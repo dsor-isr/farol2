@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+    nav/bypass_filter:
+      node_frequency: 10
+      topics:
+        subscribers:
+          position: "/#vehicle#/measurement/position"
+        publishers:
+          state: "/#vehicle#/nav/filter/state"
