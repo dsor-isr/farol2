@@ -73,7 +73,7 @@ class Process:
 
       if self.delay_before_start:
         time.sleep(self.delay_before_start)
-      self.processProcessState = subprocess.Popen(cmd)
+      self.process = subprocess.Popen(cmd)
 
 
   def restart(self):
@@ -88,10 +88,12 @@ class Process:
   def stop(self):
     if self.process:
       self.process.terminate()
+      self.process = None
 
   def kill(self):
     if self.process:
       self.process.kill()
+      self.process = None
 
   def is_active(self):
     if not self.process:
