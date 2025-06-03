@@ -22,7 +22,6 @@
 
 import rclpy
 from rclpy.node import Node
-from ament_index_python.packages import get_package_share_directory
 from fileinput import FileInput
 import time
 import subprocess
@@ -37,9 +36,6 @@ from farol_msgs.msg import ProcessState
 from farol_msgs.srv import ManageProcess
 
 PROCESS_TIMEOUT_RESTART = 5.0  # sec
-
-def kill_rosmaster():
-  subprocess.Popen(['killall', '-9', 'rosmaster'])
 
 class ProcessNotFound(Exception): pass
 
@@ -68,7 +64,7 @@ class Process:
     self.vehicle_ns = vehicle_ns
 
   def start(self):
-    if not self.is_active():
+    if not self.isActive():
       cmd = self.cmd.split(' ') + self.args + ["vehicle_ns:=" + self.vehicle_ns] + ["config_package_path:=" + self.config_package_path]
 
       if self.delay_before_start:
@@ -79,7 +75,7 @@ class Process:
   def restart(self):
     self.stop()
     timeout = time.time() + PROCESS_TIMEOUT_RESTART
-    while self.is_active():
+    while self.isActive():
       if time.time() > timeout:
         break
       time.sleep(0.1)
@@ -95,7 +91,7 @@ class Process:
       self.process.kill()
       self.process = None
 
-  def is_active(self):
+  def isActive(self):
     if not self.process:
       return False
 
@@ -126,7 +122,7 @@ class FarolBringup(Node):
     self.createProcesses()
 
     # start processes in process_list
-    self.start_init_processes()
+    self.startInitProcesses()
 
   ## Load parameters
   def loadParams(self):
@@ -165,12 +161,12 @@ class FarolBringup(Node):
   ## Initialise services
   def initialiseServices(self):
     manage_process_service = 'manage_process'
-    self.manage_process_srv = self.create_service(ManageProcess, manage_process_service, self.callback_manage_process)
+    self.manage_process_srv = self.create_service(ManageProcess, manage_process_service, self.callbackManageProcess)
   
   ## Initialise timers
   def initialiseTimers(self):
     timer_period = 0.5  # seconds
-    self.timer = self.create_timer(timer_period, self.timer_callback)
+    self.timer = self.create_timer(timer_period, self.timerCallback)
 
   def createROSTempConfigs(self):
     # get path to ros config file (personal and default) under install/
@@ -203,54 +199,54 @@ class FarolBringup(Node):
     self.find_replace(ros_tmp_folder, 'default_ros_' + self.vehicle_ns + '.yaml', '#vehicle#' , self.vehicle_ns)
 
   @staticmethod
-  def create_response(status, message):
+  def createResponse(status, message):
     response = ManageProcess.Response()
     response.status = status
     response.message = message
     return response
 
-  def publish_process_state(self):
+  def publishProcessState(self):
     msg = ProcessState()
     for p in self.process_list:
       msg.name.append(p.name)
-      msg.is_active.append(p.is_active())
+      msg.is_active.append(p.isActive())
     self.process_state_pub.publish(msg)
 
-  def callback_manage_process(self, req, resp):
+  def callbackManageProcess(self, req, resp):
     process_name = req.name
     action = req.action
 
     try:
       if action == ProcessActionType.START_ALL:
-        self.start_all_processes()
-        return self.create_response(200, "All processes have been started")
+        self.startAllProcesses()
+        return self.createResponse(200, "All processes have been started")
 
       if action == ProcessActionType.STOP_ALL:
-        self.stop_all_processes()
-        return self.create_response(200, "All processes have been stopped")
+        self.stopAllProcesses()
+        return self.createResponse(200, "All processes have been stopped")
 
       if action == ProcessActionType.START:
-        self.start_process_from_name(process_name, start_dependencies=True)
-        return self.create_response(200, "Process has been started")
+        self.startProcessFromName(process_name, start_dependencies=True)
+        return self.createResponse(200, "Process has been started")
       elif action == ProcessActionType.STOP:
-        self.stop_process_from_name(process_name)  # also stop processes that depends on this process ?   
-        return self.create_response(200, "Process has been stopped")
+        self.stopProcessFromName(process_name)  # also stop processes that depends on this process ?   
+        return self.createResponse(200, "Process has been stopped")
       elif action == ProcessActionType.RESTART:
-        self.restart_process_from_name(process_name)
-        return self.create_response(200, "Process has been restarted")
+        self.restartProcessFromName(process_name)
+        return self.createResponse(200, "Process has been restarted")
       elif action == ProcessActionType.KILL:
-        self.kill_process_from_name(process_name)
-        return self.create_response(200, "Process has been killed")
+        self.killProcessFromName(process_name)
+        return self.createResponse(200, "Process has been killed")
 
     except ProcessNotFound as e:
-        return self.create_response(400, str(e))
+        return self.createResponse(400, str(e))
 
-  def clean_ros_processes(self):
-    # +.+ delete the temprary files created in .ros_tmp folder
+  def cleanRosProcesses(self):
+    # delete the temporary files created in .ros_tmp folder
     os.remove(self.tmp_personal_config)
     os.remove(self.tmp_default_config)
-    self.stop_all_processes()
-    kill_rosmaster()
+    self.get_logger().info(self.tmp_personal_config)
+    self.stopAllProcesses()
   
   def createProcesses(self):
     self.get_logger().info("Start creating processes from process.yaml")
@@ -266,20 +262,20 @@ class FarolBringup(Node):
                                        vehicle_ns=self.vehicle_ns,
                                        config_package_path=self.config_package_path))
 
-  def start_init_processes(self):
+  def startInitProcesses(self):
     for process in self.process_list:
       if process.launch_on_startup:
-        self.start_process(process, start_dependencies=True)
+        self.startProcess(process, start_dependencies=True)
 
-  def start_all_processes(self):
+  def startAllProcesses(self):
     for process in self.process_list:
-      self.start_process(process, start_dependencies=True)
+      self.startProcess(process, start_dependencies=True)
 
-  def stop_all_processes(self):
+  def stopAllProcesses(self):
     for p in self.process_list:
-      self.stop_process(p)
+      self.stopProcess(p)
 
-  def get_process_from_name(self, name):
+  def getProcessFromName(self, name):
     p = None
     for process in self.process_list:
       if process.name == name:
@@ -289,75 +285,75 @@ class FarolBringup(Node):
       raise ProcessNotFound("Process not found : " + str(name))
     return p
 
-  def get_dependency_process_list(self, process):
+  def getDependencyProcessList(self, process):
     dep_name_list = process.dependencies
     try:
-      return list(map(lambda dep_name: self.get_process_from_name(dep_name), dep_name_list))
+      return list(map(lambda dep_name: self.getProcessFromName(dep_name), dep_name_list))
     except ProcessNotFound as e:  # should never happen if yaml file is correct
       self.get_logger().warn("Some dependency names are incorrect. Check your setup.yaml file to fix it")
       return []
 
-  def are_dependencies_met(self, process):
-    process_dep_list = self.get_dependency_process_list(process)
+  def areDependenciesMet(self, process):
+    process_dep_list = self.getDependencyProcessList(process)
     for p in process_dep_list:
-      if not p.is_active():  # is_active doesn't mean all the nodes are fully started (not a problem if nodes wait for services and actions)
+      if not p.isActive():  # isActive doesn't mean all the nodes are fully started (not a problem if nodes wait for services and actions)
         self.get_logger().info("Unmet dependency for " + str(process.name) + " (depends on : " + str(p.name) + ") !")
         return False
     return True
 
   # CAREFUL : recursion - todo mettre une securite (pas plus de 5 depth)
-  def check_and_start_dependencies(self, process):
-    process_dep_list = self.get_dependency_process_list(process)
+  def checkAndStartDependencies(self, process):
+    process_dep_list = self.getDependencyProcessList(process)
     for p in process_dep_list:
-      if not p.is_active():  # is_active doesn't mean all the nodes are fully started (not a problem if nodes wait for services and actions)
+      if not p.isActive():  # isActive doesn't mean all the nodes are fully started (not a problem if nodes wait for services and actions)
         self.get_logger().info("Unmet dependency for " + str(process.name) + " (depends on : " + str(p.name) + ") !")
         self.get_logger().info("Starting dependency process...")
-        self.start_process(p, start_dependencies=True)
+        self.startProcess(p, start_dependencies=True)
 
-  def start_process(self, p, start_dependencies=False):
+  def startProcess(self, p, start_dependencies=False):
     self.get_logger().info("Handle process : " + str(p.name))
     if start_dependencies:
-      self.check_and_start_dependencies(p)
+      self.checkAndStartDependencies(p)
       self.get_logger().info("Start process : " + str(p.name))
       p.start()
     else:
-      if self.are_dependencies_met(p):
+      if self.areDependenciesMet(p):
         self.get_logger().info("Start process : " + str(p.name))
         p.start()
 
   @staticmethod
-  def stop_process(p):
+  def stopProcess(p):
     p.stop()
 
   @staticmethod
-  def restart_process(p):
+  def restartProcess(p):
     p.restart()
 
   @staticmethod
-  def kill_process(p):
+  def killProcess(p):
     p.kill()
 
-  def start_process_from_name(self, name, start_dependencies=False):
-    p = self.get_process_from_name(name)
-    self.start_process(p, start_dependencies=start_dependencies)
+  def startProcessFromName(self, name, start_dependencies=False):
+    p = self.getProcessFromName(name)
+    self.startProcess(p, start_dependencies=start_dependencies)
 
-  def stop_process_from_name(self, name):
-    p = self.get_process_from_name(name)
-    self.stop_process(p)
+  def stopProcessFromName(self, name):
+    p = self.getProcessFromName(name)
+    self.stopProcess(p)
 
-  def restart_process_from_name(self, name):
-    p = self.get_process_from_name(name)
-    self.restart_process(p)
+  def restartProcessFromName(self, name):
+    p = self.getProcessFromName(name)
+    self.restartProcess(p)
 
-  def kill_process_from_name(self, name):
-    p = self.get_process_from_name(name)
-    self.kill_process(p)
+  def killProcessFromName(self, name):
+    p = self.getProcessFromName(name)
+    self.killProcess(p)
 
   ## Timer callback for this node
   #  Where the algorithtms will constantly run
-  def timer_callback(self):
+  def timerCallback(self):
     # publish processes' state
-    self.publish_process_state()
+    self.publishProcessState()
   
   def find_replace(self, topdir, file_pattern, text, replacement):
     """
@@ -400,7 +396,7 @@ def main(args=None):
   # Destroy the node explicitly
   # (optional - otherwise it will be done automatically
   # when the garbage collector destroys the node object)
-  farol_bringup.clean_ros_processes()
+  farol_bringup.cleanRosProcesses()
   farol_bringup.destroy_node()
   rclpy.shutdown()
 
