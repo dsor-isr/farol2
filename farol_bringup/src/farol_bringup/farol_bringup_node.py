@@ -49,10 +49,11 @@ class ProcessActionType(object):
 
 class Process:
   def __init__(self, name, cmd, vehicle_name, vehicle_id, vehicle_ns, 
-               config_package_path, args=None, launch_on_startup=False,
+               config_package_path_share, config_package_path_real, args=None, launch_on_startup=False,
                delay_before_start=0.0, dependencies=None):
     self.name = name
-    self.config_package_path = config_package_path
+    self.config_package_path_share = config_package_path_share
+    self.config_package_path_real = config_package_path_real
     self.cmd = cmd
     self.args = args if args is not None else []
     self.dependencies = dependencies if dependencies is not None else []
@@ -65,7 +66,7 @@ class Process:
 
   def start(self):
     if not self.isActive():
-      cmd = self.cmd.split(' ') + self.args + ["vehicle_ns:=" + self.vehicle_ns] + ["config_package_path:=" + self.config_package_path]
+      cmd = self.cmd.split(' ') + self.args + ["vehicle_ns:=" + self.vehicle_ns] + ["vehicle_name:=" + self.vehicle_name] + ["config_package_path_share:=" + self.config_package_path_share] + ["config_package_path_real:=" + self.config_package_path_real]
 
       if self.delay_before_start:
         time.sleep(self.delay_before_start)
@@ -129,15 +130,15 @@ class FarolBringup(Node):
     # declare all parameters
     self.declare_parameter('id', 0)
     self.declare_parameter('name', 'vehicle')
-    self.declare_parameter('config_package_path', 'medusa_bringup')
-    self.declare_parameter('farol_bringup_package_path', 'farol_bringup')
+    self.declare_parameter('config_package_path_share', 'medusa_bringup')
+    self.declare_parameter('farol_bringup_package_path_share', 'farol_bringup')
     self.declare_parameter('processes_path', '')
 
     # actually get the parameters
     self.vehicle_id = self.get_parameter('id').get_parameter_value().integer_value
     self.vehicle_name = self.get_parameter('name').get_parameter_value().string_value
-    self.config_package_path = self.get_parameter('config_package_path').get_parameter_value().string_value
-    self.farol_bringup_package_path = self.get_parameter('farol_bringup_package_path').get_parameter_value().string_value
+    self.config_package_path_share = self.get_parameter('config_package_path_share').get_parameter_value().string_value
+    self.farol_bringup_package_path_share = self.get_parameter('farol_bringup_package_path_share').get_parameter_value().string_value
     self.processes_path = self.get_parameter('processes_path').get_parameter_value().string_value
 
     # check process.yaml path exists
@@ -170,16 +171,19 @@ class FarolBringup(Node):
 
   def createROSTempConfigs(self):
     # get path to ros config file (personal and default) under install/
-    personal_config_path = os.path.join(self.config_package_path, 'config_personal/ros.yaml')
-    default_config_path = os.path.join(self.farol_bringup_package_path, 'config_default/ros.yaml')
+    personal_config_path = os.path.join(self.config_package_path_share, 'config_personal/ros.yaml')
+    default_config_path = os.path.join(self.farol_bringup_package_path_share, 'config_default/ros.yaml')
 
     # check if code was compiled with --symlink-install,
     # i.e., the config file is linked to the one under src/
     if not os.path.islink(personal_config_path):
       self.get_logger().warn(f"No symlink detected (configs won't be updated upon changes without compilation): {self.processes_path}")
 
-    # get real path (the one which the symlink points to
+    # get real path (the one which the symlink points to)
     personal_real_path = os.path.realpath(personal_config_path)
+
+    # save real path to config package
+    self.config_package_path_real = personal_real_path.removesuffix('config_personal/ros.yaml')
 
     # create .ros_tmp folder under src/[personal_bringup]/config_personal if it does not exist yet
     ros_tmp_folder = personal_real_path.removesuffix('ros.yaml') + '.ros_tmp/'
@@ -260,7 +264,8 @@ class FarolBringup(Node):
                                        vehicle_name=self.vehicle_name,
                                        vehicle_id=self.vehicle_id,
                                        vehicle_ns=self.vehicle_ns,
-                                       config_package_path=self.config_package_path))
+                                       config_package_path_share=self.config_package_path_share,
+                                       config_package_path_real=self.config_package_path_real))
 
   def startInitProcesses(self):
     for process in self.process_list:

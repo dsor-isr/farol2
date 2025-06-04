@@ -1,0 +1,15 @@
+########################################################
+# This process.yaml is just an example to be copied to #
+# the personal bringup under the newly created colcon  #
+# workspace.                                           #
+########################################################
+processes:
+  - name: 'navigation'
+    launch_on_startup: true
+    delay_before_start: 0.0
+    cmd: 'ros2 launch farol_bringup nav.launch.py'
+    args:
+      []
+      # - test:= true
+    dependencies:
+      []
