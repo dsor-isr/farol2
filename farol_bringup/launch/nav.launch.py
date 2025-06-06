@@ -59,7 +59,7 @@ def generate_launch_description():
             # load default nav configs
             PathJoinSubstitution([
               FindPackageShare('farol_bringup'),
-              'config_personal',
+              'config_default',
               'vehicles',
               LaunchConfiguration('vehicle_name'),
               'nav.yaml'
@@ -81,9 +81,9 @@ def generate_launch_description():
   ###################
   navigation_filter_node = Node(
     package='farol_nav',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/nav'],
-    executable='navigation_filter_node',
-    name='navigation_filter',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/nav', '/bypass_filter'],
+    executable='bypass_filter',
+    name='bypass_filter',
     output='screen',
     parameters=params
   )
