@@ -12,6 +12,7 @@
   <!-- dependencies libraries -->
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
+  <depend>farol_msgs</depend>
 
   <exec_depend>ros2launch</exec_depend>
 

@@ -9,26 +9,28 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(farol_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 add_executable(
-  navigation_filter_node src/navigation_filter_node.cpp)
+  bypass_filter src/bypass_filter.cpp)
 
 ament_target_dependencies(
-  navigation_filter_node
+  bypass_filter
   rclcpp
   std_msgs
+  farol_msgs
 )
 
-target_include_directories(navigation_filter_node PUBLIC
+target_include_directories(bypass_filter PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
-target_compile_features(navigation_filter_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(bypass_filter PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 install(TARGETS
-  navigation_filter_node
+  bypass_filter
   DESTINATION lib/${PROJECT_NAME}
 )
 
