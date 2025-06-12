@@ -79,11 +79,20 @@ def generate_launch_description():
   ###################
   # Nodes to launch #
   ###################
-  navigation_filter_node = Node(
+  filter_handler_node = Node(
     package='farol_nav',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/nav', '/bypass_filter'],
-    executable='bypass_filter',
-    name='bypass_filter',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/nav'],
+    executable='filter_handler',
+    name='filter_handler',
+    output='screen',
+    parameters=params
+  )
+
+  sample_and_hold_filter_node = Node(
+    package='farol_nav',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/nav'],
+    executable='sample_and_hold',
+    name='sample_and_hold',
     output='screen',
     parameters=params
   )
@@ -98,5 +107,6 @@ def generate_launch_description():
     config_package_path_share_arg,
     config_package_path_real_arg,
     # nodes
-    navigation_filter_node,
+    filter_handler_node,
+    sample_and_hold_filter_node,
   ])
