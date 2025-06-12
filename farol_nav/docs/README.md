@@ -2,13 +2,17 @@
 
 ## Description
 
+The *farol_nav* package encapsulates the navigation filter algorithms and messages/services closely related to vehicle navigation. It is designed within the scope of live filter comparison and extensibility, such that new filters can be easily added with little effort (besides coding the algorithm itself, obviously).
 
+The *sample_and_hold* node implements the most simple navigation filter, taking measurements and assigning these to the navigation state asynchronously, while the current state is published at a fixed frequency.
 
-<!-- The *farol_bringup* ROS node is responsible for handling a list of pre-defined processes, taking care of starting, stopping and restarting them (via a ROS service) and providing information about their status (via a ROS topic).
+The *filter_handler* node is responsible for handling the different navigation filters' outputs, choosing which is redirected to the main navigation filter state, which is considered the true state of the vehicle from a control perspective. It is possible to define the default filter to be used and to change filters live, using a ROS service.
 
-Each of these processes is assigned a specific launch file, which in turn runs a series of other ROS nodes. These specific launch files are usually under a common theme (e.g. control, navigation, etc.) and are all available under `farol_bringup/launch/`.
-
-Moreover, the *farol_bringup* node also creates temporary copies of the `ros.yaml` configuration files, both default (under `farol_bringup/config_default/`) and personal (under `[personal_bringup]/config_personal/`), substituting the `#vehicle#` keyword for the launched vehicle's namespace (the vehicle name followed by an ID). These copies are saved under `[personal_bringup]/config_personal/.ros_tmp/` while the stack is running, for easy access for other ROS nodes. -->
+When implementing a new navigation filter algorithm in a new node, it is only required to:
+- publish the navigation state to a topic with the ROS message `farol_msgs::msg::NavigationState`;
+- add the new topic name to the list of subscribers of the *filter_handler* node (`nav.filter_handler.topics.subscribers`), in the *ros.yaml* configuration file;
+- add the new filter name to the list of filters of the *filter_handler* node (`nav.filter_handler.filters`), in the *nav.yaml* configuration file;
+- add the new node to the navigation launch file under `farol_bringup/launch/nav.launch.py`, similarly to the other algorithms' nodes.
 
 ## Nodes
 
