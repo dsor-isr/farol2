@@ -2,7 +2,7 @@ std_msgs/Header header
 
 # Position
 GCS global_position # Geographic Coordinate System: Latitude, Longitude (degrees)
-UTM utm_position # Universal Transverse Mercator: North, East, Depth (m)
+UTM utm_position # Universal Transverse Mercator: Northing, Easting (m), UTM zone
 
 # Depth
 float32 depth
@@ -16,10 +16,10 @@ LocalDatum local_datum # local datum altitude
 geometry_msgs/Vector3 body_velocity_inertial # inertial velocity expressed in the body [u, v, w] (m/s)
 geometry_msgs/Vector3 body_velocity_fluid # velocity relative to the fluid expressed in the body (m/s)
 
-# Orientation (rad)
-geometry_msgs/Vector3 orientation # [roll pitch yaw]
+# Orientation
+geometry_msgs/Vector3 orientation # [roll pitch yaw] (rad)
 
-# Orientation Rate (rad/s)
-geometry_msgs/Vector3 orientation_rate # [p q r]
+# Orientation Rate
+geometry_msgs/Vector3 orientation_rate # [p q r] (rad/s)
 
 # If needed: add variances to position, orientation and other estimated variables
