@@ -1,10 +1,20 @@
 /**:
   ros__parameters:
     nav:
-      bypass_filter:
+      filter_handler:
         node_frequency: 10
         topics:
           subscribers:
-            position: "/#vehicle#/measurement/position"
+            sample_and_hold: "/#vehicle#/nav/sample_and_hold/state"
+            complementary: "/#vehicle#/nav/complementary/state"
           publishers:
             state: "/#vehicle#/nav/filter/state"
+          services:
+            change_filter: "/#vehicle#/nav/change_filter"
+      sample_and_hold:
+        node_frequency: 10
+        topics:
+          subscribers:
+            measurement: "/#vehicle#/measurement"
+          publishers:
+            state: "/#vehicle#/nav/sample_and_hold/state"

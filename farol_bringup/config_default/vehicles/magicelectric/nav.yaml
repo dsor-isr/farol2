@@ -1,5 +1,10 @@
 /**:
   ros__parameters:
     nav:
-      bypass_filter:
-        test: 1
+      filter_handler:
+        default_filter: "sample_and_hold"
+        filters:
+          - "sample_and_hold"
+          - "complementary"
+      sample_and_hold:
+        test: 2
