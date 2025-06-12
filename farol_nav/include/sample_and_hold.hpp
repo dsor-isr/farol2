@@ -6,18 +6,19 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "farol_msgs/msg/navigation_state.hpp"
+#include "farol_msgs/msg/measurement.hpp"
 
 /**
- * @brief   Test node
+ * @brief   Sample and Hold navigation filter
  * @author  Eduardo Cunha
  */
-class BypassFilter : public rclcpp::Node {
+class SampleAndHold : public rclcpp::Node {
   public:
     /* Constructor */
-    BypassFilter();
+    SampleAndHold();
 
     /* Destructor */
-    ~BypassFilter();
+    ~SampleAndHold();
 
     /* Load parameters */
     void loadParams();
@@ -43,7 +44,13 @@ class BypassFilter : public rclcpp::Node {
 
     /* Declare publishers, subscribers, services, etc. */
     rclcpp::Publisher<farol_msgs::msg::NavigationState>::SharedPtr state_pub_;
+    
+    rclcpp::Subscription<farol_msgs::msg::Measurement>::SharedPtr measurement_sub_;
+
+    /* Callbacks */
+    void measurement_callback(const farol_msgs::msg::Measurement &msg);
 
     /* Other variables */
-    
+    farol_msgs::msg::NavigationState filter_state_msg_;
+    rclcpp::Clock clock_;
 };

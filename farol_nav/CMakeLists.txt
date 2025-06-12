@@ -10,35 +10,62 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(farol_msgs REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(
-  bypass_filter src/bypass_filter.cpp)
+# Collect all .msg and .srv files
+file(GLOB MSG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
+file(GLOB SRV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "srv/*.srv")
+
+# Generate messages and services
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ${MSG_FILES}
+  ${SRV_FILES}
+  DEPENDENCIES std_msgs
+)
+
+ament_export_dependencies(rosidl_default_runtime)
+
+add_executable(filter_handler src/filter_handler.cpp)
+add_executable(sample_and_hold src/sample_and_hold.cpp)
 
 ament_target_dependencies(
-  bypass_filter
+  filter_handler
   rclcpp
   std_msgs
   farol_msgs
 )
 
-target_include_directories(bypass_filter PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
-target_compile_features(bypass_filter PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-
-install(TARGETS
-  bypass_filter
-  DESTINATION lib/${PROJECT_NAME}
+ament_target_dependencies(
+  sample_and_hold
+  rclcpp
+  std_msgs
+  farol_msgs
 )
 
-# Install launch files.
-# install(DIRECTORY
-#   launch
-#   DESTINATION share/${PROJECT_NAME}/
-# )
+# Link generated service types
+rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
+target_link_libraries(filter_handler "${cpp_typesupport_target}")
+
+target_include_directories(filter_handler PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+
+target_include_directories(sample_and_hold PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+  
+target_compile_features(filter_handler PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+
+target_compile_features(sample_and_hold PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17  
+  
+install(TARGETS
+  filter_handler
+  sample_and_hold
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
