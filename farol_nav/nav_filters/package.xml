@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>farol_nav</name>
+  <name>nav_filters</name>
   <version>0.0.0</version>
-  <description>FAROL_NAV: Navigation Filters</description>
+  <description>Nav Filters: Navigation Filters</description>
   <maintainer email="eduardo.m.a.cunha@tecnico.ulisboa.pt">Eduardo Cunha</maintainer>
   <license>MIT</license>
 

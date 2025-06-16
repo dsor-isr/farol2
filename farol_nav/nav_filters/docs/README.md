@@ -1,10 +1,10 @@
-# Farol Nav Package
+# Nav Filters Package
 
 ## Description
 
-The *farol_nav* package encapsulates the navigation filter algorithms and messages/services closely related to vehicle navigation. It is designed within the scope of live filter comparison and extensibility, such that new filters can be easily added with little effort (besides coding the algorithm itself, obviously).
+The *nav_filters* package encapsulates the navigation filter algorithms and messages/services closely related to vehicle navigation. It is designed within the scope of live filter comparison and extensibility, such that new filters can be easily added with little effort (besides coding the algorithm itself, obviously).
 
-The *sample_and_hold* node implements the most simple navigation filter, taking measurements and assigning these to the navigation state asynchronously, while the current state is published at a fixed frequency.
+The *sample_and_hold* node implements the simplest navigation filter, taking measurements and assigning these to the navigation state asynchronously, while the current state is published at a fixed frequency.
 
 The *filter_handler* node is responsible for handling the different navigation filters' outputs, choosing which is redirected to the main navigation filter state, which is considered the true state of the vehicle from a control perspective. It is possible to define the default filter to be used and to change filters live, using a ROS service.
 

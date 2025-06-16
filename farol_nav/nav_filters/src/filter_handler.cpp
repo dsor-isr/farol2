@@ -91,7 +91,7 @@ void FilterHandler::initialisePublishers() {
 void FilterHandler::initialiseServices() {
   /* Service servers */
   /* Service to change current filter */
-  change_filter_srv_ = create_service<farol_nav::srv::ChangeFilter>(
+  change_filter_srv_ = create_service<nav_filters::srv::ChangeFilter>(
                         get_parameter("nav.filter_handler.topics.services.change_filter").as_string(),
                         std::bind(&FilterHandler::changeFilterCallback, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -133,8 +133,8 @@ void FilterHandler::nav_filter_callback(const farol_msgs::msg::NavigationState &
 /**
  * @brief Change filter callback.
  */
-void FilterHandler::changeFilterCallback(const std::shared_ptr<farol_nav::srv::ChangeFilter::Request> request,
-                                         std::shared_ptr<farol_nav::srv::ChangeFilter::Response> response) {
+void FilterHandler::changeFilterCallback(const std::shared_ptr<nav_filters::srv::ChangeFilter::Request> request,
+                                         std::shared_ptr<nav_filters::srv::ChangeFilter::Response> response) {
   /* Check if requested filter is one of the available filters */
   if (std::find(filters_.begin(), filters_.end(), request->filter_name) == filters_.end()) {
     /* Get list of available filters in a string */

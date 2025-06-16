@@ -8,7 +8,7 @@
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "farol_msgs/msg/navigation_state.hpp"
-#include "farol_nav/srv/change_filter.hpp"
+#include "nav_filters/srv/change_filter.hpp"
 
 /**
  * @brief   Filter Handler
@@ -49,12 +49,12 @@ class FilterHandler : public rclcpp::Node {
     
     std::map<std::string, rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr> subscription_map_;
 
-    rclcpp::Service<farol_nav::srv::ChangeFilter>::SharedPtr change_filter_srv_;
+    rclcpp::Service<nav_filters::srv::ChangeFilter>::SharedPtr change_filter_srv_;
 
     /* Callbacks */
     void nav_filter_callback(const farol_msgs::msg::NavigationState &msg, std::string filter_key);
-    void changeFilterCallback(const std::shared_ptr<farol_nav::srv::ChangeFilter::Request> request,
-                              std::shared_ptr<farol_nav::srv::ChangeFilter::Response> response);
+    void changeFilterCallback(const std::shared_ptr<nav_filters::srv::ChangeFilter::Request> request,
+                              std::shared_ptr<nav_filters::srv::ChangeFilter::Response> response);
 
     /* Other variables */
     farol_msgs::msg::NavigationState filter_state_msg_;
