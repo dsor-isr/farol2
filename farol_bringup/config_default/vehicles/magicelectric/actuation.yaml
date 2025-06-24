@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    actuation:
+      thrusters:
+        - name: "Portside"
+          moment_arms: [-4.0, -1.5, 1.0]
+        - name: "Starboard"
+          moment_arms: [-4.0, 1.5, 1.0]
