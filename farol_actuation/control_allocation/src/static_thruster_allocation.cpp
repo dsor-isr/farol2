@@ -145,7 +145,7 @@ void StaticThrusterAllocation::buildThrustAllocationMatrix(const int nr_thruster
 
   /* Build matrix column by column */
   for (int i = 0; i < nr_thrusters; i++) {
-    /* Compute vector of forces */
+    /* Compute vector of forces in the body's referential frame */
     f_ = getRotationMatrixThruster2Body(std::get<std::vector<double>>(thruster_configuration_[i]["angles"])[0]/180*M_PI,
                                         std::get<std::vector<double>>(thruster_configuration_[i]["angles"])[1]/180*M_PI,
                                         std::get<std::vector<double>>(thruster_configuration_[i]["angles"])[2]/180*M_PI)*unit_vector;
