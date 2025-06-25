@@ -3,6 +3,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from launch.conditions import IfCondition
 
 def generate_launch_description():
   
@@ -31,6 +32,18 @@ def generate_launch_description():
     'config_package_path_real',
     default_value='',
     description='Path to the config package, usually the personal bringup of the workspace, in the src folder'
+  )
+
+  launch_static_thruster_allocation_arg = DeclareLaunchArgument(
+    'static_thruster_allocation',
+    default_value='true',
+    description='Boolean to determine if static thruster allocation node is launched.'
+  )
+
+  launch_thruster_rudder_allocation_arg = DeclareLaunchArgument(
+    'thruster_rudder_allocation',
+    default_value='true',
+    description='Boolean to determine if thruster rudder allocation node is launched.'
   )
 
   ###################################
@@ -85,6 +98,17 @@ def generate_launch_description():
     executable='static_thruster_allocation',
     name='static_thruster_allocation',
     output='screen',
+    condition=IfCondition(LaunchConfiguration('static_thruster_allocation')),
+    parameters=params
+  )
+
+  thruster_rudder_allocation_node = Node(
+    package='control_allocation',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/actuation'],
+    executable='thruster_rudder_allocation',
+    name='thruster_rudder_allocation',
+    output='screen',
+    condition=IfCondition(LaunchConfiguration('thruster_rudder_allocation')),
     parameters=params
   )
 
@@ -97,6 +121,9 @@ def generate_launch_description():
     vehicle_name_arg,
     config_package_path_share_arg,
     config_package_path_real_arg,
+    launch_static_thruster_allocation_arg,
+    launch_thruster_rudder_allocation_arg,
     # nodes
     static_thruster_allocation_node,
+    thruster_rudder_allocation_node,
   ])
