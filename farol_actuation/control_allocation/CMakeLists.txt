@@ -32,6 +32,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 ament_export_dependencies(rosidl_default_runtime)
 
 add_executable(static_thruster_allocation src/static_thruster_allocation.cpp)
+add_executable(thruster_rudder_allocation src/thruster_rudder_allocation.cpp)
 
 ament_target_dependencies(
   static_thruster_allocation
@@ -42,18 +43,35 @@ ament_target_dependencies(
   eigen3_cmake_module
 )
 
+ament_target_dependencies(
+  thruster_rudder_allocation
+  rclcpp
+  std_msgs
+  farol_msgs
+  Eigen3
+  eigen3_cmake_module
+)
+
 # Link generated service types
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
 target_link_libraries(static_thruster_allocation "${cpp_typesupport_target}")
+target_link_libraries(thruster_rudder_allocation "${cpp_typesupport_target}")
 
 target_include_directories(static_thruster_allocation PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+
+target_include_directories(thruster_rudder_allocation PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
   
 target_compile_features(static_thruster_allocation PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+
+target_compile_features(thruster_rudder_allocation PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
   
 install(TARGETS
   static_thruster_allocation
+  thruster_rudder_allocation
   DESTINATION lib/${PROJECT_NAME}
 )
 
