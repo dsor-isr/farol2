@@ -13,3 +13,12 @@ processes:
       # - test:= true
     dependencies:
       []
+  - name: 'actuation'
+    launch_on_startup: true
+    delay_before_start: 0.0
+    cmd: 'ros2 launch farol_bringup actuation.launch.py'
+    args:
+      []
+      # - test:= true
+    dependencies:
+      []

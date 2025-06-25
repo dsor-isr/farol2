@@ -1,5 +1,21 @@
 /**:
   ros__parameters:
+    actuation:
+      static_thruster_allocation:
+        node_frequency: 10
+        topics:
+          subscribers:
+            body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
+          publishers:
+            thruster_force: "/#vehicle#/actuation/thruster_force"
+      thruster_rudder_allocation:
+        node_frequency: 10
+        topics:
+          subscribers:
+            body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
+          publishers:
+            thruster_force: "/#vehicle#/actuation/thruster_force"
+            rudder_angle: "/#vehicle#/actuation/rudder_angle"
     nav:
       filter_handler:
         node_frequency: 10
