@@ -53,4 +53,5 @@ class SampleAndHold : public rclcpp::Node {
     /* Other variables */
     farol_msgs::msg::NavigationState filter_state_msg_;
     rclcpp::Clock clock_;
+    bool neglect_current_;
 };

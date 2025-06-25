@@ -20,10 +20,10 @@ SampleAndHold::~SampleAndHold() {
  */
 void SampleAndHold::loadParams() {
   /* Declare parameters */
+  declare_parameter<bool>("nav.sample_and_hold.neglect_current", true);
 
   /* Actually get the parameters */
-
-  return;
+  neglect_current_ = get_parameter("nav.sample_and_hold.neglect_current").as_bool();
 }
 
 /**
@@ -144,6 +144,14 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
       filter_state_msg_.body_velocity_inertial.x = msg.value[0];
       filter_state_msg_.body_velocity_inertial.y = msg.value[1];
       filter_state_msg_.body_velocity_inertial.z = msg.value[2];
+
+      /* If current is neglected, body velocity relative to the fluid will be the same as inertial one */
+      if (neglect_current_) {
+        filter_state_msg_.body_velocity_fluid.x = msg.value[0];
+        filter_state_msg_.body_velocity_fluid.y = msg.value[1];
+        filter_state_msg_.body_velocity_fluid.z = msg.value[2];
+      }
+
       break;
     /* Velocity expressed in the body relative to the fluid */
     case msg.MEAS_BODY_VELOCITY_FLUID:
