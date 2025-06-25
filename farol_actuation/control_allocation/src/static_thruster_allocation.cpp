@@ -5,8 +5,8 @@ StaticThrusterAllocation::StaticThrusterAllocation() : Node("static_thruster_all
                                       rclcpp::NodeOptions()
                                         .allow_undeclared_parameters(true)
                                         .automatically_declare_parameters_from_overrides(true)) {
-  initialiseSubscribers();
   loadParams();
+  initialiseSubscribers();
   initialisePublishers();
   initialiseServices();
   initialiseTimers();
@@ -36,32 +36,24 @@ void StaticThrusterAllocation::initialiseSubscribers() {
  * other complex types, this method should be adapted for further robustness.
  */
 void StaticThrusterAllocation::loadParams() {
-  int idx = 0;
-  std::string key_name;
-  /* Get raw flatten thruster configuration parameters */
-  if (get_node_parameters_interface()->get_parameters_by_prefix(
-        "actuation.thrusters", raw_thruster_configuration_)) {
-    /* Iterate through std::map to create new map with thruster configurations */
-    for (const auto & [key, param] : raw_thruster_configuration_) {
-      /* Get number at the beginning of the key and param name */
-      try {
-        idx = std::stoi(key.substr(0, key.find('.')));
-        key_name = key.substr(key.find('.') + 1);
-      } catch (...) {
-        continue;
-      }
-      
-      /* Create element in thruster_configuration vector with map or add info to already existing map */
-      if (idx >= (int)thruster_configuration_.size()) {
-        RCLCPP_DEBUG(get_logger(), "NEW ENTRY: %d -- %ld", idx, thruster_configuration_.size());
-        thruster_configuration_.push_back({{key_name, getFieldFromParameter(param, key_name)}});
-      } else {
-        thruster_configuration_[idx].insert({key_name, getFieldFromParameter(param, key_name)});
-      }
-    }
-  }
+  /* Get thruster configuration */
+  thruster_configuration_ = getThrusterConfiguration(*this);
 
-  buildThrustAllocationMatrix((int)thruster_configuration_.size());
+  /* Number of thrusters */
+  nr_thrusters_ = (int)thruster_configuration_.size();
+
+  /* Get thrust allocation matrix */
+  thrust_allocation_matrix_ = getThrustAllocationMatrix(thruster_configuration_, nr_thrusters_);
+
+  /* Set size of pseudo-inverse and forces output */
+  thrust_allocation_matrix_pseudo_inv_.resize(nr_thrusters_, 6);
+  forces_.resize(nr_thrusters_);
+
+  /* Compute pseudo inverse */
+  thrust_allocation_matrix_pseudo_inv_ = thrust_allocation_matrix_.completeOrthogonalDecomposition().pseudoInverse();
+
+  // std::cout << "TAM:\n" << thrust_allocation_matrix_ << std::endl;
+  // std::cout << "pinv(TAM):\n" << thrust_allocation_matrix_pseudo_inv_ << std::endl;
 }
 
 /**
@@ -102,9 +94,10 @@ void StaticThrusterAllocation::initialiseTimers() {
 void StaticThrusterAllocation::bodyWrenchRequestCallback(const control_allocation::msg::BodyWrenchRequest &msg) {
   /* Body wrench request */
   tau_ << msg.wrench.force.x, msg.wrench.force.y, msg.wrench.force.z,
-  msg.wrench.torque.x, msg.wrench.torque.y, msg.wrench.torque.z;
+          msg.wrench.torque.x, msg.wrench.torque.y, msg.wrench.torque.z;
   
   /* Compute vector of forces for each thruster based on body wrench request */
+  /* f = pinv(T).τ */
   forces_ = thrust_allocation_matrix_pseudo_inv_*tau_;
 
   /* Create message to publish */
@@ -114,70 +107,6 @@ void StaticThrusterAllocation::bodyWrenchRequestCallback(const control_allocatio
   msg_.force = forces_vec;
   
   thruster_force_pub_->publish(msg_);
-}
-
-/**
- * @brief Get field from ROS parameter according to key name.
- */
-std::variant<std::string, std::vector<double>> StaticThrusterAllocation::getFieldFromParameter(rclcpp::Parameter param, std::string key_name) {
-  /* According to key name, parse ros parameter properly */
-  if (key_name == "name") {
-    return param.as_string();
-  } else if (key_name == "moment_arms" || key_name == "angles") {
-    return param.as_double_array();
-  } else {
-    RCLCPP_WARN(get_logger(), "Unknown loaded data from config in thruster configuration.");
-    return "Unknown";
-  }
-}
-
-/**
- * @brief Build thrust allocation matrix based on thruster configuration.
- */
-void StaticThrusterAllocation::buildThrustAllocationMatrix(const int nr_thrusters) {
-  /* Set size of thrust allocation matrix, its pseudo-inverse and forces output */
-  thrust_allocation_matrix_.resize(6, nr_thrusters);
-  thrust_allocation_matrix_pseudo_inv_.resize(nr_thrusters, 6);
-  forces_.resize(nr_thrusters);
-  
-  /* Normalised vector of forces in the thruster's referential */
-  const Eigen::Vector3d unit_vector(1.0, 0.0, 0.0);
-
-  /* Build matrix column by column */
-  for (int i = 0; i < nr_thrusters; i++) {
-    /* Compute vector of forces in the body's referential frame */
-    f_ = getRotationMatrixThruster2Body(std::get<std::vector<double>>(thruster_configuration_[i]["angles"])[0]/180*M_PI,
-                                        std::get<std::vector<double>>(thruster_configuration_[i]["angles"])[1]/180*M_PI,
-                                        std::get<std::vector<double>>(thruster_configuration_[i]["angles"])[2]/180*M_PI)*unit_vector;
-
-    /* Get vector of moment arms */
-    l_ << std::get<std::vector<double>>(thruster_configuration_[i]["moment_arms"])[0],
-          std::get<std::vector<double>>(thruster_configuration_[i]["moment_arms"])[1],
-          std::get<std::vector<double>>(thruster_configuration_[i]["moment_arms"])[2];
-    
-    /* Each column of the Thrust Allocation Matrix:                            */
-    /* tau_i = |    f_i    | <- forces vector                                  */
-    /*         | l_i x f_i | <- cross product of moment arms and forces vector */
-    thrust_allocation_matrix_.block<3,1>(0,i) = f_;
-    thrust_allocation_matrix_.block<3,1>(3,i) = l_.cross(f_);
-  }
-
-  /* Pseudo Inverse */
-  thrust_allocation_matrix_pseudo_inv_ = thrust_allocation_matrix_.completeOrthogonalDecomposition().pseudoInverse();
-  
-  // std::cout << "TAM:\n" << thrust_allocation_matrix_ << std::endl;
-  // std::cout << "pinv(TAM):\n" << thrust_allocation_matrix_pseudo_inv_ << std::endl;
-}
-
-/**
- * @brief Get rotation matrix from thruster frame to body frame, given the roll,
- * pitch and yaw angles, which are the angles of rotation from body to thruster,
- * in the following order: yaw first, then pitch, finally roll.
- */
-Eigen::Matrix3d StaticThrusterAllocation::getRotationMatrixThruster2Body(double roll, double pitch, double yaw) {
-  return (Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ())
-        * Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY())
-        * Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX())).matrix();
 }
 
 /**
