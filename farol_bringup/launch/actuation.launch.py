@@ -112,6 +112,15 @@ def generate_launch_description():
     parameters=params
   )
 
+  rpm_conversion_node = Node(
+    package='control_allocation',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/actuation'],
+    executable='rpm_conversion',
+    name='rpm_conversion',
+    output='screen',
+    parameters=params
+  )
+
   ######################################################
   # Return launch description with arguments and nodes #
   ######################################################
@@ -126,4 +135,5 @@ def generate_launch_description():
     # nodes
     static_thruster_allocation_node,
     thruster_rudder_allocation_node,
+    rpm_conversion_node
   ])
