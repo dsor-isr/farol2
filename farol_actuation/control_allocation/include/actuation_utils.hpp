@@ -86,7 +86,7 @@ std::vector<std::map<std::string, std::variant<std::string, std::vector<double>>
 
   /* Get raw flatten thruster configuration parameters */
   if (node.get_node_parameters_interface()->get_parameters_by_prefix(
-        "actuation.thrusters", raw_thruster_configuration)) {
+        "actuation.thrusters.configuration", raw_thruster_configuration)) {
     /* Iterate through std::map to create new map with thruster configurations */
     for (const auto & [key, param] : raw_thruster_configuration) {
       /* Get number at the beginning of the key and param name */
