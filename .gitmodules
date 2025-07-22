@@ -1,0 +1,3 @@
+[submodule "3rd_party/nmea_msgs"]
+	path = 3rd_party/nmea_msgs
+	url = git@github.com:ros-drivers/nmea_msgs.git
