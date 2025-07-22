@@ -1,6 +1,13 @@
 /**:
   ros__parameters:
     actuation:
+      rpm_conversion:
+        node_frequency: 10
+        topics:
+          subscribers:
+            thruster_force: "/#vehicle#/actuation/thruster_force"
+          publishers:
+            rpm_command: "/#vehicle#/actuation/rpm_command"
       static_thruster_allocation:
         node_frequency: 10
         topics:
@@ -9,13 +16,14 @@
           publishers:
             thruster_force: "/#vehicle#/actuation/thruster_force"
       thruster_rudder_allocation:
-        node_frequency: 10
+        node_frequency: 1
         topics:
           subscribers:
             body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
+            nav_state: "/#vehicle#/nav/filter/state"
           publishers:
             thruster_force: "/#vehicle#/actuation/thruster_force"
-            rudder_angle: "/#vehicle#/actuation/rudder_angle"
+            rudder_angle_ref: "/#vehicle#/ref/rudder_angle"
     nav:
       filter_handler:
         node_frequency: 10
@@ -34,3 +42,66 @@
             measurement: "/#vehicle#/measurement"
           publishers:
             state: "/#vehicle#/nav/sample_and_hold/state"
+    drivers:
+      can_thrusters:
+        topics:
+          subscribers:
+            throttle_command: "/#vehicle#/throttle_command"
+          publishers:
+            port:
+              can_raw: "/#vehicle#/can_thrusters/port/can_raw"
+              throttle_status0: "/#vehicle#/can_thrusters/port/throttle_status0"
+              motor_controller_status0: "/#vehicle#/can_thrusters/port/motor_controller_status0"
+              motor_controller_status1: "/#vehicle#/can_thrusters/port/motor_controller_status1"
+            stbd:
+              can_raw: "/#vehicle#/can_thrusters/stbd/can_raw"
+              throttle_status0: "/#vehicle#/can_thrusters/stbd/throttle_status0"
+              motor_controller_status0: "/#vehicle#/can_thrusters/stbd/motor_controller_status0"
+              motor_controller_status1: "/#vehicle#/can_thrusters/stbd/motor_controller_status1"
+      can_instrumentation:
+        topics:
+          subscribers:
+            rudder_command: "/#vehicle#/rudder_command"
+          publishers:
+            position: "/#vehicle#/can_instrumentation/position"
+            orientation: "/#vehicle#/can_instrumentation/orientation"
+            can_raw: "/#vehicle#/can_instrumentation/can_raw"
+            rudder_angle: "/#vehicle#/can_instrumentation/rudder_angle"
+            position_meas: "/#vehicle#/measurement/position"
+            orientation_meas: "/#vehicle#/measurement/orientation"
+      vn310:
+        node_frequency: 10
+        topics:
+          publishers:
+            raw: /#vehicle#/drivers/vn310/raw 
+            vnins_data: /#vehicle#/drivers/vn310/VNINS/data
+            meas_orient_filter: /#vehicle#/measurement/orientation
+            vn_gnss_lla: /#vehicle#/drivers/vn310/GPSLLA/data
+            vn_ymr: /#vehicle#/drivers/vn310/YMR/data
+            vn_gnss_health_status: /#vehicle#/drivers/vn310/GPSHealthStatus/data
+            vn_gpgga: /#vehicle#/drivers/vn310/GPGGA/data
+            meas_pos_filter: /#vehicle#/measurement/position
+            corrections_rtk: /#vehicle#/drivers/vn310/corrections_rtk
+      airmar_200wx:
+        topics:
+          publishers:
+            raw: /#vehicle#/drivers/airmar_200wx/raw
+            true_heading: /#vehicle#/drivers/airmar_200wx/true_heading
+            wind_true: /#vehicle#/drivers/airmar_200wx/wind_true
+            wind_rel: /#vehicle#/drivers/airmar_200wx/wind_apparent
+            gps_fix: /#vehicle#/drivers/airmar_200wx/gps_fix
+            ground_speed: /#vehicle#/drivers/airmar_200wx/ground_speed
+            rate_of_turn: /#vehicle#/drivers/airmar_200wx/rate_of_turn
+            transducers: /#vehicle#/drivers/airmar_200wx/transducers
+            meteo_composite: /#vehicle#/drivers/airmar_200wx/meteo_composite
+            time_date: /#vehicle#/drivers/airmar_200wx/time_date
+      airmar_dx900:
+        topics:
+          publishers:
+            raw: /#vehicle#/drivers/airmar_dx900/raw
+            nautical_leeway_angle: /#vehicle#/drivers/airmar_dx900/nautical_leeway_angle
+            ground_water_speed: /#vehicle#/drivers/airmar_dx900/ground_water_speed
+            speed_through_water: /#vehicle#/drivers/airmar_dx900/speed_through_water
+            distance_through_water: /#vehicle#/drivers/airmar_dx900/distance_through_water
+            sea_water_temperature: /#vehicle#/drivers/airmar_dx900/sea_water_temperature
+            transducers: /#vehicle#/drivers/airmar_dx900/transducers
