@@ -42,6 +42,16 @@
             measurement: "/#vehicle#/measurement"
           publishers:
             state: "/#vehicle#/nav/sample_and_hold/state"
+    sim:
+      simulation:
+        node_frequency: 10
+        topics:
+          subscribers:
+            test0: "/#vehicle#/sim/something"
+          publishers:
+            test1: "/#vehicle#/sim/something_else"
+          services:
+            test2: "/#vehicle#/sim/change_something"
     drivers:
       can_thrusters:
         topics:
@@ -67,20 +77,18 @@
             orientation: "/#vehicle#/can_instrumentation/orientation"
             can_raw: "/#vehicle#/can_instrumentation/can_raw"
             rudder_angle: "/#vehicle#/can_instrumentation/rudder_angle"
-            position_meas: "/#vehicle#/measurement/position"
-            orientation_meas: "/#vehicle#/measurement/orientation"
+            measurement: "/#vehicle#/measurement"
       vn310:
         node_frequency: 10
         topics:
           publishers:
             raw: /#vehicle#/drivers/vn310/raw 
             vnins_data: /#vehicle#/drivers/vn310/VNINS/data
-            meas_orient_filter: /#vehicle#/measurement/orientation
+            measurement: /#vehicle#/measurement
             vn_gnss_lla: /#vehicle#/drivers/vn310/GPSLLA/data
             vn_ymr: /#vehicle#/drivers/vn310/YMR/data
             vn_gnss_health_status: /#vehicle#/drivers/vn310/GPSHealthStatus/data
             vn_gpgga: /#vehicle#/drivers/vn310/GPGGA/data
-            meas_pos_filter: /#vehicle#/measurement/position
             corrections_rtk: /#vehicle#/drivers/vn310/corrections_rtk
       airmar_200wx:
         topics:
