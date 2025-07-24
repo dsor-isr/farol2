@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+    sim:
+      simulation:
+        param1: "test"
+        list_of_params:
+          - "abcd"
+          - "efgh"
+        param2: 1234

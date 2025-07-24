@@ -1,0 +1,75 @@
+/**:
+  ros__parameters:
+    drivers:
+      #################
+      # CAN_THRUSTERS #
+      #################
+      can_thrusters:
+        node_frequency: 20
+        interface:
+          port: "can1"
+          stbd: "can2"
+
+      #######################
+      # CAN_INSTRUMENTATION #
+      #######################
+      can_instrumentation:
+        node_frequency: 20
+        interface: "can3"
+        use_orientation_in_nav_filter: false
+        use_position_in_nav_filter: false
+
+      #########
+      # VN310 #
+      #########
+      vn310:
+        # port: /dev/fake_sensor
+        port: /dev/ttyUSB0
+        rtk_port: 24387
+        baudrate: 115200
+        use_position: false
+        frame_id_orient: ahrs
+        frame_id_pos: gnss
+        config_commands: [
+            "",
+            # "VNWRG,06,0", # Stop Async
+            # "VNRFS", # Restore Factory Settings
+            # "VNWRG,57,0,1,0", # Set Antenna A's relative position to the VN310
+            # "VNWRG,93,0,-2,0,0.01,0.01,0.01", # Set Antenna B's relative position to Antenna A
+            # "VNWRG,06,22", # Set Async Data Output to setting 22 (VNINS)
+            # "VNWRG,07,20", # Set Async Data Frequency to 20Hz
+            # "VNWRG,26,0,1,0,-1,0,0,0,0,1", #  Installation matrix [0, 0, -90] roll, pitch, yaw (NOT WORKING)
+            # "VNWNV", # Write settings to non-volatile memory
+            # "VNRST", # Reset VN310 
+            ]
+        check_commands: [ # TODO! Not currently being checked!!!!!!
+            "VNWRG,07,10", #  Asynch data output rate 10 Hz  
+            "VNWRG,06,14", #  (reg6_14) YMR, Magnet, Accel m/s^2, Gyros rad/s  
+            #"VNRRG,21", #  Read Mag and Grav model vectors  
+            "VNRRG,23", #  Read Calibration mode  
+            "VNRRG,26", #  Install matrix  
+            "VNRRG,35", #  VPE Basic Control  
+            "VNRRG,36", #  Basic Magnetometers Configuration  
+            "VNRRG,37", #  Advanced Magnetometers Configuration  
+            #"VNRRG,83", #  Read Mag and Grav model cfg and position/date  
+            ]
+        read_commands: [ # data read at the frequency of the node
+            "VNRRG,58", # GNSS Solution - LLA
+            "VNRRG,27", # Yaw, Pitch, Roll, Magnetic, Acceleration, and Angular Rates
+            "VNRRG,86", # GNSS Compass Signal Health Status
+        ]
+
+      #########################
+      # Airmar200WX Interface #
+      #########################
+      airmar_200wx:
+        # port: /dev/magic/wind
+        port: /dev/ttyS1
+        baudrate: 4800 # not being used
+
+      ##########################
+      # AirmarDX900+ Interface #
+      ##########################
+      airmar_dx900:
+        port: /dev/ttyS2
+        baudrate: 4800 # not being used
