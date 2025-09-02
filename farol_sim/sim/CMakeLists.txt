@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(farol_msgs REQUIRED)
+find_package(control_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 # Collect all .msg and .srv files
@@ -32,6 +33,7 @@ ament_target_dependencies(
   rclcpp
   std_msgs
   farol_msgs
+  control_allocation
 )
 
 # Link generated service types

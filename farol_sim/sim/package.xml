@@ -14,6 +14,7 @@
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
   <depend>farol_msgs</depend>
+  <depend>control_allocation</depend>
 
   <build_depend>rosidl_default_generators</build_depend>
 
