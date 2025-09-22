@@ -70,6 +70,6 @@
       ##########################
       # AirmarDX900+ Interface #
       ##########################
-      airmar_dx900:
+      airmardx900:
         port: /dev/ttyS2
         baudrate: 4800 # not being used

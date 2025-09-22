@@ -103,13 +103,13 @@
             transducers: /#vehicle#/drivers/airmar200wx/transducers
             meteo_composite: /#vehicle#/drivers/airmar200wx/meteo_composite
             time_date: /#vehicle#/drivers/airmar200wx/time_date
-      airmar_dx900:
+      airmardx900:
         topics:
           publishers:
-            raw: /#vehicle#/drivers/airmar_dx900/raw
-            nautical_leeway_angle: /#vehicle#/drivers/airmar_dx900/nautical_leeway_angle
-            ground_water_speed: /#vehicle#/drivers/airmar_dx900/ground_water_speed
-            speed_through_water: /#vehicle#/drivers/airmar_dx900/speed_through_water
-            distance_through_water: /#vehicle#/drivers/airmar_dx900/distance_through_water
-            sea_water_temperature: /#vehicle#/drivers/airmar_dx900/sea_water_temperature
-            transducers: /#vehicle#/drivers/airmar_dx900/transducers
+            raw: /#vehicle#/drivers/airmardx900/raw
+            nautical_leeway_angle: /#vehicle#/drivers/airmardx900/nautical_leeway_angle
+            ground_water_speed: /#vehicle#/drivers/airmardx900/ground_water_speed
+            speed_through_water: /#vehicle#/drivers/airmardx900/speed_through_water
+            distance_through_water: /#vehicle#/drivers/airmardx900/distance_through_water
+            sea_water_temperature: /#vehicle#/drivers/airmardx900/sea_water_temperature
+            transducers: /#vehicle#/drivers/airmardx900/transducers
