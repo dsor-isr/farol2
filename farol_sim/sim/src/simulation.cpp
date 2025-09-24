@@ -23,38 +23,62 @@ Simulation::~Simulation() {
  */
 void Simulation::loadParams() {
   
-  freq_ = get_parameter("sim.simulation.node_frequency").as_double();
+  freq_ = get_parameter("sim.simulation.node_frequency").as_int(); 
+  fluid_density = get_parameter("sim.simulation.fluid_density").as_double();
 
-
-  mass = get_parameter("sim.simulation.auv.mass").as_double();
-  zg = get_parameter("sim.simulation.auv.zg").as_double();
-  fluid_density = get_parameter("sim.simulation.auv.fluid_density").as_double();
-  vehicle_density = get_parameter("sim.simulation.auv.vehicle_density").as_double();
+  mass = get_parameter("sim.simulation.vehicle.mass").as_double();
+  zg = get_parameter("sim.simulation.vehicle.zg").as_double();
+  vehicle_density = get_parameter("sim.simulation.vehicle.vehicle_density").as_double();
   
-  inertia = get_parameter("sim.simulation.auv.inertia_tensor").as_double_array();
-  Dl = get_parameter("sim.simulation.auv.linear_damping_tensor").as_double_array();
-  Dq = get_parameter("sim.simulation.auv.quadratic_damping_tensor").as_double_array();
-  added_mass = get_parameter("sim.simulation.auv.added_mass_tensor").as_double_array();
-  allocation_flat = get_parameter("sim.simulation.auv.allocation_matrix").as_double_array();
-  lump_pos = get_parameter("sim.simulation.auv.lump_param_positive").as_double_array();
-  lump_neg = get_parameter("sim.simulation.auv.lump_param_negative").as_double_array();
-  minmax_input = get_parameter("sim.simulation.auv.min_max_thruster_input").as_double_array();
+  inertia = get_parameter("sim.simulation.vehicle.inertia_tensor").as_double_array();
+  Dl = get_parameter("sim.simulation.vehicle.linear_damping_tensor").as_double_array();
+  Dq = get_parameter("sim.simulation.vehicle.quadratic_damping_tensor").as_double_array();
+  added_mass = get_parameter("sim.simulation.vehicle.added_mass_tensor").as_double_array();
 
-  thruster_gain = get_parameter("sim.simulation.auv.thrusters_gain").as_double();
-  thruster_pole = get_parameter("sim.simulation.auv.thrusters_pole").as_double();
-  thruster_delay = get_parameter("sim.simulation.auv.thrusters_delay").as_double();
-  sampling_period = get_parameter("sim.simulation.auv.sampling_period").as_double();
+  allocation_flat = get_parameter("sim.simulation.vehicle.actuators.allocation_matrix").as_double_array();
+  lump_pos = get_parameter("sim.simulation.vehicle.actuators.lump_param_positive").as_double_array();
+  lump_neg = get_parameter("sim.simulation.vehicle.actuators.lump_param_negative").as_double_array();
+  minmax_input = get_parameter("sim.simulation.vehicle.actuators.min_max_thruster_input").as_double_array();
 
-  disturbance_mean = get_parameter("sim.simulation.auv.disturbance_mean").as_double_array();
-  disturbance_sigma = get_parameter("sim.simulation.auv.disturbance_sigma").as_double_array();
-  disturbance_min = get_parameter("sim.simulation.auv.disturbance_minimum").as_double_array();
-  disturbance_max = get_parameter("sim.simulation.auv.disturbance_maximum").as_double_array();
+  thruster_gain = get_parameter("sim.simulation.vehicle.actuators.gain").as_double();
+  thruster_pole = get_parameter("sim.simulation.vehicle.actuators.pole").as_double();
+  thruster_delay = get_parameter("sim.simulation.vehicle.actuators.delay").as_double();
+  sampling_period = get_parameter("sim.simulation.vehicle.actuators.period").as_double();
+
+  disturbance_mean = get_parameter("sim.simulation.current.mean").as_double_array();
+  disturbance_sigma = get_parameter("sim.simulation.current.sigma").as_double_array();
+  disturbance_min = get_parameter("sim.simulation.current.minimum").as_double_array();
+  disturbance_max = get_parameter("sim.simulation.current.maximum").as_double_array();
 
   node_period_ = 1.0/freq_;
 
 
   //TODO: Eigen conversion of the arrays
-  //TODO: Thrusters array to be created from the paramaters defining the number of thrusters
+  Eigen::Vector3d inertia_tensor(inertia[0], inertia[1], inertia[2]);
+
+  Eigen::Matrix<double, 6, 1> Dl_tensor, Dq_tensor, added_mass_tensor;
+  for (int i = 0; i < 6; ++i) {
+    Dl_tensor(i) = Dl[i];
+    Dq_tensor(i) = Dq[i];
+    added_mass_tensor(i) = added_mass[i];
+  }
+
+  size_t n_thrusters = allocation_flat.size() / 6;
+  thrust = Eigen::VectorXd::Zero(n_thrusters);
+  Eigen::MatrixXd allocation_matrix(n_thrusters, 6);
+  for (size_t i = 0; i < n_thrusters; ++i)
+    for (size_t j = 0; j < 6; ++j)
+      allocation_matrix(i, j) = allocation_flat[i * 6 + j];
+
+  Eigen::Vector3d lump_pos_vec(lump_pos[0], lump_pos[1], lump_pos[2]);
+  Eigen::Vector3d lump_neg_vec(lump_neg[0], lump_neg[1], lump_neg[2]);
+  Eigen::Vector2d minmax_vec(minmax_input[0], minmax_input[1]);
+  Eigen::Vector3d dist_mean(disturbance_mean[0], disturbance_mean[1], disturbance_mean[2]);
+  Eigen::Vector3d dist_sigma(disturbance_sigma[0], disturbance_sigma[1], disturbance_sigma[2]);
+  Eigen::Vector3d dist_min(disturbance_min[0], disturbance_min[1], disturbance_min[2]);
+  Eigen::Vector3d dist_max(disturbance_max[0], disturbance_max[1], disturbance_max[2]);
+
+
   
   auv_ = std::make_unique<AUV>(
     mass,
@@ -86,8 +110,8 @@ void Simulation::loadParams() {
 void Simulation::initialiseSubscribers() {
 
   thrust_sub_  = create_subscription<control_allocation::msg::ThrusterRPM>(
-                          get_parameter("sim.simulation.topics.subscribers.thrust").as_string(), 
-                          1, std::bind(&RPMConversion::thrustCallback, this, std::placeholders::_1));
+                          get_parameter("sim.simulation.topics.subscribers.thruster_force").as_string(), 
+                          1, std::bind(&Simulation::thrustCallback, this, std::placeholders::_1));
   return;
 }
 
@@ -98,13 +122,13 @@ void Simulation::initialiseSubscribers() {
 void Simulation::initialisePublishers() {
 
   position_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("sim.simuation.topics.publishers.position").as_string(), 1);
+      get_parameter("sim.simulation.topics.publishers.position").as_string(), 1);
   velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("sim.simuation.topics.publishers.velocity").as_string(), 1);
+      get_parameter("sim.simulation.topics.publishers.velocity").as_string(), 1);
   orientation_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("sim.simuation.topics.publishers.orientation").as_string(), 1);
+      get_parameter("sim.simulation.topics.publishers.orientation").as_string(), 1);
   angular_velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("sim.simuation.topics.publishers.angular_velocity").as_string(), 1);
+      get_parameter("sim.simulation.topics.publishers.angular_velocity").as_string(), 1);
       
   return;
 }
@@ -127,10 +151,11 @@ void Simulation::initialiseServices() {
  */
 void Simulation::initialiseTimers() {
   /* Get node frequency from parameters */
-  int freq = get_parameter("sim.simulation.node_frequency").as_int();
+  node_period_ = 1.0/freq_;
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&Simulation::timerCallback, this));
+  timer_ = create_wall_timer(std::chrono::duration<double>(node_period_),
+                             std::bind(&Simulation::timerCallback, this));
 }
 
 /**
@@ -140,39 +165,39 @@ void Simulation::initialiseTimers() {
 
 void Simulation::thrustCallback(const control_allocation::msg::ThrusterRPM::SharedPtr msg){
 
-  thrust=msg->value;
+  for(int i=0; i < thrust.size(); i++) {
+    thrust[i] = msg->rpm[i];
+    RCLCPP_INFO(this->get_logger(), "Thrust[%d]: %f", i, thrust[i]);
+  }
+
 }
 
 void Simulation::timerCallback() {
-  AUV::update(node_period_, thrust);
 
+  
+  auv_->update(node_period_, thrust);
 
-  /*Publish*/
-  geometry_msgs::msg::Vector3 pos_msg;
-  geometry_msgs::msg::Vector3 vel_msg;
-  geometry_msgs::msg::Vector3 ori_msg;
-  geometry_msgs::msg::Vector3 ang_vel_msg;
+  geometry_msgs::msg::Vector3 pos_msg, vel_msg, ori_msg, ang_vel_msg;
 
-  pos_msg.x = AUV::getX();
-  pos_msg.y = AUV::getY();
-  pos_msg.z = AUV::getZ();
+  pos_msg.x = auv_->getX();
+  pos_msg.y = auv_->getY();
+  pos_msg.z = auv_->getZ();
   position_pub_->publish(pos_msg);
 
-  vel_msg.x = AUV::getSurge();
-  vel_msg.y = AUV::getSway();
-  vel_msg.z = AUV::getHeave();
+  vel_msg.x = auv_->getSurge();
+  vel_msg.y = auv_->getSway();
+  vel_msg.z = auv_->getHeave();
   velocity_pub_->publish(vel_msg);
 
-  ori_msg.x = AUV::getRoll();
-  ori_msg.y = AUV::getPitch();
-  ori_msg.z = AUV::getYaw();
+  ori_msg.x = auv_->getRoll();
+  ori_msg.y = auv_->getPitch();
+  ori_msg.z = auv_->getYaw();
   orientation_pub_->publish(ori_msg);
 
-  ang_vel_msg.x = AUV::getRollRate();
-  ang_vel_msg.y = AUV::getPitchRate();
-  ang_vel_msg.z = AUV::getYawRate();
+  ang_vel_msg.x = auv_->getRollRate();
+  ang_vel_msg.y = auv_->getPitchRate();
+  ang_vel_msg.z = auv_->getYawRate();
   angular_velocity_pub_->publish(ang_vel_msg);
-
   
   return;
 }

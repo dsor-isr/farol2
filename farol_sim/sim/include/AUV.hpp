@@ -5,7 +5,7 @@
 #include <vector>
 #include <tuple>
 
-#include <farol_sim/State.hpp>
+#include "State.hpp"
 
 /**
  * @brief     AUV class - implements a Matlab-like simulation of an AUV in C++
@@ -110,6 +110,9 @@ public:
     double getSurge() const;
     double getSway() const;
     double getHeave() const;
+    double getRollRate() const;
+    double getPitchRate() const;
+    double getYawRate() const;
 
 
 private:

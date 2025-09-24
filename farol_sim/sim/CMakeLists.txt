@@ -10,8 +10,15 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(farol_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(control_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(Eigen3 REQUIRED)
+
+add_library(sim_libraries INTERFACE)
+target_include_directories(sim_libraries INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 
 # Collect all .msg and .srv files
 file(GLOB MSG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
@@ -32,6 +39,7 @@ ament_target_dependencies(
   simulation
   rclcpp
   std_msgs
+  geometry_msgs
   farol_msgs
   control_allocation
 )
@@ -39,6 +47,7 @@ ament_target_dependencies(
 # Link generated service types
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
 target_link_libraries(simulation "${cpp_typesupport_target}")
+target_link_libraries(simulation Eigen3::Eigen)
 
 target_include_directories(simulation PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

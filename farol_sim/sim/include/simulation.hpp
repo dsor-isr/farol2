@@ -9,7 +9,10 @@
 #include "rclcpp/parameter.hpp"
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "control_allocation/msg/thruster_rpm.hpp"
+#include "geometry_msgs/msg/vector3.hpp"
 #include "AUV.hpp"
+#include "Utilis.hpp"
+#include <Eigen/Dense>
 
 #include "sim/msg/placeholder.hpp"
 
@@ -58,12 +61,12 @@ class Simulation : public rclcpp::Node {
     /* Callbacks */
     void thrustCallback(const control_allocation::msg::ThrusterRPM::SharedPtr msg);
 
-    /* Other variables */
-    std::string param1_;
-    std::vector<std::string> list_of_params_;
+    std::unique_ptr<AUV> auv_;
 
-    double freq_;
+    int freq_;
     double node_period_;
+
+    Eigen::VectorXd thrust; 
 
 
     double mass;
@@ -91,6 +94,4 @@ class Simulation : public rclcpp::Node {
     std::vector<double> disturbance_max;
 
 
-
-    int param2_;
 };
