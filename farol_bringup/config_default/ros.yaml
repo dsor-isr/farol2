@@ -47,9 +47,12 @@
         node_frequency: 10
         topics:
           subscribers:
-            test0: "/#vehicle#/sim/something"
+            thruster_force: "/#vehicle#/actuation/thruster_force"
           publishers:
-            test1: "/#vehicle#/sim/something_else"
+            position: "/#vehicle#/sim/position"
+            orientation: "/#vehicle#/sim/orientation"
+            velocity: "/#vehicle#/sim/velocity"
+            angular_velocity: "/#vehicle#/sim/angular_velocity"
           services:
             test2: "/#vehicle#/sim/change_something"
     drivers:

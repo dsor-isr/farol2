@@ -2,8 +2,43 @@
   ros__parameters:
     sim:
       simulation:
-        param1: "test"
-        list_of_params:
-          - "abcd"
-          - "efgh"
-        param2: 1234
+        fluid_density: 1.025 # (kg/l)
+        vehicle:
+          mass: 30.0 # (kg)
+          zg: 0.0 # center of gravity in body axis (m)
+          vehicle_density: 1.0 # TO DEFINE LATER
+          inertia_tensor: [1000.0, 1000.0, 4.14]  # diagonal (3x3) moment of inertia matrix (kg/m2)
+          linear_damping_tensor: [0.0, -55.1, -4.1879, -3000.0, -3000.0, -4.14] # diagonal (6x6) matrix with linear damping
+          quadratic_damping_tensor: [-27.5, -101.0, -40.9649,  -3000.0, -3000.0, -6.23] # diagonal (6x6) matrix with quadratic damping
+          added_mass_tensor: [20.0, 30.0, 80.088, 0.0, 0.0, 0.5] # diagonal (6x6) matrix with added mass terms
+
+          actuators:
+            # For each thruster [Fx, Fy, Fz, lx, ly, lz] where F = forces and l = moments arms
+            # and each line of the matrix represents a thruster
+            allocation_matrix: [1.0, 0.0, 0.0, -0.25, -0.15, 0.0,
+                                1.0, 0.0, 0.0, -0.25,  0.15, 0.0]
+
+            # Thrusters parameter
+            lump_param_positive: [0.00000177778, 0.0, 0.0]  # (a*|x|^{2} + b*|x| + c)
+            lump_param_negative: [-0.00000177778, 0.0, 0.0] # (a*|x|^{2} + b*|x| + c)
+
+            max_input: 100.0 # Maximum normalized input value
+            min_input: 8.6 # Minimum normalized input value (for values < |min_input|) the motors "won't" spin <-> dead-zone
+            min_max_thruster_input: [8.6, 100.0] # Minimum and maximum input values for thrusters
+
+            # A gain used to scale the applied normalized input thrust (in this case used to convert from % to RPM)
+            # This gain is mainly used to convert between scales
+            gain: 45.0
+
+            # Model of each thruster is the same as for a regular DC motor (pole+delay)
+            pole: 7.2115
+            delay: 0.345 # s
+            period: 0.1
+              # Oceans currents as a gaussian process
+        current:
+          mean: [0.0, 0.0, 0.0]
+          sigma: [0.0, 0.0, 0.0]
+          minimum: [0.0, 0.0, 0.0]
+          maximum: [0.0, 0.0, 0.0]
+
+              
