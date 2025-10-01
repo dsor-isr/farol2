@@ -24,6 +24,26 @@
           publishers:
             thruster_force: "/#vehicle#/actuation/thruster_force"
             rudder_angle_ref: "/#vehicle#/ref/rudder_angle"
+    control:
+      inner_loop:
+        pid:
+          node_frequency: 10
+          topics:
+            subscribers:
+              nav_state: "/#vehicle#/nav/filter/state"
+              surge_ref: "/#vehicle#/control/ref/surge"
+              sway_ref: "/#vehicle#/control/ref/sway"
+              heave_ref: "/#vehicle#/control/ref/heave"
+              yaw_ref: "/#vehicle#/control/ref/yaw"
+              pitch_ref: "/#vehicle#/control/ref/pitch"
+              roll_ref: "/#vehicle#/control/ref/roll"
+              yaw_rate_ref: "/#vehicle#/control/ref/yaw_rate"
+              pitch_rate_ref: "/#vehicle#/control/ref/pitch_rate"
+              roll_rate_ref: "/#vehicle#/control/ref/roll_rate"
+            publishers:
+              body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
+            services:
+              change_params: "/#vehicle#/control/pid/change_params"
     nav:
       filter_handler:
         node_frequency: 10
