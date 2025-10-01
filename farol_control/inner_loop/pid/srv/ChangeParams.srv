@@ -1,0 +1,10 @@
+string controller
+float64 kp
+float64 ki
+float64 kd
+float64 lpf_pole
+float64 tau_min
+float64 tau_max
+---
+bool success
+string message

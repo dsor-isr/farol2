@@ -13,6 +13,7 @@
 
 #include "control_allocation/msg/body_wrench_request.hpp"
 #include "farol_msgs/msg/navigation_state.hpp"
+#include "pid/srv/change_params.hpp"
 
 enum ControllerType {
   SURGE = 0,
@@ -27,6 +28,62 @@ enum ControllerType {
   ATTITUDE = 9,
 };
 
+class ControllerPI {
+  public:
+    /* Constructor */
+    ControllerPI(double kp, double ki, double lpf_pole, double tau_min, double tau_max);
+
+    /* Call for controller */
+    double callController(double state, double state_ref, double dt);
+
+    /* Methods for setting parameters */
+    void setParams(double kp, double ki, double lpf_pole, double tau_min, double tau_max);
+  
+  private:
+    /* Controllers' parameters */
+    double kp_;
+    double ki_;
+    double lpf_pole_;
+    double tau_min_;
+    double tau_max_;
+
+    /* Variables for control algorithm */
+    double error_, tau_d_;
+    bool first_it_ = true;
+    double state_prev_ = 0.0, state_dot_ = 0.0, state_dot_filter_ = 0.0, state_dot_filter_prev_ = 0.0;
+    double lpf_A_ = 0.0, lpf_B_ = 0.0;
+    double Ka_, tau_dot_, tau_, tau_prev_, tau_sat_, tau_sat_prev_;
+};
+
+class ControllerPID {
+  public:
+    /* Constructor */
+    ControllerPID(double kp, double ki, double kd, double lpf_pole, double tau_min, double tau_max, bool wrapToPi);
+
+    /* Call for controller */
+    double callController(double state, double state_ref, double state_rate, double dt);
+
+    /* Methods for setting parameters */
+    void setParams(double kp, double ki, double kd, double lpf_pole, double tau_min, double tau_max);
+  
+  private:
+    /* Controllers' parameters */
+    double kp_;
+    double ki_;
+    double kd_;
+    double lpf_pole_;
+    double tau_min_;
+    double tau_max_;
+    bool wrapToPi_;
+
+    /* Variables for control algorithm */
+    double error_, tau_d_;
+    bool first_it_ = true;
+    double state_rate_prev_ = 0.0, state_rate_dot_ = 0.0, state_rate_dot_filter_ = 0.0, state_rate_dot_filter_prev_ = 0.0;
+    double lpf_A_ = 0.0, lpf_B_ = 0.0;
+    double Ka_, tau_dot_, tau_, tau_prev_, tau_sat_, tau_sat_prev_;
+};
+
 /**
  * @brief   PID
  * @author  Eduardo Cunha
@@ -39,6 +96,7 @@ class PID : public rclcpp::Node {
     /* Destructor */
     ~PID();
 
+  private:
     /* Load parameters */
     void loadParams();
 
@@ -57,10 +115,9 @@ class PID : public rclcpp::Node {
     /* Timer callback */
     void timerCallback();
 
-  private:
     /* Timer for node's callbacks */
     rclcpp::TimerBase::SharedPtr timer_;
-
+    
     /* Declare publishers, subscribers, services, etc. */
     rclcpp::Publisher<control_allocation::msg::BodyWrenchRequest>::SharedPtr body_wrench_request_pub_;
 
@@ -75,6 +132,8 @@ class PID : public rclcpp::Node {
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr pitch_rate_ref_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr roll_rate_ref_sub_;
 
+    rclcpp::Service<pid::srv::ChangeParams>::SharedPtr change_params_srv_;
+
     /* Callbacks */
     void navStateCallback(const farol_msgs::msg::NavigationState &msg);
     void surgeRefCallback(const std_msgs::msg::Float32 &msg);
@@ -86,6 +145,8 @@ class PID : public rclcpp::Node {
     void yawRateRefCallback(const std_msgs::msg::Float32 &msg);
     void pitchRateRefCallback(const std_msgs::msg::Float32 &msg);
     void rollRateRefCallback(const std_msgs::msg::Float32 &msg);
+    void changeParamsCallback(const std::shared_ptr<pid::srv::ChangeParams::Request> request,
+                              std::shared_ptr<pid::srv::ChangeParams::Response> response);
 
     /* Map to relate controller names to enum type */
     std::map<std::string, int> controller_map_ = {
@@ -127,7 +188,18 @@ class PID : public rclcpp::Node {
            yaw_rate_ref_ = 0.0, pitch_rate_ref_ = 0.0, roll_rate_ref_ = 0.0;
     double tau_;
 
+    ControllerPI controller_surge_;
+    ControllerPI controller_sway_;
+    ControllerPI controller_heave_;
+    ControllerPID controller_yaw_;
+    ControllerPID controller_pitch_;
+    ControllerPID controller_roll_;
+    ControllerPI controller_yaw_rate_;
+    ControllerPI controller_pitch_rate_;
+    ControllerPI controller_roll_rate_;
+
     /* Other functions */
+    void createControllers();
     bool hasRecentReference(const rclcpp::Time &last_reference_timestamp, const int &node_frequency);
     void callControllers();
     void callControllerSurge();
@@ -141,49 +213,4 @@ class PID : public rclcpp::Node {
     void callControllerRollRate();
     void callControllerAttitude();
     void resetBodyWrenchRequest();
-};
-
-class ControllerPI {
-  public:
-    /* Constructor */
-    ControllerPI(double kp, double ki, double lpf_pole, double tau_min, double tau_max);
-
-    /* Call for controller */
-    double callController(double state, double state_ref, double dt);
-
-    /* Methods for setting parameters */
-    void setGainKp(double kp);
-    void setGainKi(double ki);
-    void setLPFPole(double lpf_pole);
-  
-  private:
-    double kp_;
-    double ki_;
-    double lpf_pole_;
-    double tau_min_;
-    double tau_max_;
-};
-
-class ControllerPID {
-  public:
-    /* Constructor */
-    ControllerPID(double kp, double ki, double kd, double lpf_pole, double tau_min, double tau_max, bool wrapToPi);
-
-    /* Call for controller */
-    double callController(double state, double state_ref, double state_rate, double dt);
-
-    /* Methods for setting parameters */
-    void setGainKp(double kp);
-    void setGainKi(double ki);
-    void setGainKd(double kd);
-    void setLPFPole(double lpf_pole);
-  
-  private:
-    double kp_;
-    double ki_;
-    double kd_;
-    double lpf_pole_;
-    double tau_min_;
-    double tau_max_;
-    bool wrapToPi_;
 };
