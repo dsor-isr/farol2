@@ -55,7 +55,7 @@ inline Eigen::Matrix3d rotationBodyToInertial(double phi, double theta, double p
  * @param psi
  * @return
  */
-inline Eigen::Matrix3d rotationAngularBodyToInertial(double phi, double theta, double psi) {
+inline Eigen::Matrix3d rotationAngularBodyToInertial(double phi, double theta) {
     Eigen::Matrix3d transformation_matrix;
     transformation_matrix << 1, sin(phi) * tan(theta), cos(phi) * tan(theta),
                              0, cos(phi), -sin(phi),

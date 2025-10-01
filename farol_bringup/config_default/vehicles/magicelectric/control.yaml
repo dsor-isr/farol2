@@ -1,0 +1,77 @@
+/**:
+  ros__parameters:
+    control:
+      inner_loop:
+        pid:
+          # Speeds (surge, sway, heave)
+          surge:
+            enabled: true
+            kp: 10.0
+            ki: 1.0
+            lpf_pole: 31.4 # rad/s
+            tau_min: -30.0 # N
+            tau_max: 30.0 # N
+          sway:
+            enabled: false
+            kp: 1.0
+            ki: 1.0
+            lpf_pole: 31.4 # rad/s
+            tau_min: -20.0 # N
+            tau_max: 20.0 # N
+          heave:
+            enabled: false
+            kp: 1.0
+            ki: 1.0
+            lpf_pole: 31.4 # rad/s
+            tau_min: -20.0 # N
+            tau_max: 20.0 # N
+          # Angles (yaw, pitch, roll)
+          yaw:
+            enabled: true
+            kp: 1.0
+            ki: 1.0
+            kd: 1.0
+            lpf_pole: 31.4 # rad/s
+            tau_min: -10.0 # N.m
+            tau_max: 10.0 # N.m
+          pitch:
+            enabled: false
+            kp: 1.0
+            ki: 1.0
+            kd: 1.0
+            lpf_pole: 31.4 # rad/s
+            tau_min: -10.0 # N.m
+            tau_max: 10.0 # N.m
+          roll:
+            enabled: false
+            kp: 1.0
+            ki: 1.0
+            kd: 1.0
+            lpf_pole: 31.4 # rad/s
+            tau_min: -10.0 # N.m
+            tau_max: 10.0 # N.m
+          # Angle rates (yaw rate, pitch rate, roll rate)
+          yaw_rate:
+            enabled: false
+            kp: 1.0
+            ki: 1.0
+            lpf_pole: 31.4 # rad/s
+            tau_min: -10.0 # N.m
+            tau_max: 10.0 # N.m
+          pitch_rate:
+            enabled: false
+            kp: 1.0
+            ki: 1.0
+            lpf_pole: 31.4 # rad/s
+            tau_min: -10.0 # N.m
+            tau_max: 10.0 # N.m
+          roll_rate:
+            enabled: false
+            kp: 1.0
+            ki: 1.0
+            lpf_pole: 31.4 # rad/s
+            tau_min: -10.0 # N
+            tau_max: 10.0 # N-m
+          # Full attitude (yaw, pitch and roll)
+          attitude:
+            enabled: false

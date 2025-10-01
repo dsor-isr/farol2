@@ -24,7 +24,9 @@ $$ N_r = K_s \, l \, ||V_s||^2 \, \delta , $$
 where $l$ is the distance from the rudder to the vehicle's center of mass, $V_s$ is the velocity of the rudder relative to the inertial frame and $K_s$ is a constant dependent on the density of the fluid $\rho$, the area of the rudder surface $A_r$ and another rudder constant $C_L^r$, such that $K_s = \rho \, A_r \, C_L^r$. Therefore, the rudder angle can be computed given the requested torque $\tau_r$:
 $$ \delta = \dfrac{\tau_r}{K_s \, l \, ||V_s||^2}. $$
 The next figure shows a rough sketch of the rudder dynamics:
-<img src="img/rudder_dynamics.png" alt="Rudder Dynamics Figure" width="500" class="center"/>
+<!-- <img src="img/rudder_dynamics.png" alt="Rudder Dynamics Figure" width="500" class="center"/> -->
+<img src="img/yaw-rate-steady-state-new_body_v2_final.png" alt="Rudder Dynamics Figure" width="500" class="center"/>
+
 Considering $\psi$, $\dot{\psi}$, $u$, $v$ as the vehicle's yaw, yaw_rate, surge and sway, respectively, $\chi$ the course angle and $\beta$ the sideslip angle:
 $$ V_s = V 
 \begin{bmatrix}

@@ -109,7 +109,7 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
       }
       filter_state_msg_.utm_position.easting = msg.value[0];
       filter_state_msg_.utm_position.northing = msg.value[1];
-      filter_state_msg_.utm_position.utm_zone = msg.data;
+      filter_state_msg_.utm_position.utm_zone = msg.value[2];
       break;
     /* Depth */
     case msg.MEAS_DEPTH:

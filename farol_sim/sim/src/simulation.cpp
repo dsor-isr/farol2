@@ -26,6 +26,9 @@ void Simulation::loadParams() {
   freq_ = get_parameter("sim.simulation.node_frequency").as_int(); 
   fluid_density = get_parameter("sim.simulation.fluid_density").as_double();
 
+  originLat = get_parameter("sim.simulation.originLat").as_double();
+  originLon = get_parameter("sim.simulation.originLon").as_double();
+
   mass = get_parameter("sim.simulation.vehicle.mass").as_double();
   zg = get_parameter("sim.simulation.vehicle.zg").as_double();
   vehicle_density = get_parameter("sim.simulation.vehicle.vehicle_density").as_double();
@@ -52,8 +55,10 @@ void Simulation::loadParams() {
 
   node_period_ = 1.0/freq_;
 
+  /* Convert origin lat/lon to UTM */
+  GeographicLib::UTMUPS::Forward(originLat, originLon, UTMZone, northp, originEasting, originNorthing);
 
-  //TODO: Eigen conversion of the arrays
+
   Eigen::Vector3d inertia_tensor(inertia[0], inertia[1], inertia[2]);
 
   Eigen::Matrix<double, 6, 1> Dl_tensor, Dq_tensor, added_mass_tensor;
@@ -121,6 +126,8 @@ void Simulation::initialiseSubscribers() {
  */
 void Simulation::initialisePublishers() {
 
+  utm_pub_ = create_publisher<farol_msgs::msg::UTM>(
+      get_parameter("sim.simulation.topics.publishers.utm").as_string(), 1);
   position_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
       get_parameter("sim.simulation.topics.publishers.position").as_string(), 1);
   velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
@@ -177,7 +184,20 @@ void Simulation::timerCallback() {
   
   auv_->update(node_period_, thrust);
 
+
+
+
+
+
   geometry_msgs::msg::Vector3 pos_msg, vel_msg, ori_msg, ang_vel_msg;
+  farol_msgs::msg::UTM utm_msg;
+
+  utm_msg.northing = originNorthing + auv_->getX();
+  utm_msg.easting = originEasting + auv_->getY();
+  utm_msg.utm_zone = UTMZone;
+  utm_msg.northp = northp;
+  utm_pub_->publish(utm_msg);
+  
 
   pos_msg.x = auv_->getX();
   pos_msg.y = auv_->getY();
@@ -485,7 +505,7 @@ std::tuple<Eigen::Vector3d, Eigen::Vector3d> AUV::updateKinematics(const Eigen::
     eta1_dot = (rotationBodyToInertial(this->state_.eta2(0), this->state_.eta2(1), this->state_.eta2(2)) * v1) + ocean_disturbances;
 
     /* Compute the angular velocity in the inertial frame */
-    eta2_dot = rotationAngularBodyToInertial(this->state_.eta2(0), this->state_.eta2(1), this->state_.eta2(2)) * v2;
+    eta2_dot = rotationAngularBodyToInertial(this->state_.eta2(0), this->state_.eta2(1)) * v2;
 
     return std::make_tuple(eta1_dot, eta2_dot);
 }

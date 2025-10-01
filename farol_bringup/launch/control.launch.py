@@ -3,8 +3,6 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch.conditions import IfCondition
-
 
 def generate_launch_description():
   
@@ -35,18 +33,6 @@ def generate_launch_description():
     description='Path to the config package, usually the personal bringup of the workspace, in the src folder'
   )
 
-  launch_simulation_arg = DeclareLaunchArgument(
-    'simulation',
-    default_value='true',
-    description='Boolean to determine if simulation node is launched.'
-  )
-
-  launch_sim_sensors_arg = DeclareLaunchArgument(
-    'sim_sensors',
-    default_value='true',
-    description='Boolean to determine if sim_sensors node is launched.'
-  )
-
   ###################################
   # Define parameters for all nodes #
   ###################################
@@ -70,22 +56,22 @@ def generate_launch_description():
               PythonExpression(["'personal_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
             ]),
 
-            # load default sim configs
+            # load default control configs
             PathJoinSubstitution([
               FindPackageShare('farol_bringup'),
               'config_default',
               'vehicles',
               LaunchConfiguration('vehicle_name'),
-              'sim.yaml'
+              'control.yaml'
             ]),
             
-            # override with personal sim configs
+            # override with personal control configs
             PathJoinSubstitution([
               LaunchConfiguration('config_package_path_share'),
               'config_personal',
               'vehicles',
               LaunchConfiguration('vehicle_name'),
-              'sim.yaml'
+              'control.yaml'
             ]),
           ]
 
@@ -93,23 +79,12 @@ def generate_launch_description():
   ###################
   # Nodes to launch #
   ###################
-  simulation_node = Node(
-    package='sim',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
-    executable='simulation',
-    name='simulation',
+  pid_node = Node(
+    package='pid',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/inner_loop'],
+    executable='pid_control',
+    name='pid',
     output='screen',
-    condition=IfCondition(LaunchConfiguration('simulation')),
-    parameters=params
-  )
-
-  sim_sensors_node = Node(
-    package='sim',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
-    executable='sim_sensors',
-    name='sim_sensors',
-    output='screen',
-    condition=IfCondition(LaunchConfiguration('sim_sensors')),
     parameters=params
   )
 
@@ -122,9 +97,6 @@ def generate_launch_description():
     vehicle_name_arg,
     config_package_path_share_arg,
     config_package_path_real_arg,
-    launch_simulation_arg,
-    launch_sim_sensors_arg,
     # nodes
-    simulation_node,
-    sim_sensors_node,
+    pid_node,
   ])

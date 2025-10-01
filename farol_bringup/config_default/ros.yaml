@@ -24,6 +24,26 @@
           publishers:
             thruster_force: "/#vehicle#/actuation/thruster_force"
             rudder_angle_ref: "/#vehicle#/ref/rudder_angle"
+    control:
+      inner_loop:
+        pid:
+          node_frequency: 10
+          topics:
+            subscribers:
+              nav_state: "/#vehicle#/nav/filter/state"
+              surge_ref: "/#vehicle#/control/ref/surge"
+              sway_ref: "/#vehicle#/control/ref/sway"
+              heave_ref: "/#vehicle#/control/ref/heave"
+              yaw_ref: "/#vehicle#/control/ref/yaw"
+              pitch_ref: "/#vehicle#/control/ref/pitch"
+              roll_ref: "/#vehicle#/control/ref/roll"
+              yaw_rate_ref: "/#vehicle#/control/ref/yaw_rate"
+              pitch_rate_ref: "/#vehicle#/control/ref/pitch_rate"
+              roll_rate_ref: "/#vehicle#/control/ref/roll_rate"
+            publishers:
+              body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
+            services:
+              change_params: "/#vehicle#/control/pid/change_params"
     nav:
       filter_handler:
         node_frequency: 10
@@ -93,26 +113,26 @@
             vn_gnss_health_status: /#vehicle#/drivers/vn310/GPSHealthStatus/data
             vn_gpgga: /#vehicle#/drivers/vn310/GPGGA/data
             corrections_rtk: /#vehicle#/drivers/vn310/corrections_rtk
-      airmar_200wx:
+      airmar200wx:
         topics:
           publishers:
-            raw: /#vehicle#/drivers/airmar_200wx/raw
-            true_heading: /#vehicle#/drivers/airmar_200wx/true_heading
-            wind_true: /#vehicle#/drivers/airmar_200wx/wind_true
-            wind_rel: /#vehicle#/drivers/airmar_200wx/wind_apparent
-            gps_fix: /#vehicle#/drivers/airmar_200wx/gps_fix
-            ground_speed: /#vehicle#/drivers/airmar_200wx/ground_speed
-            rate_of_turn: /#vehicle#/drivers/airmar_200wx/rate_of_turn
-            transducers: /#vehicle#/drivers/airmar_200wx/transducers
-            meteo_composite: /#vehicle#/drivers/airmar_200wx/meteo_composite
-            time_date: /#vehicle#/drivers/airmar_200wx/time_date
-      airmar_dx900:
+            raw: /#vehicle#/drivers/airmar200wx/raw
+            true_heading: /#vehicle#/drivers/airmar200wx/true_heading
+            wind_true: /#vehicle#/drivers/airmar200wx/wind_true
+            wind_rel: /#vehicle#/drivers/airmar200wx/wind_apparent
+            gps_fix: /#vehicle#/drivers/airmar200wx/gps_fix
+            ground_speed: /#vehicle#/drivers/airmar200wx/ground_speed
+            rate_of_turn: /#vehicle#/drivers/airmar200wx/rate_of_turn
+            transducers: /#vehicle#/drivers/airmar200wx/transducers
+            meteo_composite: /#vehicle#/drivers/airmar200wx/meteo_composite
+            time_date: /#vehicle#/drivers/airmar200wx/time_date
+      airmardx900:
         topics:
           publishers:
-            raw: /#vehicle#/drivers/airmar_dx900/raw
-            nautical_leeway_angle: /#vehicle#/drivers/airmar_dx900/nautical_leeway_angle
-            ground_water_speed: /#vehicle#/drivers/airmar_dx900/ground_water_speed
-            speed_through_water: /#vehicle#/drivers/airmar_dx900/speed_through_water
-            distance_through_water: /#vehicle#/drivers/airmar_dx900/distance_through_water
-            sea_water_temperature: /#vehicle#/drivers/airmar_dx900/sea_water_temperature
-            transducers: /#vehicle#/drivers/airmar_dx900/transducers
+            raw: /#vehicle#/drivers/airmardx900/raw
+            nautical_leeway_angle: /#vehicle#/drivers/airmardx900/nautical_leeway_angle
+            ground_water_speed: /#vehicle#/drivers/airmardx900/ground_water_speed
+            speed_through_water: /#vehicle#/drivers/airmardx900/speed_through_water
+            distance_through_water: /#vehicle#/drivers/airmardx900/distance_through_water
+            sea_water_temperature: /#vehicle#/drivers/airmardx900/sea_water_temperature
+            transducers: /#vehicle#/drivers/airmardx900/transducers
