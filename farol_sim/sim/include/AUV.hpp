@@ -17,6 +17,13 @@
 class AUV {
 
 public:
+    /**
+     * Get the most recent linear and angular accelerations (body frame)
+     * @return std::tuple<Eigen::Vector3d, Eigen::Vector3d> (v1_dot, v2_dot)
+     */
+    inline std::tuple<Eigen::Vector3d, Eigen::Vector3d> getAccelerations() const {
+        return std::make_tuple(last_v1_dot_, last_v2_dot_);
+    }
 
     /**
      * FarolAUV class constructor
@@ -113,9 +120,17 @@ public:
     double getRollRate() const;
     double getPitchRate() const;
     double getYawRate() const;
-
+    double getSurgeDot() const; 
+    double getSwayDot() const; 
+    double getHeaveDot() const; 
+    double getRollRateDot() const; 
+    double getPitchRateDot() const; 
+    double getYawRateDot() const; 
 
 private:
+    // Store the most recent linear and angular accelerations (body frame)
+    Eigen::Vector3d last_v1_dot_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d last_v2_dot_ = Eigen::Vector3d::Zero();
 
     /**
      *

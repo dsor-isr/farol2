@@ -22,4 +22,4 @@ float64[] value
 float64[] noise
 
 # Measurement additional data
-string data
+string data 

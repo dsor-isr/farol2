@@ -59,6 +59,8 @@ class Simulation : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr velocity_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr orientation_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_velocity_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr linear_acceleration_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_acceleration_pub_;
 
     rclcpp::Subscription<control_allocation::msg::ThrusterRPM>::SharedPtr thrust_sub_;
     

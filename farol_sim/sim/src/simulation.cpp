@@ -136,6 +136,10 @@ void Simulation::initialisePublishers() {
       get_parameter("sim.simulation.topics.publishers.orientation").as_string(), 1);
   angular_velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
       get_parameter("sim.simulation.topics.publishers.angular_velocity").as_string(), 1);
+  linear_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
+      get_parameter("sim.simulation.topics.publishers.linear_acceleration").as_string(), 1);
+  angular_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
+      get_parameter("sim.simulation.topics.publishers.angular_acceleration").as_string(), 1);
       
   return;
 }
@@ -185,11 +189,7 @@ void Simulation::timerCallback() {
   auv_->update(node_period_, thrust);
 
 
-
-
-
-
-  geometry_msgs::msg::Vector3 pos_msg, vel_msg, ori_msg, ang_vel_msg;
+  geometry_msgs::msg::Vector3 pos_msg, vel_msg, ori_msg, ang_vel_msg, lin_acc_msg, ang_acc_msg;
   farol_msgs::msg::UTM utm_msg;
 
   utm_msg.northing = originNorthing + auv_->getX();
@@ -218,6 +218,17 @@ void Simulation::timerCallback() {
   ang_vel_msg.y = auv_->getPitchRate();
   ang_vel_msg.z = auv_->getYawRate();
   angular_velocity_pub_->publish(ang_vel_msg);
+
+  lin_acc_msg.x = auv_->getSurgeDot();
+  lin_acc_msg.y = auv_->getSwayDot();
+  lin_acc_msg.z = auv_->getHeaveDot();
+  linear_acceleration_pub_->publish(lin_acc_msg);
+
+  ang_acc_msg.x = auv_->getRollRateDot();
+  ang_acc_msg.y = auv_->getPitchRateDot();
+  ang_acc_msg.z = auv_->getYawRateDot();
+  angular_acceleration_pub_->publish(ang_acc_msg);
+
   
   return;
 }
@@ -325,9 +336,12 @@ void AUV::update(double dt, const Eigen::VectorXd &thrust) {
     Eigen::Vector3d ocean_disturbances;
     ocean_disturbances = this->computeOceanDisturbances();
 
-    /* Compute the dynamics of the rigid body - linear and angular acceleration in body frame */
-    Eigen::Vector3d v1_dot, v2_dot;
-    std::tie(v1_dot, v2_dot) = this->updateDynamics(applied_forces_and_torques);
+  /* Compute the dynamics of the rigid body - linear and angular acceleration in body frame */
+  Eigen::Vector3d v1_dot, v2_dot;
+  std::tie(v1_dot, v2_dot) = this->updateDynamics(applied_forces_and_torques);
+  // Store the latest accelerations
+  this->last_v1_dot_ = v1_dot;
+  this->last_v2_dot_ = v2_dot;
 
     /* Integrate the dynamics */
     Eigen::Vector3d v1(this->state_.v1), v2(this->state_.v2);
@@ -595,7 +609,13 @@ double AUV::getSway() const { return state_.v1(1); }
 double AUV::getHeave() const { return state_.v1(2); } 
 double AUV::getRollRate() const { return state_.v2(0); }
 double AUV::getPitchRate() const { return state_.v2(1); }
-double AUV::getYawRate() const { return state_.v2(2); }       
+double AUV::getYawRate() const { return state_.v2(2); }      
+double AUV::getSurgeDot() const { return last_v1_dot_.x(); }
+double AUV::getSwayDot() const { return last_v1_dot_.y(); }
+double AUV::getHeaveDot() const { return last_v1_dot_.z(); }
+double AUV::getRollRateDot() const { return last_v2_dot_.x(); }
+double AUV::getPitchRateDot() const { return last_v2_dot_.y(); }
+double AUV::getYawRateDot() const { return last_v2_dot_.z(); } 
 
 
 
