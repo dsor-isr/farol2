@@ -14,10 +14,23 @@ The current version is built using ROS2 Jazzy, aiming to migrate the previous on
 
 ## Installation
 
+Create a colcon workspace, as such:
+
+```bash
+mkdir -p ~/colcon_ws_sim/src
+```
+
 Clone this repository and its submodules to the colcon workspace:
 
 ```bash
+cd ~/colcon_ws_sim/src
 git clone --recurse-submodules git@github.com:dsor-isr/farol2.git
+```
+
+If you're planning on using FAROL 2 in your own repo, consider cloning FAROL 2 as a submodule instead:
+
+```bash
+git submodule add --recursive git@github.com:dsor-isr/farol2.git
 ```
 
 ## Using FAROL 2 QOL scripts and alias
@@ -63,9 +76,10 @@ export _colcon_cd_root=${COLCON_ROOT}
 
 ## Compiling
 
-Move to the colcon workspace, using `colcon_cd`, for example, and compile:
+Source your colcon workspace dependent setup files, move to the colcon workspace, using `colcon_cd`, for example, and compile:
 
 ```bash
+set_colcon_ws_function sim
 colcon_cd
 colcon build --symlink-install
 ```

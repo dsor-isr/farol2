@@ -1,3 +1,12 @@
 # pid Node
 
-[Info about the node]
+## Diagram
+<!-- ![pid Diagram](img/pid.png) -->
+
+## Subscribers
+
+## Publishers
+
+## Services
+
+## Parameters
