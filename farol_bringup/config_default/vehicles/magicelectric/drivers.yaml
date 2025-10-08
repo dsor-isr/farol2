@@ -9,6 +9,7 @@
         interface:
           port: "can1"
           stbd: "can2"
+        throttle_rate_limit: 10.0 # %/s
 
       #######################
       # CAN_INSTRUMENTATION #
