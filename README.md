@@ -65,6 +65,12 @@ export COLCON_HOME=${HOME}/dsor/ # change according to where the colcon workspac
 export COLCON_ROOT=${COLCON_HOME}${COLCON_WS}
 source ${COLCON_ROOT}/install/setup.bash
 
+# create directory for saving ROS data
+export ROSDATA_DIR=${COLCON_HOME}ROSData
+if [ ! -d "$ROSDATA_DIR" ]; then
+    mkdir -p "$ROSDATA_DIR"
+fi
+
 # set discovery range
 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 
