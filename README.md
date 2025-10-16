@@ -33,6 +33,12 @@ If you're planning on using FAROL 2 in your own repo, consider cloning FAROL 2 a
 git submodule add --recursive git@github.com:dsor-isr/farol2.git
 ```
 
+## Install libraries
+
+```
+sudo apt install libgeographiclib-dev
+```
+
 ## Using FAROL 2 QOL scripts and alias
 
 In order to use FAROL 2 QOL scripts and alias, the following lines should be added to the `~/.bashrc` file. **Note that** these lines already add default ROS2 setup, including the `colcon_cd` command. **Remember to** set `$COLCON_HOME` to the directory where the colcon workspace is created.
@@ -78,6 +84,9 @@ ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 source /usr/share/colcon_cd/function/colcon_cd.sh
 source /usr/share/colcon_cd/function/colcon_cd-argcomplete.bash
 export _colcon_cd_root=${COLCON_ROOT}
+
+# easy sourcing
+alias S='source ${HOME}/.bashrc'
 ```
 
 ## Compiling
