@@ -3,7 +3,7 @@
 <package format="3">
   <name>control_allocation</name>
   <version>0.0.0</version>
-  <description>Control Allocation: Thurster/Rudder Alocation Methods</description>
+  <description>Control Allocation: Thruster/Rudder Allocation Methods</description>
   <maintainer email="eduardo.m.a.cunha@tecnico.ulisboa.pt">Eduardo Cunha</maintainer>
   <license>MIT</license>
 
