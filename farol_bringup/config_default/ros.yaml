@@ -72,6 +72,26 @@
             test1: "/#vehicle#/sim/something_else"
           services:
             test2: "/#vehicle#/sim/change_something"
+    planning:
+      paths:
+        node_frequency: 10
+        topics:
+          subscribers:
+            gamma: "/#vehicle#/control/outer_loop/gamma"
+            vehicle_state: "/#vehicle#/nav/filter/state"
+          publishers:
+            path_data: "/#vehicle#/control/outer_loop/path_data"
+            virtual_target_state: "/#vehicle#/control/outer_loop/virtual_state"
+          services: # Services for constructing a path
+            reset_path: "/#vehicle#/ResetPath"
+            set_mode: "/#vehicle#/SetMode"
+            arc2d_path: "/#vehicle#/SpawnArc2DPath"
+            bernoulli_path: "/#vehicle#/SpawnBernoulliPath"
+            circle2d_path: "/#vehicle#/SpawnCircle2DPath"
+            line_path: "/#vehicle#/SpawnLinePath"
+            speed:
+              const_rabbit_speed: "/#vehicle#/SetConstVdRabbit"
+              const_vehicle_speed: "/#vehicle#/SetConstVdVehicle"
     drivers:
       can_thrusters:
         topics:
