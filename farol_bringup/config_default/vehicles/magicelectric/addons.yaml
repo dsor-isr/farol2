@@ -1,0 +1,10 @@
+/**:
+  ros__parameters:
+    addons:
+      console_parser:
+        path_folder: "../paths_from_console" 
+        vehicle_id: 3
+        console_new: false
+      console_server:
+        PORT: 7080
+        root_namespace: true
