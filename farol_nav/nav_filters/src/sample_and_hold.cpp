@@ -84,7 +84,7 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
     /* Orientation: roll, pitch, yaw */
     case msg.MEAS_ORIENTATION:
       if (msg.value.size() != 3) {
-        RCLCPP_ERROR(get_logger(), "Measurement has incorrect length or type.");
+        RCLCPP_ERROR(get_logger(), "Measurement ORIENTATION has incorrect length or type.");
         break;
       }
       filter_state_msg_.orientation.x = msg.value[0];
@@ -94,7 +94,7 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
     /* Orientation rate: roll rate, pitch rate, yaw rate */
     case msg.MEAS_ORIENTATION_RATE:
       if (msg.value.size() != 3) {
-        RCLCPP_ERROR(get_logger(), "Measurement has incorrect length or type.");
+        RCLCPP_ERROR(get_logger(), "Measurement ORIENTATION_RATE has incorrect length or type.");
         break;
       }
       filter_state_msg_.orientation_rate.x = msg.value[0];
@@ -104,17 +104,17 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
     /* UTM position (easting, northing) and UTM zone */
     case msg.MEAS_UTM_POSITION:
       if (msg.value.size() != 2 || msg.data.size() == 0) {
-        RCLCPP_ERROR(get_logger(), "Measurement has incorrect length or type.");
+        RCLCPP_ERROR(get_logger(), "Measurement UTM_POSITION has incorrect length or type.");
         break;
       }
-      filter_state_msg_.utm_position.easting = msg.value[0];
-      filter_state_msg_.utm_position.northing = msg.value[1];
+      filter_state_msg_.utm_position.northing = msg.value[0];
+      filter_state_msg_.utm_position.easting = msg.value[1];
       filter_state_msg_.utm_position.utm_zone = msg.data;
       break;
     /* Depth */
     case msg.MEAS_DEPTH:
       if (msg.value.size() != 1) {
-        RCLCPP_ERROR(get_logger(), "Measurement has incorrect length or type.");
+        RCLCPP_ERROR(get_logger(), "Measurement DEPTH has incorrect length or type.");
         break;
       }
       filter_state_msg_.depth = msg.value[0];
@@ -122,7 +122,7 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
     /* Altimeter */
     case msg.MEAS_ALTIMETER:
       if (msg.value.size() != 1) {
-        RCLCPP_ERROR(get_logger(), "Measurement has incorrect length or type.");
+        RCLCPP_ERROR(get_logger(), "Measurement ALTIMETER has incorrect length or type.");
         break;
       }
       filter_state_msg_.altimeter = msg.value[0];
@@ -130,7 +130,7 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
     /* Altitude realtive to the ellipsoid, WGS84 */
     case msg.MEAS_ALTITUDE_WGS84:
       if (msg.value.size() != 1) {
-        RCLCPP_ERROR(get_logger(), "Measurement has incorrect length or type.");
+        RCLCPP_ERROR(get_logger(), "Measurement ALTITUDE_WGS84 has incorrect length or type.");
         break;
       }
       filter_state_msg_.altitude_ellipsoidal = msg.value[0];
@@ -138,7 +138,7 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
     /* Inertial velocity expressed in the body */
     case msg.MEAS_BODY_VELOCITY_INERTIAL:
       if (msg.value.size() != 3) {
-        RCLCPP_ERROR(get_logger(), "Measurement has incorrect length or type.");
+        RCLCPP_ERROR(get_logger(), "Measurement BODY_VELOCITY_INERTIAL has incorrect length or type.");
         break;
       }
       filter_state_msg_.body_velocity_inertial.x = msg.value[0];
@@ -156,7 +156,7 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
     /* Velocity expressed in the body relative to the fluid */
     case msg.MEAS_BODY_VELOCITY_FLUID:
       if (msg.value.size() != 3) {
-        RCLCPP_ERROR(get_logger(), "Measurement has incorrect length or type.");
+        RCLCPP_ERROR(get_logger(), "Measurement BODY_VELOCITY_FLUID has incorrect length or type.");
         break;
       }
       filter_state_msg_.body_velocity_fluid.x = msg.value[0];
