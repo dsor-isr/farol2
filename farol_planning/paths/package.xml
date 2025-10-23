@@ -17,6 +17,7 @@
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
   <depend>farol_msgs</depend>
+  <depend>farol_utils</depend>
   <depend>eigen3_cmake_module</depend>
   <depend>Eigen3</depend>
 
