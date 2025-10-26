@@ -55,6 +55,12 @@
             wp_heading: "/#vehicle#/control/outer_loop/send_wp_heading"
           console:
             waypoint: "wp_standard"
+      nav2console_state:
+        topics:
+          subscribers:
+            nav_state: "/#vehicle#/nav/filter/state"
+          publishers:
+            console_state: "/#vehicle#/State"
     control:
       inner_loop:
         pid:

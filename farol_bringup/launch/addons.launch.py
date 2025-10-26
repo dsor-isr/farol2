@@ -94,7 +94,15 @@ def generate_launch_description():
     executable='console_server',
     name='console_server',
     output='screen',
-    # arguments=['console'],
+    parameters=params,
+  )
+
+  nav2console_state_node = Node(
+    package='nav2console_state',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/addons'],
+    executable='nav2console_state_node',
+    name='nav2console_state',
+    output='screen',
     parameters=params,
   )
 
@@ -109,5 +117,6 @@ def generate_launch_description():
     config_package_path_real_arg,
     # nodes
     console_parser_node,
-    console_server_node
+    console_server_node,
+    nav2console_state_node
   ])
