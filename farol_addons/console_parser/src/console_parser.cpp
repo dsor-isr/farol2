@@ -13,20 +13,8 @@ ConsoleParser::ConsoleParser() : Node("console_parser",
     initializeServices();
     initializeTimer();
 
-    RCLCPP_WARN(get_logger(), "before");
-
     depth_end = rclcpp::Time(0,1);
-
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr mission_pub = 
-      create_publisher<std_msgs::msg::String>(
-        get_parameter("addons.console_parser.topics.subscribers.Mission_String").as_string(), 1);
-
-    std_msgs::msg::String msg;
-    msg.data = "3\n481844.386 4282309.864 29S\nLINE 258.23 131.86 -226.06 11.69 0.30 -1";
-    mission_pub->publish(msg);
-    
-    RCLCPP_WARN(get_logger(), "after");
-  }
+}
 
 /**
  * @brief  Console Path Parser node destructor
@@ -144,7 +132,7 @@ void ConsoleParser::missionStringCallback(const std_msgs::msg::String &msg) {
   char buffer[BUF_SIZE_TIME];
   time(&rawtime);
   timeinfo = localtime(&rawtime);
-  strftime(buffer, BUF_SIZE_TIME, "/%Y-%m-%d_%I-%M-%S.txt", timeinfo);
+  strftime(buffer, BUF_SIZE_TIME, "/%Y-%m-%d_%H-%M-%S.txt", timeinfo);
   RCLCPP_INFO_STREAM(get_logger(), "PATH: " << path_folder);
   std::string str(path_folder + buffer);
   RCLCPP_INFO(get_logger(), "Saving mission in: [%s]", str.c_str());
