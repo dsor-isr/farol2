@@ -15,10 +15,10 @@ The waypoint node takes in the filtered state of the vehicle, as well as the *Fl
 ## Publishers
 | Publishers | msg type | Purpose |
 | --- | --- | --- |
-| /#vehicle#/ref/surge | [std_msgs/Float64](http://docs.ros.org/en/api/std_msgs/html/msg/Float64.html) | Surge reference for vehicle to follow |
-| /#vehicle#/ref/sway | [std_msgs/Float64](http://docs.ros.org/en/api/std_msgs/html/msg/Float64.html) | Sway reference for vehicle to follow |
-| /#vehicle#/ref/yaw | [std_msgs/Float64](http://docs.ros.org/en/api/std_msgs/html/msg/Float64.html) | Yaw reference for vehicle to follow |
-| /#vehicle#/ref/yaw_rate | [std_msgs/Float64](http://docs.ros.org/en/api/std_msgs/html/msg/Float64.html) | Yaw rate for vehicle to follow |
+| /#vehicle#/ref/surge | [std_msgs/Float32](http://docs.ros.org/en/api/std_msgs/html/msg/Float32.html) | Surge reference for vehicle to follow |
+| /#vehicle#/ref/sway | [std_msgs/Float32](http://docs.ros.org/en/api/std_msgs/html/msg/Float32.html) | Sway reference for vehicle to follow |
+| /#vehicle#/ref/yaw | [std_msgs/Float32](http://docs.ros.org/en/api/std_msgs/html/msg/Float32.html) | Yaw reference for vehicle to follow |
+| /#vehicle#/ref/yaw_rate | [std_msgs/Float32](http://docs.ros.org/en/api/std_msgs/html/msg/Float32.html) | Yaw rate for vehicle to follow |
 | /#vehicle#/Flag | [std_msgs/Int8](http://docs.ros.org/en/api/std_msgs/html/msg/Int8.html) | Flag that determines teh state of the vehicle (idle, following waypoint, path, etc.) |
 
 ## Services

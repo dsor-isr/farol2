@@ -3,9 +3,9 @@
 Service to send the waypoint information to the node.
 
 ```
-float64 x
-float64 y
-float64 yaw
+float32 x
+float32 y
+float32 yaw
 ---
 bool success
 string message
