@@ -75,3 +75,17 @@
           # Full attitude (yaw, pitch and roll)
           attitude:
             enabled: false
+      outer_loop:
+        waypoint:
+          cdist: 1.5
+          delta_t: 5.0
+          type1:
+            gains:
+                ku: 1.0
+                ks: 4.0
+                speed_turn: 5.0
+          type2:
+            gains:
+              k1: 0.05
+              k2: 0.1
+              k3: 0.1

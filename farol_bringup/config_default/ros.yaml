@@ -23,7 +23,7 @@
             nav_state: "/#vehicle#/nav/filter/state"
           publishers:
             thruster_force: "/#vehicle#/actuation/thruster_force"
-            rudder_angle_ref: "/#vehicle#/ref/rudder_angle"
+            rudder_angle_ref: "/#vehicle#/control/ref/rudder_angle"
     addons:
       console_parser:
         node_frequency: 5
@@ -37,8 +37,8 @@
             Formation: "/#vehicle#/addons/formation"
             biased_formation: "/#vehicle#/addons/biased_formation"
             WPRef: "/#vehicle#/addons/WPRef"
-            DepthRef: "/#vehicle#/ref/depth"
-            AltRef: "/#vehicle#/ref/altitude"
+            DepthRef: "/#vehicle#/control/ref/depth"
+            AltRef: "/#vehicle#/control/ref/altitude"
             FullMission: "/#vehicle#/addons/full_mission"
           services:
             reset_path: "/#vehicle#/ResetPath"
@@ -81,6 +81,24 @@
               body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
             services:
               change_params: "/#vehicle#/control/pid/change_params"
+      outer_loop:
+        waypoint:
+          node_frequency: 10
+          topics:
+            subscribers:
+              mission_status: "/#vehicle#/mission_status"
+              state: "/#vehicle#/nav/filter/state"
+              turn_radius_flag: "/#vehicle#/turn_radius_flag"
+            publishers:
+              yaw_ref: "/#vehicle#/control/ref/yaw"
+              yaw_rate_ref: "/#vehicle#/control/ref/yaw_rate"
+              u_ref: "/#vehicle#/control/ref/surge"
+              v_ref: "/#vehicle#/control/ref/sway"
+              mission_status: "/#vehicle#/mission_status"
+            services:
+              wp_standard: "/#vehicle#/control/outer_loop/send_wp_standard"
+              wp_loose: "/#vehicle#/control/outer_loop/send_wp_loose"
+              wp_heading: "/#vehicle#/control/outer_loop/send_wp_heading"
     nav:
       filter_handler:
         node_frequency: 10
