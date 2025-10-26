@@ -10,7 +10,10 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(farol_msgs REQUIRED)
+find_package(farol_utils REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(eigen3_cmake_module REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 # Collect all .srv files
 file(GLOB SRV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "srv/*.srv")
@@ -23,28 +26,36 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 ament_export_dependencies(rosidl_default_runtime)
 
-# add_executable(waypoint_node src/waypoint.cpp)
+add_executable(waypoint_node 
+  src/waypoint.cpp
+  src/wp_heading.cpp
+  src/wp_loose.cpp
+  src/wp_standard.cpp
+)
 
-# ament_target_dependencies(
-#   waypoint_node
-#   rclcpp
-#   std_msgs
-#   farol_msgs
-# )
+ament_target_dependencies(
+  waypoint_node
+  rclcpp
+  std_msgs
+  farol_msgs
+  farol_utils
+  Eigen3
+  eigen3_cmake_module
+)
 
-# add_dependencies(waypoint_node ${PROJECT_NAME}__rosidl_typesupport_cpp)
+add_dependencies(waypoint_node ${PROJECT_NAME}__rosidl_typesupport_cpp)
 
-# # Link generated service types
-# rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
-# target_link_libraries(waypoint_node "${cpp_typesupport_target}")
+# Link generated service types
+rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
+target_link_libraries(waypoint_node "${cpp_typesupport_target}")
 
-# target_include_directories(waypoint_node PUBLIC
-#   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-#   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+target_include_directories(waypoint_node PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
   
-# target_compile_features(waypoint_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(waypoint_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
   
-# install(TARGETS waypoint_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS waypoint_node DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
