@@ -754,7 +754,9 @@ def cmd_set_topic(args, console_server: Node):
 
     if(console_server.get_parameter('addons.console_server.topics.console.waypoint').get_parameter_value().string_value in topic_name):
       try:
-        send_wp_standard = console_server.create_client(SendWpType1, topic_name)
+        actual_service_topic = console_server.get_parameter('addons.console_server.topics.services.wp_standard').get_parameter_value().string_value
+
+        send_wp_standard = console_server.create_client(SendWpType1, actual_service_topic)
 
         # create request
         req = SendWpType1.Request()
@@ -1520,6 +1522,7 @@ class ConsoleServer(Node):
     self.declare_parameter('pages_folder', "/home/farol/farol-sw/farol_common/http_server/pages/") # should point to the package's own directory
     self.declare_parameter('addons.console_server.PORT', 7080)
     self.declare_parameter('addons.console_server.topics.console.waypoint', 'wp_standard')
+    self.declare_parameter('addons.console_server.topics.services.wp_standard', 'wp_standard')
 
     MISSION_PATH = self.get_parameter('addons.console_parser.path_folder').get_parameter_value().string_value
     pages_folder = self.get_parameter('pages_folder').get_parameter_value().string_value
