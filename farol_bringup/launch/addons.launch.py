@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, Shutdown
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -88,6 +88,16 @@ def generate_launch_description():
     parameters=params
   )
 
+  console_server_node = Node(
+    package='console_server',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/addons'],
+    executable='console_server',
+    name='console_server',
+    output='screen',
+    # arguments=['console'],
+    parameters=params,
+  )
+
   ######################################################
   # Return launch description with arguments and nodes #
   ######################################################
@@ -99,4 +109,5 @@ def generate_launch_description():
     config_package_path_real_arg,
     # nodes
     console_parser_node,
+    console_server_node
   ])
