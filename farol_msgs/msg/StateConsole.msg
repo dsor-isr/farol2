@@ -11,9 +11,9 @@ uint8 imu_good # 0 = Bad; 1 = Good/Not Filtered; 2= ; 3 = Very good
 # Depth Measurement
 float64 depth
 
-# North
+# East (console is in ENU, so x is east)
 float64 x
-# East 
+# North (console is in ENU, so y is north)
 float64 y
 # Down
 float64 z
