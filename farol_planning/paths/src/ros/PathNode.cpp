@@ -152,8 +152,8 @@ void PathNode::timerCallback() {
       /* Create a message with the state of the virtual target and 
        * publish it (to be seen as a virtual vehicle)
        */
-      vt_state_msg.x = pd.value()[0];
-      vt_state_msg.y = pd.value()[1];
+      vt_state_msg.y = pd.value()[0];
+      vt_state_msg.x = pd.value()[1];
       vt_state_msg.z = pd.value()[2];
       vt_state_msg.yaw = tangent.value() * 180.0 / M_PI; 
 
