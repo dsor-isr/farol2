@@ -24,6 +24,37 @@
           publishers:
             thruster_force: "/#vehicle#/actuation/thruster_force"
             rudder_angle_ref: "/#vehicle#/ref/rudder_angle"
+    addons:
+      console_parser:
+        node_frequency: 5
+        topics:
+          subscribers: 
+            Mission_String: "/#vehicle#/addons/Mission_String"
+            state: "/#vehicle#/nav/filter/state"
+            mission_status: "/#vehicle#/mission_status"
+          publishers:
+            Path_Section: "/#vehicle#/addons/path_section"
+            Formation: "/#vehicle#/addons/formation"
+            biased_formation: "/#vehicle#/addons/biased_formation"
+            WPRef: "/#vehicle#/addons/WPRef"
+            DepthRef: "/#vehicle#/ref/depth"
+            AltRef: "/#vehicle#/ref/altitude"
+            FullMission: "/#vehicle#/addons/full_mission"
+          services:
+            reset_path: "/#vehicle#/ResetPath"
+            arc2d_path: "/#vehicle#/SpawnArc2DPath"
+            line_path: "/#vehicle#/SpawnLinePath"
+            pf_start: "/#vehicle#/PFStart"
+            pf_stop: "/#vehicle#/PFStop"
+            set_speed: "/#vehicle#/SetConstVdVehicle"
+      console_server:
+        topics:
+          services:
+            wp_standard: "/#vehicle#/control/outer_loop/send_wp_standard"
+            wp_loose: "/#vehicle#/control/outer_loop/send_wp_loose"
+            wp_heading: "/#vehicle#/control/outer_loop/send_wp_heading"
+          console:
+            waypoint: "wp_standard"
     control:
       inner_loop:
         pid:
