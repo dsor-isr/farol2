@@ -75,6 +75,11 @@
           # Full attitude (yaw, pitch and roll)
           attitude:
             enabled: false
+        open_loop:
+          # Speeds (surge)
+          surge:
+            enabled: true
+            gain: 100.0
       outer_loop:
         waypoint:
           cdist: 1.5
