@@ -9,13 +9,11 @@ RPMConversion::RPMConversion() : Node("rpm_conversion",
   initialiseSubscribers();
   initialisePublishers();
   initialiseServices();
-  initialiseTimers();
 }
 
 /* Destructor */
 RPMConversion::~RPMConversion() {
-  /* Stop the timer */
-  timer_->cancel();
+
 }
 
 /**
@@ -25,6 +23,10 @@ void RPMConversion::initialiseSubscribers() {
   thruster_force_sub_ = create_subscription<control_allocation::msg::ThrusterForce>(
                           get_parameter("actuation.rpm_conversion.topics.subscribers.thruster_force").as_string(), 
                           1, std::bind(&RPMConversion::thrusterForceCallback, this, std::placeholders::_1));
+
+  nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
+                    get_parameter("actuation.rpm_conversion.topics.subscribers.nav_state").as_string(), 
+                    1, std::bind(&RPMConversion::navStateCallback, this, std::placeholders::_1));
 
   return;
 }
@@ -36,9 +38,21 @@ void RPMConversion::initialiseSubscribers() {
  * other complex types, this method should be adapted for further robustness.
  */
 void RPMConversion::loadParams() {
+  mode_ = get_parameter("actuation.thrusters.rpm_conversion.mode").as_int();
+
+  if (mode_ != 0 && mode_ != 1) {
+    mode_ = 1;
+  }
+
+  /* Thruster parameters */
+  rho_ = get_parameter("actuation.thrusters.rpm_conversion.mode0.rho").as_double();
+  K_T_BP_ = get_parameter("actuation.thrusters.rpm_conversion.mode0.K_T_BP").as_double();
+  prop_pitch_ = get_parameter("actuation.thrusters.rpm_conversion.mode0.prop_pitch").as_double();
+  D_ = get_parameter("actuation.thrusters.rpm_conversion.mode0.D").as_double();
+
   /* Thruster coefficients */
-  coef_fwd_ = get_parameter("actuation.thrusters.rpm_conversion.coef_fwd").as_double_array();
-  coef_bwd_ = get_parameter("actuation.thrusters.rpm_conversion.coef_bwd").as_double_array();
+  coef_fwd_ = get_parameter("actuation.thrusters.rpm_conversion.mode1.coef_fwd").as_double_array();
+  coef_bwd_ = get_parameter("actuation.thrusters.rpm_conversion.mode1.coef_bwd").as_double_array();
 
   /* Minimum and maximum RPM allowed */
   max_rpm_ = get_parameter("actuation.thrusters.rpm_conversion.max_rpm").as_double();
@@ -67,17 +81,6 @@ void RPMConversion::initialiseServices() {
 }
 
 /**
- * @brief Initialise Timers
- */
-void RPMConversion::initialiseTimers() {
-  /* Get node frequency from parameters */
-  int freq = get_parameter("actuation.rpm_conversion.node_frequency").as_int();
-
-  /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&RPMConversion::timerCallback, this));
-}
-
-/**
  * @brief Compute force for each thruster based on body wrench (force and torque) request.
  */
 void RPMConversion::thrusterForceCallback(const control_allocation::msg::ThrusterForce &msg) {
@@ -87,35 +90,51 @@ void RPMConversion::thrusterForceCallback(const control_allocation::msg::Thruste
   
   /* Convert force to RPM */
   for (int i = 0; i < (int)msg.force.size(); i++) {
-    if (msg.force[i] == 0.0) {
-      rpm_command_msg_.rpm.push_back(0.0);
-    } else if (msg.force[i] > 0.0) {
-      rpm_value_ = (-coef_fwd_[1] + sqrt(coef_fwd_[1] * coef_fwd_[1] - 4 * coef_fwd_[0] * (coef_fwd_[2] - msg.force[i]))) / (2 * coef_fwd_[0]);
+    if (mode_ == 1) {
+      if (msg.force[i] == 0.0) {
+        rpm_command_msg_.rpm.push_back(0.0);
+      } else if (msg.force[i] > 0.0) {
+        rpm_value_ = (-coef_fwd_[1] + sqrt(coef_fwd_[1] * coef_fwd_[1] - 4 * coef_fwd_[0] * (coef_fwd_[2] - msg.force[i]))) / (2 * coef_fwd_[0]);
 
-      /* Saturate */
-      rpm_value_ = (rpm_value_ > max_rpm_) ? max_rpm_ : rpm_value_;
+        /* Saturate */
+        rpm_value_ = (rpm_value_ > max_rpm_) ? max_rpm_ : rpm_value_;
 
-      rpm_command_msg_.rpm.push_back(rpm_value_);
-    } else {
-      rpm_value_ = (-coef_bwd_[1] + sqrt(coef_bwd_[1] * coef_bwd_[1] - 4 * coef_bwd_[0] * (coef_bwd_[2] - msg.force[i]))) / (2 * coef_bwd_[0]);
+        rpm_command_msg_.rpm.push_back(rpm_value_);
+      } else {
+        rpm_value_ = (-coef_bwd_[1] + sqrt(coef_bwd_[1] * coef_bwd_[1] - 4 * coef_bwd_[0] * (coef_bwd_[2] - msg.force[i]))) / (2 * coef_bwd_[0]);
 
-      /* Saturate */
-      rpm_value_ = (rpm_value_ < min_rpm_) ? min_rpm_ : rpm_value_;
+        /* Saturate */
+        rpm_value_ = (rpm_value_ < min_rpm_) ? min_rpm_ : rpm_value_;
 
-      rpm_command_msg_.rpm.push_back(rpm_value_);
+        rpm_command_msg_.rpm.push_back(rpm_value_);
+      }
+    } else if (mode_ == 0) {
+      if (msg.force[i] == 0.0) {
+        rpm_command_msg_.rpm.push_back(0.0);
+      } else {
+        double a = rho_*pow(D_,4)*K_T_BP_;
+        double b = -rho_*pow(D_,4)*K_T_BP_/prop_pitch_*surge_;
+        double c = - msg.force[i];
+
+        rpm_value_ = ((-b + sqrt(pow(b,2) - 4*a*c)) / (2*a)) * 60; /* RPM = RPS x 60 */
+
+        /* Saturate */
+        rpm_value_ = (rpm_value_ > max_rpm_) ? max_rpm_ : rpm_value_;
+
+        rpm_command_msg_.rpm.push_back(rpm_value_);
+      }
     }
-  }
 
   /* Publish */
   rpm_command_pub_->publish(rpm_command_msg_);
+  }
 }
 
 /**
- * @brief Timer callback for this node.
- *        Where the algorithms will constantly run.
+ * @brief Callback for navigation state.
  */
-void RPMConversion::timerCallback() {
-  return;
+void RPMConversion::navStateCallback(const farol_msgs::msg::NavigationState &msg) {
+  surge_ = msg.body_velocity_fluid.x;
 }
 
 /**
