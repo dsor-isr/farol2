@@ -27,8 +27,8 @@
 #include "paths/srv/spawn_line.hpp"
 #include "paths/srv/set_const_speed.hpp"
 
-// #include "path_following/srv/start_p_f.h"
-// #include "path_following/srv/stop_p_f.h"
+#include "path_following/srv/start_pf.hpp"
+#include "path_following/srv/stop_pf.hpp"
 
 // ROS messages and stuff
 #include "geometry_msgs/msg/point.hpp"
@@ -116,8 +116,8 @@ class ConsoleParser : public rclcpp::Node {
     rclcpp::Publisher<farol_msgs::msg::Formation>::SharedPtr formation_pub_;
     rclcpp::Publisher<farol_msgs::msg::Formation>::SharedPtr biased_formation_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr wpref_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr altitude_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr depth_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr altitude_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr depth_pub_;
     rclcpp::Publisher<farol_msgs::msg::MultiSection>::SharedPtr fullpath_pub_;
     rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr flag_pub_;
 
@@ -131,14 +131,14 @@ class ConsoleParser : public rclcpp::Node {
     rclcpp::Client<paths::srv::SetConstSpeed>::SharedPtr set_path_speed_client_;
 
     /* Path Following clients - to start and stop the path following algorithm */
-    // rclcpp::Client<path_following::srv::StartPF>::SharedPtr stop_pf_client_;
-    // rclcpp::Client<path_following::srv::StopPF>::SharedPtr start_pf_client_;
+    rclcpp::Client<path_following::srv::StartPF>::SharedPtr start_pf_client_;
+    rclcpp::Client<path_following::srv::StopPF>::SharedPtr stop_pf_client_;
 
     /* ROS Clock */
     rclcpp::Clock clock_;
 
     // +.+ Reference position
-    std_msgs::msg::Float64 aux;
+    std_msgs::msg::Float32 aux;
     geometry_msgs::msg::PointStamped Reference_;
 
     // #######################################################################################
