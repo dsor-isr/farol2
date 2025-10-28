@@ -121,6 +121,15 @@ def generate_launch_description():
     parameters=params
   )
 
+  throttle_conversion_node = Node(
+    package='control_allocation',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/actuation'],
+    executable='throttle_conversion',
+    name='throttle_conversion',
+    output='screen',
+    parameters=params
+  )
+
   wrench_manager_node = Node(
     package='wrench_manager',
     namespace=[LaunchConfiguration('vehicle_ns'), '/actuation'],
@@ -145,5 +154,6 @@ def generate_launch_description():
     static_thruster_allocation_node,
     thruster_rudder_allocation_node,
     rpm_conversion_node,
-    wrench_manager_node
+    throttle_conversion_node,
+    wrench_manager_node,
   ])
