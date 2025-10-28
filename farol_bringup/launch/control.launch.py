@@ -115,6 +115,15 @@ def generate_launch_description():
     parameters=params
   )
 
+  rudder_control_node = Node(
+    package='rudder',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/inner_loop'],
+    executable='rudder_control',
+    name='rudder',
+    output='screen',
+    parameters=params
+  )
+
   ######################################################
   # Return launch description with arguments and nodes #
   ######################################################
@@ -129,4 +138,5 @@ def generate_launch_description():
     waypoint_node,
     path_following_node,
     open_loop_node,
+    rudder_control_node,
   ])

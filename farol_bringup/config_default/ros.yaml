@@ -6,8 +6,15 @@
         topics:
           subscribers:
             thruster_force: "/#vehicle#/actuation/thruster_force"
+            nav_state: "/#vehicle#/nav/filter/state"
           publishers:
             rpm_command: "/#vehicle#/actuation/rpm_command"
+      throttle_conversion:
+        topics:
+          subscribers:
+            rpm_command: "/#vehicle#/actuation/rpm_command"
+          publishers:
+            throttle_command: "/#vehicle#/throttle_command"
       static_thruster_allocation:
         node_frequency: 10
         topics:
@@ -110,6 +117,14 @@
               # torque_x: "/#vehicle#/actuation/torque_x"
               # torque_y: "/#vehicle#/actuation/torque_y"
               # torque_z: "/#vehicle#/actuation/torque_z"
+        rudder:
+          topics:
+            node_frequency: 10
+            subscribers:
+              rudder_angle_ref: "/#vehicle#/control/ref/rudder_angle"
+              rudder_angle: "/#vehicle#/drivers/can_instrumentation/rudder_angle"
+            publishers:
+              rudder_command: "/#vehicle#/rudder_command"
       outer_loop:
         waypoint:
           node_frequency: 10

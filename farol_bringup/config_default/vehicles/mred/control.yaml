@@ -80,15 +80,17 @@
           surge:
             enabled: true
             gain: 100.0
+        rudder:
+          deadzone: 4.0 # deg, if the rudder angle error is lower than this, don't actuate
       outer_loop:
         waypoint:
           cdist: 1.5
           delta_t: 5.0
           type1:
             gains:
-                ku: 1.0
-                ks: 4.0
-                speed_turn: 5.0
+              ku: 1.0
+              ks: 4.0
+              speed_turn: 5.0
           type2:
             gains:
               k1: 0.05
