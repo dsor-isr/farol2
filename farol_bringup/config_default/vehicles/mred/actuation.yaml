@@ -1,12 +1,56 @@
 /**:
   ros__parameters:
     actuation:
+      model:
+        K_s: 1.0
+        K_L: 0.0    # 0.0 -> drag induced by rudder is not accounted for
+        K_D0: 0.0   # 0.0 -> drag induced by rudder is not accounted for
+        K_D1: 0.0   # 0.0 -> drag induced by rudder is not accounted for
+      rudder:
+        limits:
+          max: 36.0 # [deg]
+          min: -36.0 # [deg]
+        cm_distance: 4.0 # [m]
       thrusters:
-        0:
-          name: "Portside"
-          moment_arms: [-4.0, -1.5, 0.0] # [m]
-          angles: [0.0, 0.0, 0.0] # roll, pitch, yaw [deg]
-        1:
-          name: "Starboard"
-          moment_arms: [-4.0, 1.5, 0.0] # [m]
-          angles: [0.0, 0.0, 0.0] # roll, pitch, yaw [deg]
+        rpm_conversion:
+          max_rpm: 2000.0
+          min_rpm: -2000.0
+          mode: 1
+          mode0:
+            # Force [N] = rho*(rpm/60)^2*D^4*K_T_BP*(1 - u/(rps*prop_pitch))
+            rho: 1025.0 # % Density of salt water kg/m^3
+            K_T_BP: 0.061461915
+            prop_pitch: 0.381 # 15 in
+            D: 0.4318 # m
+          mode1:
+            # Forces (N) = ct[0]*RPM^2 + c[1]*RPM + c[2]
+            coef_fwd: [0.00000177778, 0.0, 0.0]     # parameters for farol seabotix, eqn -> Thrust = f(rpm)
+            coef_bwd: [-0.00000177778, 0.0, 0.0]    # parameters for farol seabotix, eqn -> Thrust = f(rpm)
+        throttle_conversion:
+          k: 20.0 # throttle[%] * k = [RPM] -> throttle[%] = [RPM] / k
+        configuration:
+          0:
+            name: "Portside"
+            moment_arms: [-4.0, -1.5, 0.0] # [m]
+            angles: [0.0, 0.0, 0.0] # roll, pitch, yaw [deg]
+          1:
+            name: "Starboard"
+            moment_arms: [-4.0, 1.5, 0.0] # [m]
+            angles: [0.0, 0.0, 0.0] # roll, pitch, yaw [deg]
+          # TEST: MYELLOW HORIZONTAL THRUSTERS 45 DEG
+          # 0:
+          #   name: "Portside-Bow"
+          #   moment_arms: [1.0, -1.0, 0.0]
+          #   angles: [0.0, 0.0, 45.0] # roll, pitch, yaw
+          # 1:
+          #   name: "Starboard-Bow"
+          #   moment_arms: [1.0, 1.0, 0.0]
+          #   angles: [0.0, 0.0, -45.0] # roll, pitch, yaw
+          # 2:
+          #   name: "Portside-Stern"
+          #   moment_arms: [-1.0, -1.0, 0.0]
+          #   angles: [0.0, 0.0, -45.0] # roll, pitch, yaw
+          # 3:
+          #   name: "Starboard-Stern"
+          #   moment_arms: [-1.0, 1.0, 0.0]
+          #   angles: [0.0, 0.0, 45.0] # roll, pitch, yaw
