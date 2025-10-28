@@ -121,6 +121,15 @@ def generate_launch_description():
     parameters=params
   )
 
+  wrench_manager_node = Node(
+    package='wrench_manager',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/actuation'],
+    executable='wrench_manager_node',
+    name='wrench_manager',
+    output='screen',
+    parameters=params
+  )
+
   ######################################################
   # Return launch description with arguments and nodes #
   ######################################################
@@ -135,5 +144,6 @@ def generate_launch_description():
     # nodes
     static_thruster_allocation_node,
     thruster_rudder_allocation_node,
-    rpm_conversion_node
+    rpm_conversion_node,
+    wrench_manager_node
   ])

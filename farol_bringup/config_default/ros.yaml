@@ -24,6 +24,18 @@
           publishers:
             thruster_force: "/#vehicle#/actuation/thruster_force"
             rudder_angle_ref: "/#vehicle#/control/ref/rudder_angle"
+      wrench_manager:
+        node_frequency: 10
+        topics:
+          subscribers:
+            thrust_x: "/#vehicle#/actuation/thrust_x"
+            thrust_y: "/#vehicle#/actuation/thrust_y"
+            thrust_z: "/#vehicle#/actuation/thrust_z"
+            torque_x: "/#vehicle#/actuation/torque_x"
+            torque_y: "/#vehicle#/actuation/torque_y"
+            torque_z: "/#vehicle#/actuation/torque_z"
+          publishers:
+            body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
     addons:
       console_parser:
         node_frequency: 5
@@ -78,9 +90,26 @@
               pitch_rate_ref: "/#vehicle#/control/ref/pitch_rate"
               roll_rate_ref: "/#vehicle#/control/ref/roll_rate"
             publishers:
-              body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
+              thrust_x: "/#vehicle#/actuation/thrust_x"
+              thrust_y: "/#vehicle#/actuation/thrust_y"
+              thrust_z: "/#vehicle#/actuation/thrust_z"
+              torque_x: "/#vehicle#/actuation/torque_x"
+              torque_y: "/#vehicle#/actuation/torque_y"
+              torque_z: "/#vehicle#/actuation/torque_z"
             services:
               change_params: "/#vehicle#/control/pid/change_params"
+        open_loop:
+          node_frequency: 10
+          topics:
+            subscribers:
+              surge_ref: "/#vehicle#/control/ref/surge"
+            publishers:
+              thrust_x: "/#vehicle#/actuation/thrust_x"
+              # thrust_y: "/#vehicle#/actuation/thrust_y"
+              # thrust_z: "/#vehicle#/actuation/thrust_z"
+              # torque_x: "/#vehicle#/actuation/torque_x"
+              # torque_y: "/#vehicle#/actuation/torque_y"
+              # torque_z: "/#vehicle#/actuation/torque_z"
       outer_loop:
         waypoint:
           node_frequency: 10

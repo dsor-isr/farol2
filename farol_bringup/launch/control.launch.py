@@ -106,6 +106,15 @@ def generate_launch_description():
     parameters=params
   )
 
+  open_loop_node = Node(
+    package='open_loop',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/inner_loop'],
+    executable='open_loop_control',
+    name='open_loop',
+    output='screen',
+    parameters=params
+  )
+
   ######################################################
   # Return launch description with arguments and nodes #
   ######################################################
@@ -119,4 +128,5 @@ def generate_launch_description():
     pid_node,
     waypoint_node,
     path_following_node,
+    open_loop_node,
   ])
