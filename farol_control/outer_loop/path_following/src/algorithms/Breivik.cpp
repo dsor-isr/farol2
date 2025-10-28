@@ -1,0 +1,180 @@
+#include "Breivik.h"
+
+/* The constructor for the Aguiar Path Following Controller */
+Breivik::Breivik(rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surge_pub, 
+                 rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_pub, 
+                 rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rabbit_pub, 
+                 double delta_h) {
+
+  /* Save the publishers, to latter publish the data */
+  this->surge_pub_ = surge_pub;
+  this->yaw_pub_ = yaw_pub;
+  this->rabbit_pub_ = rabbit_pub;
+
+  /* Save the Breivik gains */
+  this->delta_h_ = delta_h;
+}
+
+/* Method used to set the path following gains */
+bool Breivik::setPFGains(std::vector<double> gains) {
+  // Breiviks algorithm receives no gains
+  return false; 
+}
+
+/* Method that implements the control law */
+void Breivik::callPFController(double dt) {
+  
+  /* Update the angles for the path and the vehicle in a continuous manner */
+  this->smoothVehicleYaw();
+  this->smoothPathYaw();
+  
+  /* Get the path parameters */
+  Eigen::Vector2d path_pd;
+  path_pd << this->path_state_.pd[0], this->path_state_.pd[1];
+  double path_hg = this->path_state_.tangent_norm;
+  double path_vd = this->path_state_.vd;
+
+  /* Get the vehicle parameters */
+  Eigen::Vector2d veh_p;
+  veh_p << this->vehicle_state_.eta1[0], this->vehicle_state_.eta1[1];
+
+  /* Compute the rotation matrix */
+  Eigen::Matrix2d RI_F;
+  RI_F << cos(this->psi_out_), sin(this->psi_out_), -sin(this->psi_out_), cos(this->psi_out_);
+
+  /* Compute the error */
+  Eigen::Vector2d pos_error = RI_F * (veh_p - path_pd);
+  double s1 = pos_error[0];
+  double y1 = pos_error[1];
+  double psie = this->yaw_out_ - this->psi_out_;
+
+  /* Compute the control law */
+  double ud;
+  ud = path_hg * (path_vd + path_state_.vc);
+
+  /* Save the control law to be published */
+  this->desired_surge_ = std::min(std::max(ud, 0.0), 1.5);
+  this->desired_yaw_ = this->path_state_.psi + atan(-y1 / this->delta_h_);
+
+  /* Convert the yaw from rad to deg (used by the inner-loop controller) */
+  this->desired_yaw_ = this->desired_yaw_ * 180.0 / M_PI;
+
+  /* Compute the evolution of the virtual target */
+  double k3 = 1.0;
+  double uP = ud * cos(psie) + k3 * s1;
+  
+  double v_gamma = uP / path_hg;
+  this->gamma_dot_ = v_gamma;
+  this->gamma_dot_ = std::min(std::max(this->gamma_dot_, -0.5), 0.5);
+
+  /* Saturate the values of gamma to guarantee that if we start the */
+  if (this->gamma_ <= this->path_state_.gamma_min && this->gamma_dot_ < 0) {
+    this->gamma_dot_ = 0.0;
+    this->gamma_ = this->path_state_.gamma_min;
+  }
+
+  /* Make sure gamma does not return to a previous path section, given that
+  each path section is paramaterised from 0 to 1 */
+  this->gamma_dot_ = this->preventPathSectionSwitching(this->gamma_, this->gamma_dot_, dt);
+  
+  /* Integrate to get the virtual target position */
+  this->gamma_ += this->gamma_dot_ * dt;
+  
+  /* Path following values for debug */
+  pfollowing_debug_.algorithm = "Breivik"; 
+  pfollowing_debug_.cross_track_error = pos_error[1];
+  pfollowing_debug_.along_track_error = pos_error[0];
+  pfollowing_debug_.yaw = yaw_out_;
+  pfollowing_debug_.psi = psi_out_;
+  pfollowing_debug_.gamma = gamma_;
+}
+
+/* Auxiliar method to smooth the vehicle angle */
+void Breivik::smoothVehicleYaw() {
+  
+  if (!std::isnan(this->vehicle_state_.eta2[2])) {
+    this->yaw_out_ = this->algConvert(this->vehicle_state_.eta2[2], this->yaw_old_, this->yaw_out_old_);  
+    this->yaw_old_ = this->vehicle_state_.eta2[2];
+    this->yaw_out_old_ = this->yaw_out_;
+  }
+}
+
+/* Auxiliar method to smooth the path angle */
+void Breivik::smoothPathYaw() {
+  
+  if (!std::isnan(this->path_state_.psi)) {
+    this->psi_out_ = this->algConvert(this->path_state_.psi, this->psi_old_, this->psi_out_old_);
+    this->psi_old_ = this->path_state_.psi;
+    this->psi_out_old_ = this->psi_out_;
+  }
+}
+
+/* Method to publish the data computed from the algorithm */
+void Breivik::publish_private(){
+  std_msgs::msg::Float32 msg;
+    
+  /* Publish the control references */
+  msg.data = this->desired_surge_;
+  this->surge_pub_->publish(msg);
+  
+  msg.data = this->desired_yaw_ / 180 * M_PI;
+  this->yaw_pub_->publish(msg);
+
+  /* Publish the virtual targets value */
+  msg.data = this->gamma_;
+  this->rabbit_pub_->publish(msg);
+}
+
+/* Method that will run in the first iteration of the algorithm */
+void Breivik::start() {
+  std_msgs::msg::Float32 msg;
+  
+  /* Publish the initial virtual target value to get the data from the path */
+  msg.data = this->gamma_;
+  this->rabbit_pub_->publish(msg);
+}
+
+/* Method used to check whether we reached the end of the algorithm or not */
+bool Breivik::stop() {
+
+  /**
+   * Check if the gamma is greater then the gamma max of the path 
+   * If so, we have reached the end
+   */
+  if(this->gamma_ >= this->path_state_.gamma_max) return true;
+
+  return false;
+}
+
+/* Method to reset all the algorithm data when the path following restarts */
+bool Breivik::reset() {
+  
+  /* Reset the velocity references */
+  this->desired_surge_ = 0.0;
+  this->desired_yaw_ = 0.0;
+  
+  /* Reset the auxiliar variables for the angles*/
+  this->yaw_out_ = 0.0;
+  this->yaw_out_old_ = 0.0;
+  this->yaw_old_ = 0.0;
+    
+  this->psi_out_ = 0.0;
+  this->psi_out_old_ = 0.0;
+  this->psi_old_ = 0.0;
+
+  /* Reset the virtual target */
+  this->gamma_dot_ = 0.0;
+  this->gamma_ = 0.0;
+
+  return true;
+}
+
+/* Method to reset the virtual target of the vehicle (gamma) */
+bool Breivik::resetVirtualTarget(float value) {
+  
+  /* Reset the virtual target */
+  this->gamma_dot_ = 0.0;
+  this->gamma_ = value;
+
+  return true;
+}

@@ -58,10 +58,10 @@ void ConsoleParser::initializePublishers() {
   wpref_pub_ = create_publisher<geometry_msgs::msg::PointStamped>(
                 get_parameter("addons.console_parser.topics.publishers.WPRef").as_string(), 1);
 
-  altitude_pub_ = create_publisher<std_msgs::msg::Float64>(
+  altitude_pub_ = create_publisher<std_msgs::msg::Float32>(
                     get_parameter("addons.console_parser.topics.publishers.DepthRef").as_string(), 1);
 
-  depth_pub_ = create_publisher<std_msgs::msg::Float64>(
+  depth_pub_ = create_publisher<std_msgs::msg::Float32>(
                 get_parameter("addons.console_parser.topics.publishers.AltRef").as_string(), 1);
 
   fullpath_pub_ = create_publisher<farol_msgs::msg::MultiSection>(
@@ -83,13 +83,13 @@ void ConsoleParser::initializeServices() {
                         get_parameter("addons.console_parser.topics.services.line_path").as_string());
 
   set_path_speed_client_ = create_client<paths::srv::SetConstSpeed>(
-                            get_parameter("addons.console_parser.topics.services.pf_start").as_string());
+                            get_parameter("addons.console_parser.topics.services.set_speed").as_string());
 
-  // start_pf_client_ = create_client<path_following::srv::StartPF>(
-  //                     get_parameter("addons.console_parser.topics.services.pf_stop").as_string());
+  start_pf_client_ = create_client<path_following::srv::StartPF>(
+                      get_parameter("addons.console_parser.topics.services.pf_start").as_string());
 
-  // stop_pf_client_ = create_client<path_following::srv::StopPF>(
-  //                     get_parameter("addons.console_parser.topics.services.set_speed").as_string());
+  stop_pf_client_ = create_client<path_following::srv::StopPF>(
+                      get_parameter("addons.console_parser.topics.services.pf_stop").as_string());
 }
 
 /**
@@ -228,8 +228,8 @@ void ConsoleParser::requestPath() {
   /* If there was at least one valid section to follow, invoke the path following algorithm */
   if(run >= 1) {
       /* Call the path following service */
-      // path_following::srv::StartPF::Request req;
-      // start_pf_client_->async_send_request(req);
+      std::shared_ptr<path_following::srv::StartPF::Request> req = std::make_shared<path_following::srv::StartPF::Request>();
+      start_pf_client_->async_send_request(req);
   }
 }
 
@@ -757,7 +757,7 @@ void ConsoleParser::depthCallback() {
     }
   }
 
-  std_msgs::msg::Float64 depth;
+  std_msgs::msg::Float32 depth;
   // +.+ Depth Reference
   if (DesiredDepth >= 0) {
     depth.data = DesiredDepth;

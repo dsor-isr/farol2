@@ -44,8 +44,8 @@
             reset_path: "/#vehicle#/ResetPath"
             arc2d_path: "/#vehicle#/SpawnArc2DPath"
             line_path: "/#vehicle#/SpawnLinePath"
-            pf_start: "/#vehicle#/PFStart"
-            pf_stop: "/#vehicle#/PFStop"
+            pf_start: "/#vehicle#/control/outer_loop/path_following/Start"
+            pf_stop: "/#vehicle#/control/outer_loop/path_following/Stop"
             set_speed: "/#vehicle#/SetConstVdVehicle"
       console_server:
         topics:
@@ -99,6 +99,56 @@
               wp_standard: "/#vehicle#/control/outer_loop/send_wp_standard"
               wp_loose: "/#vehicle#/control/outer_loop/send_wp_loose"
               wp_heading: "/#vehicle#/control/outer_loop/send_wp_heading"
+        path_following:
+          node_frequency: 10
+          topics:
+            subscribers:
+              mission_status: "/#vehicle#/mission_status"
+              state: "/#vehicle#/nav/filter/state"
+              path_data: "/#vehicle#/control/outer_loop/path_data"
+              vc: "/#vehicle#/control/outer_loop/path_following/vc"
+            publishers:
+              mission_status: "/#vehicle#/mission_status"
+              surge: "/#vehicle#/control/ref/surge"
+              sway: "/#vehicle#/control/ref/sway"
+              heave: "/#vehicle#/control/ref/heave"
+              roll: "/#vehicle#/control/ref/roll"
+              roll_rate: "/#vehicle#/control/ref/roll_rate"
+              pitch: "/#vehicle#/control/ref/pitch"
+              pitch_rate: "/#vehicle#/control/ref/pitch_rate"
+              yaw: "/#vehicle#/control/ref/yaw"
+              yaw_rate: "/#vehicle#/control/ref/yaw_rate"
+              # Publishers for the virtual target
+              rabbit: "/#vehicle#/control/outer_loop/gamma"
+              # Observer for the currents
+              observer:
+                x: "/#vehicle#/current/x"
+                y: "/#vehicle#/current/y"
+              # Publish info for plots
+              pfollowing_debug: "/#vehicle#/control/outer_loop/path_following/debug"
+            services:
+              # Service names to start and stop the path following algorithm
+              start_pf: "/#vehicle#/control/outer_loop/path_following/Start"
+              stop_pf: "/#vehicle#/control/outer_loop/path_following/Stop"
+              updates_gains_pf: "/#vehicle#/control/outer_loop/path_following/UpdateGains"
+              reset_vt_pf: "/#vehicle#/ResetVT"
+              # Service names to switch the path following algorithm
+              relative_heading_pf: "/#vehicle#/control/outer_loop/path_following/SetRelativeHeading"
+              marcelo_pf: "/#vehicle#/control/outer_loop/path_following/SetMarcelo"
+              aguiar_pf: "/#vehicle#/control/outer_loop/path_following/SetAguiar"
+              breivik_pf: "/#vehicle#/control/outer_loop/path_following/SetBrevik"
+              fossen_pf: "/#vehicle#/control/outer_loop/path_following/SetFossen"
+              romulo_pf: "/#vehicle#/control/outer_loop/path_following/SetRomulo"
+              lapierre_pf: "/#vehicle#/control/outer_loop/path_following/SetLapierre"
+              pramod_pf: "/#vehicle#/control/outer_loop/path_following/SetPramod"
+              samson_pf: "/#vehicle#/control/outer_loop/path_following/SetSamson"
+              # Service names related to the path
+              reset_path: "/#vehicle#/ResetPath"
+              set_path_mode: "/#vehicle#/SetMode"
+              # Service names related to the waypoint
+              wp_standard: "/#vehicle#/control/outer_loop/send_wp_standard"
+              # Service for resetting Dead Reckoning in filter
+              reset_dr: "/#vehicle#/nav/filter/reset_dead_reckoning"
     nav:
       filter_handler:
         node_frequency: 10
@@ -155,24 +205,24 @@
             mission_status: "/#vehicle#/mission_status"
           publishers:
             port:
-              can_raw: "/#vehicle#/can_thrusters/port/can_raw"
-              throttle_status0: "/#vehicle#/can_thrusters/port/throttle_status0"
-              motor_controller_status0: "/#vehicle#/can_thrusters/port/motor_controller_status0"
-              motor_controller_status1: "/#vehicle#/can_thrusters/port/motor_controller_status1"
+              can_raw: "/#vehicle#/drivers/can_thrusters/port/can_raw"
+              throttle_status0: "/#vehicle#/drivers/can_thrusters/port/throttle_status0"
+              motor_controller_status0: "/#vehicle#/drivers/can_thrusters/port/motor_controller_status0"
+              motor_controller_status1: "/#vehicle#/drivers/can_thrusters/port/motor_controller_status1"
             stbd:
-              can_raw: "/#vehicle#/can_thrusters/stbd/can_raw"
-              throttle_status0: "/#vehicle#/can_thrusters/stbd/throttle_status0"
-              motor_controller_status0: "/#vehicle#/can_thrusters/stbd/motor_controller_status0"
-              motor_controller_status1: "/#vehicle#/can_thrusters/stbd/motor_controller_status1"
+              can_raw: "/#vehicle#/drivers/can_thrusters/stbd/can_raw"
+              throttle_status0: "/#vehicle#/drivers/can_thrusters/stbd/throttle_status0"
+              motor_controller_status0: "/#vehicle#/drivers/can_thrusters/stbd/motor_controller_status0"
+              motor_controller_status1: "/#vehicle#/drivers/can_thrusters/stbd/motor_controller_status1"
       can_instrumentation:
         topics:
           subscribers:
             rudder_command: "/#vehicle#/rudder_command"
           publishers:
-            position: "/#vehicle#/can_instrumentation/position"
-            orientation: "/#vehicle#/can_instrumentation/orientation"
-            can_raw: "/#vehicle#/can_instrumentation/can_raw"
-            rudder_angle: "/#vehicle#/can_instrumentation/rudder_angle"
+            position: "/#vehicle#/drivers/can_instrumentation/position"
+            orientation: "/#vehicle#/drivers/can_instrumentation/orientation"
+            can_raw: "/#vehicle#/drivers/can_instrumentation/can_raw"
+            rudder_angle: "/#vehicle#/drivers/can_instrumentation/rudder_angle"
             measurement: "/#vehicle#/measurement"
       vn310:
         node_frequency: 10

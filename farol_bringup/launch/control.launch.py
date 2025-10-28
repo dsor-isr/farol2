@@ -97,6 +97,15 @@ def generate_launch_description():
     parameters=params
   )
 
+  path_following_node = Node(
+    package='path_following',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/outer_loop'],
+    executable='path_following_node',
+    name='path_following',
+    output='screen',
+    parameters=params
+  )
+
   ######################################################
   # Return launch description with arguments and nodes #
   ######################################################
@@ -109,4 +118,5 @@ def generate_launch_description():
     # nodes
     pid_node,
     waypoint_node,
+    path_following_node,
   ])

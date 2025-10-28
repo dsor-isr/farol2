@@ -40,7 +40,7 @@ void PathNode::loadParams() {
  * by the constructor of the PathNode class upon object creation
  */
 void PathNode::initializeSubscribers() {
-  this->gamma_sub_ = create_subscription<std_msgs::msg::Float64>(
+  this->gamma_sub_ = create_subscription<std_msgs::msg::Float32>(
                       get_parameter("planning.paths.topics.subscribers.gamma").as_string(), 
                       1, std::bind(&PathNode::gammaCallback, this, std::placeholders::_1));
 
@@ -166,9 +166,9 @@ void PathNode::timerCallback() {
 /**
  * @brief  Callback to update the current gamma of the path
  *
- * @param msg  A Float64/Double with the current value of gamma
+ * @param msg  A Float32/Double with the current value of gamma
  */
-void PathNode::gammaCallback(const std_msgs::msg::Float64 &msg) {
+void PathNode::gammaCallback(const std_msgs::msg::Float32 &msg) {
 
   /* Update the current gamma value */
   this->gamma_ = msg.data;

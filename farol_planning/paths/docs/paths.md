@@ -9,7 +9,7 @@ This node deals with the rationale previously explained in the *paths* documenta
 ## Subscribers
 | Subscribers | msgs type | Purpose |
 | ----------- | -------------- | --------- |
-| /#vehicle#/control/outer_loop/gamma | [std\_msgs/Float64](http://docs.ros.org/en/api/std_msgs/html/msg/Float64.html) | The coordination state of a certain vehicle with respect to others on the network |
+| /#vehicle#/control/outer_loop/gamma | [std\_msgs/Float32](http://docs.ros.org/en/api/std_msgs/html/msg/Float32.html) | The coordination state of a certain vehicle with respect to others on the network |
 | /#vehicle#/nav/filter/state | farol\_msgs/NavigationState | The navigation state of the vehicle after filtering                               |
 
 ## Publishers

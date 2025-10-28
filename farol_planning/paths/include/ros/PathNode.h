@@ -11,7 +11,7 @@
 #include "rclcpp/parameter.hpp"
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "std_msgs/msg/string.hpp"
-#include "std_msgs/msg/float64.hpp"
+#include "std_msgs/msg/float32.hpp"
 
 /* Include the message for publishing the path information */
 #include "paths/msg/path_data.hpp"
@@ -92,7 +92,7 @@ class PathNode : public rclcpp::Node {
     /**
      * @brief ROS Subscribers
      */ 
-    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr gamma_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr gamma_sub_;
     rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr vehicle_sub_;
 
     /** 
@@ -134,7 +134,7 @@ class PathNode : public rclcpp::Node {
     /** 
      * @brief Callbacks 
      */
-    void gammaCallback(const std_msgs::msg::Float64 &msg);
+    void gammaCallback(const std_msgs::msg::Float32 &msg);
     void vehicleStateCallback(const farol_msgs::msg::NavigationState &msg);
 
     /** 

@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>console_parser</name>
+  <name>path_following</name>
   <version>0.0.0</version>
-  <description>Console Parser</description>
+  <description>Path Following: Implementation of path following controllers for the Farol class of vehicles. This package is based on an old implementation of path following created by João Cruz and Nguyen Hung</description>
   <maintainer email="eduardo.m.a.cunha@tecnico.ulisboa.pt">Eduardo Cunha</maintainer>
   <license>MIT</license>
 
@@ -13,12 +13,13 @@
   <!-- dependencies libraries -->
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
-  <depend>geometry_msgs</depend>
   <depend>farol_msgs</depend>
-  <depend>farol_utils</depend>
-  <depend>paths</depend>
-  <depend>path_following</depend>
+  <depend>geometry_msgs</depend>
   <depend>Eigen3</depend>
+  <depend>waypoint</depend>
+  <depend>paths</depend>
+  <depend>farol_utils</depend>
+
 
   <build_depend>rosidl_default_generators</build_depend>
 

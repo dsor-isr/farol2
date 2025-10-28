@@ -131,7 +131,7 @@ void Waypoint::stateCallback(const farol_msgs::msg::NavigationState &msg) {
   veh_state_.v1[1] = msg.body_velocity_inertial.y;
 
   // // send message if error and stop timer
-  // if (!(msg.status & msg.STATUS_ALL_OK) && timer_->is_ready()) {
+  // if (!(msg.status & msg.STATUS_ALL_OK) && !timer_->is_canceled()) {
   //   RCLCPP_ERROR(get_logger(), "The filter estimate is not good, disabling WayPoint");
   //   timer_->cancel();
   // }
@@ -140,7 +140,7 @@ void Waypoint::stateCallback(const farol_msgs::msg::NavigationState &msg) {
 void Waypoint::missionStatusCallback(const std_msgs::msg::Int8 &msg) {
   // stop the waypoint controller if the mission status has been changed to other value
   // than 4
-  if (timer_->is_ready() && msg.data != 4) {
+  if (!timer_->is_canceled() && msg.data != 4) {
     timer_->cancel();
     RCLCPP_INFO(get_logger(), "Some process changed the mission status to %d", msg.data);
   }

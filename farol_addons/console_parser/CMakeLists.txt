@@ -13,7 +13,7 @@ find_package(farol_msgs REQUIRED)
 find_package(farol_utils REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(paths REQUIRED)
-# find_package(path_following REQUIRED)
+find_package(path_following REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
@@ -32,7 +32,7 @@ ament_target_dependencies(
   farol_msgs
   farol_utils
   paths
-  # path_following
+  path_following
   Eigen3
   eigen3_cmake_module
 )
