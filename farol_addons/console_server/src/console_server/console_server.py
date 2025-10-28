@@ -613,7 +613,6 @@ def fill_message(msg, args, console_server: Node):
 
   # If args is a list or tuple — assign fields by order
   elif isinstance(args, Sequence) and not isinstance(args, (str, bytes)):
-    console_server.get_logger().warn("<2>")
     fields = msg.__slots__
 
     try:
@@ -621,10 +620,7 @@ def fill_message(msg, args, console_server: Node):
     except:
       pass
 
-    console_server.get_logger().warn("FIELDS: " + str(fields))
-
     for i, val in enumerate(args):
-      console_server.get_logger().warn("VAL, type: " + str(type(val)) + " -> " + str(val))
       if i >= len(fields):
         break
       field_name = fields[i][1:] if fields[i].startswith('_') else fields[i]
@@ -638,7 +634,6 @@ def fill_message(msg, args, console_server: Node):
 
   # If scalar — assign directly if possible
   else:
-    console_server.get_logger().warn("<3>")
     
     fields = msg.__slots__
     fields.remove("_check_fields")
@@ -662,7 +657,7 @@ def _publish_latched(pub, msg):
   try:
     pub.publish(msg)
   except Exception as e:
-    console_server.get_logger().warn("EYO3.4: " + str(e))
+    console_server.get_logger().warn(str(e))
 
 def publish_message(pub, msg_class, pub_args, console_server: Node):
   """
@@ -674,11 +669,8 @@ def publish_message(pub, msg_class, pub_args, console_server: Node):
   :param pub_args: Arguments to initialize message that is published, ``[val]``
   """
 
-  console_server.get_logger().warn("->>>>> " + str(type(msg_class)))
-
   msg = msg_class()
   try:
-    console_server.get_logger().warn("EYO3.2")
     msg = fill_message(msg, pub_args, console_server)
   except Exception as e:
     console_server.get_logger().warn(str(e))
@@ -687,7 +679,7 @@ def publish_message(pub, msg_class, pub_args, console_server: Node):
   try:
     _publish_latched(pub, msg)
   except Exception as e:
-    console_server.get_logger().warn("EYO3.3: Unable to publish message. One of the fields has an incorrect type\n" + str(e))
+    console_server.get_logger().warn("Unable to publish message. One of the fields has an incorrect type\n" + str(e))
     return 0
 
 def cmd_set_topic(args, console_server: Node):
@@ -745,7 +737,6 @@ def cmd_set_topic(args, console_server: Node):
     try:
       pub_args = []
       pub_args.append(yaml.safe_load(args))
-      # console_server.get_logger().warn("EYO3: " + pub_args)
     except Exception as e:
       console_server.get_logger().warn("Argument error: %s"% str(e))
       return 0
