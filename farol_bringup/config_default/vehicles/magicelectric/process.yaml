@@ -4,6 +4,15 @@
 # workspace.                                           #
 ########################################################
 processes:
+  - name: 'bag_record'
+    launch_on_startup: true
+    delay_before_start: 0.0
+    cmd: 'ros2 launch farol_bringup bag_record.launch.py'
+    args:
+      - compression:=false
+      # - prefix:=something_you_want # default prefix is the vehicle's namespace
+    dependencies:
+      []
   - name: 'navigation'
     launch_on_startup: true
     delay_before_start: 0.0

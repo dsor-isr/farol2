@@ -34,6 +34,7 @@ ament_export_dependencies(rosidl_default_runtime)
 add_executable(static_thruster_allocation src/static_thruster_allocation.cpp)
 add_executable(thruster_rudder_allocation src/thruster_rudder_allocation.cpp)
 add_executable(rpm_conversion src/rpm_conversion.cpp)
+add_executable(throttle_conversion src/throttle_conversion.cpp)
 
 ament_target_dependencies(
   static_thruster_allocation
@@ -57,6 +58,14 @@ ament_target_dependencies(
   rpm_conversion
   rclcpp
   std_msgs
+  farol_msgs
+)
+
+ament_target_dependencies(
+  throttle_conversion
+  rclcpp
+  std_msgs
+  farol_msgs
 )
 
 # Link generated service types
@@ -64,6 +73,7 @@ rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_t
 target_link_libraries(static_thruster_allocation "${cpp_typesupport_target}")
 target_link_libraries(thruster_rudder_allocation "${cpp_typesupport_target}")
 target_link_libraries(rpm_conversion "${cpp_typesupport_target}")
+target_link_libraries(throttle_conversion "${cpp_typesupport_target}")
 
 target_include_directories(static_thruster_allocation PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -76,17 +86,24 @@ target_include_directories(thruster_rudder_allocation PUBLIC
 target_include_directories(rpm_conversion PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+
+target_include_directories(throttle_conversion PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
   
 target_compile_features(static_thruster_allocation PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 target_compile_features(thruster_rudder_allocation PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 target_compile_features(rpm_conversion PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+
+target_compile_features(throttle_conversion PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
   
 install(TARGETS
   static_thruster_allocation
   thruster_rudder_allocation
   rpm_conversion
+  throttle_conversion
   DESTINATION lib/${PROJECT_NAME}
 )
 

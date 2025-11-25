@@ -119,7 +119,12 @@ class PID : public rclcpp::Node {
     rclcpp::TimerBase::SharedPtr timer_;
     
     /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<control_allocation::msg::BodyWrenchRequest>::SharedPtr body_wrench_request_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr thrust_x_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr thrust_y_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr thrust_z_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_x_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_y_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_z_pub_;
 
     rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr nav_state_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr surge_ref_sub_;
@@ -180,6 +185,7 @@ class PID : public rclcpp::Node {
     rclcpp::Clock clock_;
     int freq_;
     control_allocation::msg::BodyWrenchRequest body_wrench_request_msg_;
+    std_msgs::msg::Float32 float32_msg_;
     farol_msgs::msg::NavigationState nav_state_;
     std::set<std::string> controller_names_;
     std::map<std::string, std::map<std::string, double>> controller_parameters_;

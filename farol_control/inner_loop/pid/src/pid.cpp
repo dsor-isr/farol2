@@ -157,8 +157,23 @@ void PID::initialiseSubscribers() {
  * @brief Initialise Publishers
  */
 void PID::initialisePublishers() {
-  body_wrench_request_pub_ = create_publisher<control_allocation::msg::BodyWrenchRequest>(
-                              get_parameter("control.inner_loop.pid.topics.publishers.body_wrench_request").as_string(), 1);
+  thrust_x_pub_ = create_publisher<std_msgs::msg::Float32>(
+                    get_parameter("control.inner_loop.pid.topics.publishers.thrust_x").as_string(), 1);
+
+  thrust_y_pub_ = create_publisher<std_msgs::msg::Float32>(
+                    get_parameter("control.inner_loop.pid.topics.publishers.thrust_y").as_string(), 1);
+
+  thrust_z_pub_ = create_publisher<std_msgs::msg::Float32>(
+                    get_parameter("control.inner_loop.pid.topics.publishers.thrust_z").as_string(), 1);
+
+  torque_x_pub_ = create_publisher<std_msgs::msg::Float32>(
+                    get_parameter("control.inner_loop.pid.topics.publishers.torque_x").as_string(), 1);
+
+  torque_y_pub_ = create_publisher<std_msgs::msg::Float32>(
+                    get_parameter("control.inner_loop.pid.topics.publishers.torque_y").as_string(), 1);
+
+  torque_z_pub_ = create_publisher<std_msgs::msg::Float32>(
+                    get_parameter("control.inner_loop.pid.topics.publishers.torque_z").as_string(), 1);
 }
 
 /**
@@ -419,9 +434,66 @@ void PID::timerCallback() {
   /* Run controllers to update body wrench request */
   callControllers();
 
-  /* Publish body wrench request message */
-  body_wrench_request_msg_.header.stamp = clock_.now();
-  body_wrench_request_pub_->publish(body_wrench_request_msg_);
+  /* Go through existing controllers */
+  /* Don't publish if controller hasn't received references */
+  static std::set<std::string>::iterator it;
+  for (it = controller_names_.begin(); it != controller_names_.end(); it++) {
+    /* If controller is not enabled or hasn't received a reference, skip it publishing */
+    if (!controller_parameters_[*it]["enabled"] || !hasRecentReference(controller_last_reference_[*it], freq_)) {
+      continue;
+    }
+
+    /* If controller is enabled */
+    /* Publish individual forces and torques messages */
+    switch (controller_map_[*it]){
+      case SURGE:
+        float32_msg_.data = body_wrench_request_msg_.wrench.force.x;
+        thrust_x_pub_->publish(float32_msg_);
+        break;
+      case SWAY:
+        float32_msg_.data = body_wrench_request_msg_.wrench.force.y;
+        thrust_y_pub_->publish(float32_msg_);
+        break;
+      case HEAVE:
+        float32_msg_.data = body_wrench_request_msg_.wrench.force.z;
+        thrust_z_pub_->publish(float32_msg_);
+        break;
+      case YAW:
+        float32_msg_.data = body_wrench_request_msg_.wrench.torque.z;
+        torque_z_pub_->publish(float32_msg_);
+        break;
+      case PITCH:
+        float32_msg_.data = body_wrench_request_msg_.wrench.torque.y;
+        torque_y_pub_->publish(float32_msg_);
+        break;
+      case ROLL:
+        float32_msg_.data = body_wrench_request_msg_.wrench.torque.x;
+        torque_x_pub_->publish(float32_msg_);
+        break;
+      case YAW_RATE:
+        float32_msg_.data = body_wrench_request_msg_.wrench.torque.z;
+        torque_z_pub_->publish(float32_msg_);
+        break;
+      case PITCH_RATE:
+        float32_msg_.data = body_wrench_request_msg_.wrench.torque.y;
+        torque_y_pub_->publish(float32_msg_);
+        break;
+      case ROLL_RATE:
+        float32_msg_.data = body_wrench_request_msg_.wrench.torque.x;
+        torque_x_pub_->publish(float32_msg_);
+        break;
+      case ATTITUDE:
+        float32_msg_.data = body_wrench_request_msg_.wrench.torque.z;
+        torque_z_pub_->publish(float32_msg_);
+
+        float32_msg_.data = body_wrench_request_msg_.wrench.torque.y;
+        torque_y_pub_->publish(float32_msg_);
+
+        float32_msg_.data = body_wrench_request_msg_.wrench.torque.x;
+        torque_x_pub_->publish(float32_msg_);
+        break;
+    }
+  }
 
   /* Set body wrench request to 0 */
   resetBodyWrenchRequest();

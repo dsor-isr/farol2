@@ -88,6 +88,42 @@ def generate_launch_description():
     parameters=params
   )
 
+  waypoint_node = Node(
+    package='waypoint',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/outer_loop'],
+    executable='waypoint_node',
+    name='waypoint',
+    output='screen',
+    parameters=params
+  )
+
+  path_following_node = Node(
+    package='path_following',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/outer_loop'],
+    executable='path_following_node',
+    name='path_following',
+    output='screen',
+    parameters=params
+  )
+
+  open_loop_node = Node(
+    package='open_loop',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/inner_loop'],
+    executable='open_loop_control',
+    name='open_loop',
+    output='screen',
+    parameters=params
+  )
+
+  rudder_control_node = Node(
+    package='rudder',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/inner_loop'],
+    executable='rudder_control',
+    name='rudder',
+    output='screen',
+    parameters=params
+  )
+
   ######################################################
   # Return launch description with arguments and nodes #
   ######################################################
@@ -99,4 +135,8 @@ def generate_launch_description():
     config_package_path_real_arg,
     # nodes
     pid_node,
+    waypoint_node,
+    path_following_node,
+    open_loop_node,
+    rudder_control_node,
   ])
