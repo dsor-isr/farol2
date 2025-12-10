@@ -14,6 +14,7 @@
 #include "control_allocation/msg/body_wrench_request.hpp"
 #include "farol_msgs/msg/navigation_state.hpp"
 #include "pid/srv/change_params.hpp"
+#include "pid/msg/pid_debug.hpp"
 
 enum ControllerType {
   SURGE = 0,
@@ -38,6 +39,15 @@ class ControllerPI {
 
     /* Methods for setting parameters */
     void setParams(double kp, double ki, double lpf_pole, double tau_min, double tau_max);
+
+    double getError() { return error_; }
+    double getIntegralTerm() { return ki_*error_; }
+    double getProportionalTerm() { return kp_*error_; }
+    double getTau_d() { return tau_d_; }
+    double getTau_sat() { return tau_sat_; }
+    double getAntiWindupTerm() { return Ka_*(tau_prev_ - tau_sat_prev_); }
+    double getTauDot() { return tau_dot_; }
+    double getTau() { return tau_; }
   
   private:
     /* Controllers' parameters */
@@ -52,7 +62,7 @@ class ControllerPI {
     bool first_it_ = true;
     double state_prev_ = 0.0, state_dot_ = 0.0, state_dot_filter_ = 0.0, state_dot_filter_prev_ = 0.0;
     double lpf_A_ = 0.0, lpf_B_ = 0.0;
-    double Ka_, tau_dot_, tau_, tau_prev_, tau_sat_, tau_sat_prev_;
+    double Ka_, tau_dot_, tau_, tau_prev_, tau_sat_, tau_sat_prev_ = 0.0;
 };
 
 class ControllerPID {
@@ -65,6 +75,16 @@ class ControllerPID {
 
     /* Methods for setting parameters */
     void setParams(double kp, double ki, double kd, double lpf_pole, double tau_min, double tau_max);
+
+    double getError() { return error_; }
+    double getIntegralTerm() { return ki_*error_; }
+    double getProportionalTerm() { return kp_*state_rate_prev_; }
+    double getDerivativeTerm() { return kd_*state_rate_dot_filter_; }
+    double getTau_d() { return tau_d_; }
+    double getTau_sat() { return tau_sat_; }
+    double getAntiWindupTerm() { return Ka_*(tau_prev_ - tau_sat_prev_); }
+    double getTauDot() { return tau_dot_; }
+    double getTau() { return tau_; }
   
   private:
     /* Controllers' parameters */
@@ -77,11 +97,11 @@ class ControllerPID {
     bool wrapToPi_;
 
     /* Variables for control algorithm */
-    double error_, tau_d_;
+    double error_, tau_d_ ,error_prev_, error_dot_, error_integral_ = 0.0;
     bool first_it_ = true;
-    double state_rate_prev_ = 0.0, state_rate_dot_ = 0.0, state_rate_dot_filter_ = 0.0, state_rate_dot_filter_prev_ = 0.0;
+    double state_rate_prev_ = 0.0 , state_rate_dot_ = 0.0, state_rate_dot_filter_ = 0.0, state_rate_dot_filter_prev_ = 0.0;
     double lpf_A_ = 0.0, lpf_B_ = 0.0;
-    double Ka_, tau_dot_, tau_, tau_prev_, tau_sat_, tau_sat_prev_;
+    double Ka_, tau_dot_, tau_, tau_prev_=0.0, tau_sat_, tau_sat_prev_=0.0;
 };
 
 /**
@@ -115,6 +135,9 @@ class PID : public rclcpp::Node {
     /* Timer callback */
     void timerCallback();
 
+
+
+
     /* Timer for node's callbacks */
     rclcpp::TimerBase::SharedPtr timer_;
     
@@ -136,6 +159,17 @@ class PID : public rclcpp::Node {
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr yaw_rate_ref_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr pitch_rate_ref_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr roll_rate_ref_sub_;
+
+    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr surge_debug_pub_;
+    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr sway_debug_pub_;
+    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr heave_debug_pub_;
+    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr yaw_debug_pub_;
+    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr pitch_debug_pub_;
+    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr roll_debug_pub_;
+    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr yaw_rate_debug_pub_;
+    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr pitch_rate_debug_pub_;
+    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr roll_rate_debug_pub_;
+    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr attitude_debug_pub_;
 
     rclcpp::Service<pid::srv::ChangeParams>::SharedPtr change_params_srv_;
 
@@ -188,11 +222,15 @@ class PID : public rclcpp::Node {
     std_msgs::msg::Float32 float32_msg_;
     farol_msgs::msg::NavigationState nav_state_;
     std::set<std::string> controller_names_;
+    std::map<std::string, bool> controller_debug_;
     std::map<std::string, std::map<std::string, double>> controller_parameters_;
+    std::map<std::string, rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr> debug_publishers_;
     double surge_ref_ = 0.0, sway_ref_ = 0.0, heave_ref_ = 0.0,
            yaw_ref_ = 0.0, pitch_ref_ = 0.0, roll_ref_ = 0.0,
            yaw_rate_ref_ = 0.0, pitch_rate_ref_ = 0.0, roll_rate_ref_ = 0.0;
     double tau_;
+
+    std::array<bool, 10> debug_mode_{}; 
 
     ControllerPI controller_surge_;
     ControllerPI controller_sway_;

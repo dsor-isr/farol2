@@ -78,7 +78,7 @@ void SampleAndHold::initialiseTimers() {
 
 void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg) {
   /* Update filter state */
-  
+
   /* Depending on measurement type */
   switch(msg.type){
     /* Orientation: roll, pitch, yaw */
@@ -103,13 +103,13 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
       break;
     /* UTM position (easting, northing) and UTM zone */
     case msg.MEAS_UTM_POSITION:
-      if (msg.value.size() != 2 || msg.data.size() == 0) {
+      if (msg.value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement UTM_POSITION has incorrect length or type.");
         break;
       }
       filter_state_msg_.utm_position.northing = msg.value[0];
       filter_state_msg_.utm_position.easting = msg.value[1];
-      filter_state_msg_.utm_position.utm_zone = msg.data;
+      filter_state_msg_.utm_position.utm_zone = msg.value[2];
       break;
     /* Depth */
     case msg.MEAS_DEPTH:

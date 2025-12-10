@@ -6,13 +6,15 @@
           # Speeds (surge, sway, heave)
           surge:
             enabled: true
-            kp: 10.0
-            ki: 1.0
+            #debug: true
+            kp: 5000.0
+            ki: 3500.0
             lpf_pole: 31.4 # rad/s
-            tau_min: -30.0 # N
-            tau_max: 30.0 # N
+            tau_min: -1000.0 # N
+            tau_max: 1000.0 # N
           sway:
             enabled: false
+            #debug: false
             kp: 1.0
             ki: 1.0
             lpf_pole: 31.4 # rad/s
@@ -20,6 +22,7 @@
             tau_max: 20.0 # N
           heave:
             enabled: false
+            #debug: false
             kp: 1.0
             ki: 1.0
             lpf_pole: 31.4 # rad/s
@@ -28,14 +31,16 @@
           # Angles (yaw, pitch, roll)
           yaw:
             enabled: true
-            kp: 10.0
-            ki: 5.0
-            kd: 1.0
+            #debug: true
+            kp: 25.0
+            ki: 3.0
+            kd: 1.25 
             lpf_pole: 31.4 # rad/s
-            tau_min: -10.0 # N.m
-            tau_max: 10.0 # N.m
+            tau_min: -7.0 # N.m 7 for 1.5 m/s
+            tau_max: 7.0 # N.m -7 for 1.5 m/s
           pitch:
             enabled: false
+            #debug: false
             kp: 1.0
             ki: 1.0
             kd: 1.0
@@ -44,6 +49,7 @@
             tau_max: 10.0 # N.m
           roll:
             enabled: false
+            #debug: false
             kp: 1.0
             ki: 1.0
             kd: 1.0
@@ -53,6 +59,7 @@
           # Angle rates (yaw rate, pitch rate, roll rate)
           yaw_rate:
             enabled: false
+            #debug: false
             kp: 1.0
             ki: 1.0
             lpf_pole: 31.4 # rad/s
@@ -60,6 +67,7 @@
             tau_max: 10.0 # N.m
           pitch_rate:
             enabled: false
+            #debug: false
             kp: 1.0
             ki: 1.0
             lpf_pole: 31.4 # rad/s
@@ -67,6 +75,7 @@
             tau_max: 10.0 # N.m
           roll_rate:
             enabled: false
+            #debug: false
             kp: 1.0
             ki: 1.0
             lpf_pole: 31.4 # rad/s
@@ -78,7 +87,7 @@
         open_loop:
           # Speeds (surge)
           surge:
-            enabled: true
+            enabled: false
             gain: 1100.0
         rudder:
           deadzone: 4.0 # deg, if the rudder angle error is lower than this, don't actuate
@@ -143,4 +152,4 @@
               yaw_offset: 0.785
               p_sat: [1.0, 1.0] #x, y
             breivik:
-              delta_h: 2.0
+              delta_h: 2.0 #20.0 magic

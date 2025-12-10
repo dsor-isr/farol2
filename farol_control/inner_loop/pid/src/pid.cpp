@@ -92,18 +92,25 @@ void PID::loadParams() {
       /* double (except for the "enabled" parameter) otherwise the parameter is skipped */
       try {
         if (param_name == "enabled") {
-          controller_parameters_[name].insert({param_name, param.as_bool()});
+          controller_parameters_[name].insert({param_name, param.as_bool() ? 1.0 : 0.0});
           RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
-        } else { /* Default case, parameter is a double */
+        } else if (param_name == "debug") {
+          controller_debug_[name] = param.as_bool();   // ← store here
+          RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
+        } else {
           controller_parameters_[name].insert({param_name, param.as_double()});
           RCLCPP_DEBUG(get_logger(), "DOUBLE %s: %f", key.c_str(), param.as_double());
         }
+
       } catch(...) {
         RCLCPP_INFO(get_logger(), "Unexpected parameter (not boolean or double) found for controller %s: %s", name.c_str(), param_name.c_str());
         continue;
       }
     }
   }
+
+
+
 }
 
 /**
@@ -174,6 +181,17 @@ void PID::initialisePublishers() {
 
   torque_z_pub_ = create_publisher<std_msgs::msg::Float32>(
                     get_parameter("control.inner_loop.pid.topics.publishers.torque_z").as_string(), 1);
+  /*
+  body_wrench_request_pub_ = create_publisher<control_allocation::msg::BodyWrenchRequest>(
+                    get_parameter("control.inner_loop.pid.topics.publishers.body_wrench_request").as_string(), 1);
+  
+  */
+  for (const auto& [name, dbg] : controller_debug_) {
+    if (!dbg) continue;
+    const auto topic =
+        get_parameter("control.inner_loop.pid.topics.publishers.debug." + name).as_string();
+    debug_publishers_[name] = create_publisher<pid::msg::PidDebug>(topic, 1);
+  }          
 }
 
 /**
@@ -200,7 +218,9 @@ void PID::initialiseTimers() {
   freq_ = get_parameter("control.inner_loop.pid.node_frequency").as_int();
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq_*1000)), std::bind(&PID::timerCallback, this));
+  timer_ = create_wall_timer
+    (std::chrono::milliseconds(int(1.0/freq_*1000)), 
+    std::bind(&PID::timerCallback, this));
 }
 
 void PID::navStateCallback(const farol_msgs::msg::NavigationState &msg) {
@@ -521,44 +541,6 @@ void PID::changeParamsCallback(const std::shared_ptr<pid::srv::ChangeParams::Req
     response->message = "Parameter(s) invalid (negative gains/pole/tau, tau_min > tau_max).";
   }
 
-  /* Depending on controller, change its parameters */
-  switch (controller_map_[request->controller]){
-      case SURGE:
-        controller_surge_.setParams(request->kp, request->ki, request->lpf_pole, request->tau_min, request->tau_max);
-        break;
-      case SWAY:
-        controller_sway_.setParams(request->kp, request->ki, request->lpf_pole, request->tau_min, request->tau_max);
-        break;
-      case HEAVE:
-        controller_heave_.setParams(request->kp, request->ki, request->lpf_pole, request->tau_min, request->tau_max);
-        break;
-      case YAW:
-        controller_yaw_.setParams(request->kp, request->ki, request->kd, request->lpf_pole, request->tau_min, request->tau_max);
-        break;
-      case PITCH:
-        controller_pitch_.setParams(request->kp, request->ki, request->kd, request->lpf_pole, request->tau_min, request->tau_max);
-        break;
-      case ROLL:
-        controller_roll_.setParams(request->kp, request->ki, request->kd, request->lpf_pole, request->tau_min, request->tau_max);
-        break;
-      case YAW_RATE:
-        controller_yaw_rate_.setParams(request->kp, request->ki, request->lpf_pole, request->tau_min, request->tau_max);
-        break;
-      case PITCH_RATE:
-        controller_pitch_rate_.setParams(request->kp, request->ki, request->lpf_pole, request->tau_min, request->tau_max);
-        break;
-      case ROLL_RATE:
-        controller_roll_rate_.setParams(request->kp, request->ki, request->lpf_pole, request->tau_min, request->tau_max);
-        break;
-      case ATTITUDE:
-        /* Missing implementation */
-        response->success = false;
-        response->message = "Attitude controller not implemented yet.";
-        return;
-    }
-
-  response->success = true;
-  response->message = "Changed " + request->controller + " controller parameters.";
 }
 
 bool PID::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const int &node_frequency) {
@@ -631,6 +613,22 @@ void PID::callControllerSurge() {
   /* Call PI controller */
   tau_ = controller_surge_.callController(nav_state_.body_velocity_fluid.x, surge_ref_, 1.0/freq_);
 
+  pid::msg::PidDebug debug_msg;
+  debug_msg.header.stamp = clock_.now();
+  debug_msg.error = controller_surge_.getError();
+  debug_msg.p_term = controller_surge_.getProportionalTerm();
+  debug_msg.i_term = controller_surge_.getIntegralTerm();
+  debug_msg.tau_d = controller_surge_.getTau_d();
+  debug_msg.tau_dot = controller_surge_.getTauDot();
+  debug_msg.tau_sat = controller_surge_.getTau_sat();
+  debug_msg.a_term = controller_surge_.getAntiWindupTerm();
+  debug_msg.tau = tau_;
+
+  if (controller_debug_["surge"]) {
+  auto it = debug_publishers_.find("surge");
+  if (it != debug_publishers_.end()) it->second->publish(debug_msg);
+  }
+
   /* Update body wrench request */
   body_wrench_request_msg_.wrench.force.x += tau_;
 
@@ -640,6 +638,22 @@ void PID::callControllerSurge() {
 void PID::callControllerSway() {
   /* Call PI controller */
   tau_ = controller_sway_.callController(nav_state_.body_velocity_fluid.y, sway_ref_, 1.0/freq_);
+
+  pid::msg::PidDebug debug_msg;
+  debug_msg.header.stamp = clock_.now();
+  debug_msg.error = controller_sway_.getError();
+  debug_msg.p_term = controller_sway_.getProportionalTerm();
+  debug_msg.i_term = controller_sway_.getIntegralTerm();
+  debug_msg.tau_d = controller_sway_.getTau_d();
+  debug_msg.tau_dot = controller_sway_.getTauDot();
+  debug_msg.tau_sat = controller_sway_.getTau_sat();
+  debug_msg.a_term = controller_sway_.getAntiWindupTerm();
+  debug_msg.tau = tau_;
+
+  if (controller_debug_["sway"]) {
+  auto it = debug_publishers_.find("sway");
+  if (it != debug_publishers_.end()) it->second->publish(debug_msg);
+  }
 
   /* Update body wrench request */
   body_wrench_request_msg_.wrench.force.y += tau_;
@@ -651,6 +665,22 @@ void PID::callControllerHeave() {
   /* Call PI controller */
   tau_ = controller_heave_.callController(nav_state_.body_velocity_fluid.z, heave_ref_, 1.0/freq_);
 
+    pid::msg::PidDebug debug_msg;
+  debug_msg.header.stamp = clock_.now();
+  debug_msg.error = controller_heave_.getError();
+  debug_msg.p_term = controller_heave_.getProportionalTerm();
+  debug_msg.i_term = controller_heave_.getIntegralTerm();
+  debug_msg.tau_d = controller_heave_.getTau_d();
+  debug_msg.tau_dot = controller_heave_.getTauDot();
+  debug_msg.tau_sat = controller_heave_.getTau_sat();
+  debug_msg.a_term = controller_heave_.getAntiWindupTerm();
+  debug_msg.tau = tau_;
+
+  if (controller_debug_["heave"]) {
+  auto it = debug_publishers_.find("heave");
+  if (it != debug_publishers_.end()) it->second->publish(debug_msg);
+  }
+
   /* Update body wrench request */
   body_wrench_request_msg_.wrench.force.z += tau_;
   
@@ -660,6 +690,25 @@ void PID::callControllerHeave() {
 void PID::callControllerYaw() {
   /* Call PID controller */
   tau_ = controller_yaw_.callController(nav_state_.orientation.z, yaw_ref_, nav_state_.orientation_rate.z, 1.0/freq_);
+
+
+  pid::msg::PidDebug debug_msg;
+  debug_msg.header.stamp = clock_.now();
+  debug_msg.error = controller_yaw_.getError();
+  debug_msg.p_term = controller_yaw_.getProportionalTerm();
+  debug_msg.i_term = controller_yaw_.getIntegralTerm();
+  debug_msg.d_term = controller_yaw_.getDerivativeTerm();
+  debug_msg.tau_d = controller_yaw_.getTau_d();
+  debug_msg.tau_dot = controller_yaw_.getTauDot();
+  debug_msg.tau_sat = controller_yaw_.getTau_sat();
+  debug_msg.a_term = controller_yaw_.getAntiWindupTerm();
+  debug_msg.tau = tau_;
+
+  if (controller_debug_["yaw"]) {
+  auto it = debug_publishers_.find("yaw");
+  if (it != debug_publishers_.end()) it->second->publish(debug_msg);
+  }
+
 
   /* Update body wrench request */
   body_wrench_request_msg_.wrench.torque.z += tau_;
@@ -671,6 +720,24 @@ void PID::callControllerPitch() {
   /* Call PID controller */
   tau_ = controller_pitch_.callController(nav_state_.orientation.y, pitch_ref_, nav_state_.orientation_rate.y, 1.0/freq_);
 
+  pid::msg::PidDebug debug_msg;
+  debug_msg.header.stamp = clock_.now();
+  debug_msg.error = controller_pitch_.getError();
+  debug_msg.p_term = controller_pitch_.getProportionalTerm();
+  debug_msg.i_term = controller_pitch_.getIntegralTerm();
+  debug_msg.d_term = controller_pitch_.getDerivativeTerm();
+  debug_msg.tau_d = controller_pitch_.getTau_d();
+  debug_msg.tau_dot = controller_pitch_.getTauDot();
+  debug_msg.tau_sat = controller_pitch_.getTau_sat();
+  debug_msg.a_term = controller_pitch_.getAntiWindupTerm();
+  debug_msg.tau = tau_;
+
+  if (controller_debug_["pitch"]) {
+  auto it = debug_publishers_.find("pitch");
+  if (it != debug_publishers_.end()) it->second->publish(debug_msg);
+  }
+
+
   /* Update body wrench request */
   body_wrench_request_msg_.wrench.torque.y += tau_;
 
@@ -680,6 +747,24 @@ void PID::callControllerPitch() {
 void PID::callControllerRoll() {
   /* Call PID controller */
   tau_ = controller_roll_.callController(nav_state_.orientation.x, roll_ref_, nav_state_.orientation_rate.x, 1.0/freq_);
+
+  pid::msg::PidDebug debug_msg;
+  debug_msg.header.stamp = clock_.now();
+  debug_msg.error = controller_roll_.getError();
+  debug_msg.p_term = controller_roll_.getProportionalTerm();
+  debug_msg.i_term = controller_roll_.getIntegralTerm();
+  debug_msg.d_term = controller_roll_.getDerivativeTerm();
+  debug_msg.tau_d = controller_roll_.getTau_d();
+  debug_msg.tau_dot = controller_roll_.getTauDot();
+  debug_msg.tau_sat = controller_roll_.getTau_sat();
+  debug_msg.a_term = controller_roll_.getAntiWindupTerm();
+  debug_msg.tau = tau_;
+
+  if (controller_debug_["roll"]) {
+  auto it = debug_publishers_.find("roll");
+  if (it != debug_publishers_.end()) it->second->publish(debug_msg);
+  }
+
 
   /* Update body wrench request */
   body_wrench_request_msg_.wrench.torque.x += tau_;
@@ -691,6 +776,22 @@ void PID::callControllerYawRate() {
   /* Call PI controller */
   tau_ = controller_yaw_rate_.callController(nav_state_.orientation_rate.z, yaw_rate_ref_, 1.0/freq_);
 
+  pid::msg::PidDebug debug_msg;
+  debug_msg.header.stamp = clock_.now();
+  debug_msg.error = controller_yaw_rate_.getError();
+  debug_msg.p_term = controller_yaw_rate_.getProportionalTerm();
+  debug_msg.i_term = controller_yaw_rate_.getIntegralTerm();
+  debug_msg.tau_d = controller_yaw_rate_.getTau_d();
+  debug_msg.tau_dot = controller_yaw_rate_.getTauDot();
+  debug_msg.tau_sat = controller_yaw_rate_.getTau_sat();
+  debug_msg.a_term = controller_yaw_rate_.getAntiWindupTerm();
+  debug_msg.tau = tau_;
+
+  if (controller_debug_["yaw_rate"]) {
+  auto it = debug_publishers_.find("yaw_rate");
+  if (it != debug_publishers_.end()) it->second->publish(debug_msg);
+  }
+
   /* Update body wrench request */
   body_wrench_request_msg_.wrench.torque.z += tau_;
 
@@ -701,6 +802,22 @@ void PID::callControllerPitchRate() {
   /* Call PI controller */
   tau_ = controller_pitch_rate_.callController(nav_state_.orientation_rate.y, pitch_rate_ref_, 1.0/freq_);
 
+  pid::msg::PidDebug debug_msg;
+  debug_msg.header.stamp = clock_.now();
+  debug_msg.error = controller_pitch_rate_.getError();
+  debug_msg.p_term = controller_pitch_rate_.getProportionalTerm();
+  debug_msg.i_term = controller_pitch_rate_.getIntegralTerm();
+  debug_msg.tau_d = controller_pitch_rate_.getTau_d();
+  debug_msg.tau_dot = controller_pitch_rate_.getTauDot();
+  debug_msg.tau_sat = controller_pitch_rate_.getTau_sat();
+  debug_msg.a_term = controller_pitch_rate_.getAntiWindupTerm();
+  debug_msg.tau = tau_;
+
+  if (controller_debug_["pitch_rate"]) {
+  auto it = debug_publishers_.find("pitch_rate");
+  if (it != debug_publishers_.end()) it->second->publish(debug_msg);
+  }
+
   /* Update body wrench request */
   body_wrench_request_msg_.wrench.torque.y += tau_;
 
@@ -710,6 +827,22 @@ void PID::callControllerPitchRate() {
 void PID::callControllerRollRate() {
   /* Call PI controller */
   tau_ = controller_roll_rate_.callController(nav_state_.orientation_rate.x, roll_rate_ref_, 1.0/freq_);
+
+  pid::msg::PidDebug debug_msg;
+  debug_msg.header.stamp = clock_.now();
+  debug_msg.error = controller_roll_rate_.getError();
+  debug_msg.p_term = controller_roll_rate_.getProportionalTerm();
+  debug_msg.i_term = controller_roll_rate_.getIntegralTerm();
+  debug_msg.tau_d = controller_roll_rate_.getTau_d();
+  debug_msg.tau_dot = controller_roll_rate_.getTauDot();
+  debug_msg.tau_sat = controller_roll_rate_.getTau_sat();
+  debug_msg.a_term = controller_roll_rate_.getAntiWindupTerm();
+  debug_msg.tau = tau_;
+
+  if (controller_debug_["roll_rate"]) {
+  auto it = debug_publishers_.find("roll_rate");
+  if (it != debug_publishers_.end()) it->second->publish(debug_msg);
+  }
 
   /* Update body wrench request */
   body_wrench_request_msg_.wrench.torque.x += tau_;
@@ -748,36 +881,47 @@ ControllerPI::ControllerPI(double kp, double ki, double lpf_pole, double tau_min
 
 double ControllerPI::callController(double state, double state_ref, double dt) {
   /* Compute error */
+
+  //check for nan
+  
   error_ = state_ref - state;
 
-  /* Compute derivative of Kp term if not in first iteration */
+  /*Compute derivative of Kp term if not in first iteration*/ 
   if (!first_it_) {
     state_dot_ = (state - state_prev_) / dt;
 
-    /* Apply low pass filter due to noise amplification from derivative computation */
-    lpf_A_ = std::exp(- lpf_pole_*dt);
-    lpf_B_ = 1 - lpf_A_;
-    state_dot_filter_ = lpf_A_*state_dot_filter_prev_ + lpf_B_*state_dot_;
+
+
+
+
+    /*Apply low pass filter due to noise amplification from derivative computation*/ 
+  lpf_A_ = std::exp(- lpf_pole_*dt);
+  lpf_B_ = 1 - lpf_A_;
+  state_dot_filter_ = lpf_A_*state_dot_filter_prev_ + lpf_B_*state_dot_;
 
   } else {
-    /* Reset first iteration flag */
+    /*Reset first iteration flag*/ 
     first_it_ = false;
   }
 
-  /* Add all PI terms */
+  /*Add all PI terms*/ 
   tau_d_ = ki_*error_ - kp_*state_dot_filter_;
 
-  /* Anti-windup */
+  /*Anti-windup*/ 
   Ka_ = 1.0/dt;
   tau_dot_ = tau_d_ - Ka_*(tau_prev_ - tau_sat_prev_);
   tau_ = tau_prev_ + tau_dot_*dt;
   tau_sat_ = std::clamp(tau_, tau_min_, tau_max_);
 
-  /* Set prev values */
   state_prev_ = state;
   state_dot_filter_prev_ = state_dot_filter_;
   tau_prev_ = tau_;
   tau_sat_prev_ = tau_sat_;
+
+  
+
+
+
 
   return tau_sat_;
 }

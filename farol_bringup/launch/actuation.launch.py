@@ -42,7 +42,7 @@ def generate_launch_description():
 
   launch_thruster_rudder_allocation_arg = DeclareLaunchArgument(
     'thruster_rudder_allocation',
-    default_value='true',
+    default_value='false',
     description='Boolean to determine if thruster rudder allocation node is launched.'
   )
 

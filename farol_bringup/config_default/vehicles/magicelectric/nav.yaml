@@ -7,4 +7,5 @@
           - "sample_and_hold"
           - "complementary"
       sample_and_hold:
+        neglect_current: true
         test: 2

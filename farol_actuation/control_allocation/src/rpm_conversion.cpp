@@ -92,22 +92,28 @@ void RPMConversion::thrusterForceCallback(const control_allocation::msg::Thruste
   for (int i = 0; i < (int)msg.force.size(); i++) {
     if (mode_ == 1) {
       if (msg.force[i] == 0.0) {
-        rpm_command_msg_.rpm.push_back(0.0);
+      rpm_command_msg_.rpm.push_back(0.0);
       } else if (msg.force[i] > 0.0) {
-        rpm_value_ = (-coef_fwd_[1] + sqrt(coef_fwd_[1] * coef_fwd_[1] - 4 * coef_fwd_[0] * (coef_fwd_[2] - msg.force[i]))) / (2 * coef_fwd_[0]);
+      rpm_value_ = (-coef_fwd_[1] + sqrt(coef_fwd_[1] * coef_fwd_[1] - 4 * coef_fwd_[0] * (coef_fwd_[2] - msg.force[i]))) / (2 * coef_fwd_[0]);
 
-        /* Saturate */
-        rpm_value_ = (rpm_value_ > max_rpm_) ? max_rpm_ : rpm_value_;
+      /* Saturate */
+      rpm_value_ = (rpm_value_ > max_rpm_) ? max_rpm_ : rpm_value_;
 
-        rpm_command_msg_.rpm.push_back(rpm_value_);
+      rpm_command_msg_.rpm.push_back(rpm_value_);
       } else {
-        rpm_value_ = (-coef_bwd_[1] + sqrt(coef_bwd_[1] * coef_bwd_[1] - 4 * coef_bwd_[0] * (coef_bwd_[2] - msg.force[i]))) / (2 * coef_bwd_[0]);
+      rpm_value_ = (-coef_bwd_[1] + sqrt(coef_bwd_[1] * coef_bwd_[1] - 4 * coef_bwd_[0] * (coef_bwd_[2] - msg.force[i]))) / (2 * coef_bwd_[0]);
 
-        /* Saturate */
-        rpm_value_ = (rpm_value_ < min_rpm_) ? min_rpm_ : rpm_value_;
+      /* Saturate */
+      rpm_value_ = (rpm_value_ < min_rpm_) ? min_rpm_ : rpm_value_;
 
         rpm_command_msg_.rpm.push_back(rpm_value_);
       }
+
+
+
+
+
+      
     } else if (mode_ == 0) {
       if (msg.force[i] == 0.0) {
         rpm_command_msg_.rpm.push_back(0.0);
@@ -116,10 +122,18 @@ void RPMConversion::thrusterForceCallback(const control_allocation::msg::Thruste
         double b = -rho_*pow(D_,4)*K_T_BP_/prop_pitch_*surge_;
         double c = - msg.force[i];
 
-        rpm_value_ = ((-b + sqrt(pow(b,2) - 4*a*c)) / (2*a)) * 60; /* RPM = RPS x 60 */
+        if(c >0){
+        rpm_value_ = ((-b + sqrt(pow(b,2) + 4*a*c)) / (2*a)) * 60; /* RPM = RPS x 60 */
+        rpm_value_ = -rpm_value_;
+        rpm_value_ = (rpm_value_ < min_rpm_) ? min_rpm_ : rpm_value_;
+        }else{
 
-        /* Saturate */
-        rpm_value_ = (rpm_value_ > max_rpm_) ? max_rpm_ : rpm_value_;
+          rpm_value_ = ((-b + sqrt(pow(b,2) - 4*a*c)) / (2*a)) * 60; /* RPM = RPS x 60 */
+          /* Saturate */
+          rpm_value_ = (rpm_value_ > max_rpm_) ? max_rpm_ : rpm_value_;
+
+        }
+
 
         rpm_command_msg_.rpm.push_back(rpm_value_);
       }

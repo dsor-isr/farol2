@@ -17,12 +17,13 @@ find_package(rosidl_default_generators REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 # Collect all .msg and .srv files
-# file(GLOB MSG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
+file(GLOB MSG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
 file(GLOB SRV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "srv/*.srv")
+
 
 # Generate messages and services
 rosidl_generate_interfaces(${PROJECT_NAME}
-  # ${MSG_FILES}
+  ${MSG_FILES}
   ${SRV_FILES}
   DEPENDENCIES std_msgs
 )
@@ -37,6 +38,7 @@ ament_target_dependencies(
   std_msgs
   farol_msgs
   control_allocation
+
 )
 
 # Link generated service types
@@ -45,6 +47,7 @@ target_link_libraries(pid_control "${cpp_typesupport_target}")
 
 target_include_directories(pid_control PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
   
 target_compile_features(pid_control PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17 

@@ -5,7 +5,7 @@
 ########################################################
 processes:
   - name: 'bag_record'
-    launch_on_startup: true
+    launch_on_startup: false
     delay_before_start: 0.0
     cmd: 'ros2 launch farol_bringup bag_record.launch.py'
     args:
@@ -26,8 +26,8 @@ processes:
     delay_before_start: 0.1
     cmd: 'ros2 launch farol_bringup actuation.launch.py'
     args:
-      - static_thruster_allocation:=true
-      - thruster_rudder_allocation:=false
+      - static_thruster_allocation:=false
+      - thruster_rudder_allocation:=true
     dependencies:
       - navigation
   - name: "control"
