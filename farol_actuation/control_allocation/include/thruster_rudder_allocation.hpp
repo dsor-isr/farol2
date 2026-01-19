@@ -4,6 +4,9 @@
 #include <string>
 #include <variant>
 #include <Eigen/Dense>
+#include <cmath>
+#include <optional>
+#include <algorithm>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/parameter.hpp"
@@ -15,6 +18,7 @@
 #include "farol_msgs/msg/navigation_state.hpp"
 
 #include <actuation_utils.hpp>
+#include <farol_utils/angles.hpp>
 
 /**
  * @brief   Thruster Rudder Allocation
@@ -52,7 +56,7 @@ class ThrusterRudderAllocation : public rclcpp::Node {
 
     /* Declare publishers, subscribers, services, etc. */
     rclcpp::Publisher<control_allocation::msg::ThrusterForce>::SharedPtr thruster_force_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_angle_ref_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_angle_ref_pub_, debug1_pub_;
     rclcpp::Subscription<control_allocation::msg::BodyWrenchRequest>::SharedPtr body_wrench_request_sub_;
     rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr nav_state_sub_;
     
@@ -62,11 +66,12 @@ class ThrusterRudderAllocation : public rclcpp::Node {
 
     /* Other functions */
     void computeRudderAngle(double tau_r);
+    double solve_delta_from_tau(double tau_r, double gamma, double V);
     
     /* Other variables */
     rclcpp::Clock clock_;
     control_allocation::msg::ThrusterForce thruster_force_msg_;
-    std_msgs::msg::Float32 rudder_angle_ref_msg_;
+    std_msgs::msg::Float32 rudder_angle_ref_msg_, debug1_msg_;
     std::vector<std::map<std::string, std::variant<std::string, std::vector<double>>>> thruster_configuration_;
     Eigen::Matrix<double, 6, Eigen::Dynamic> thrust_allocation_matrix_;
     Eigen::Matrix<double, Eigen::Dynamic, 6> thrust_allocation_matrix_pseudo_inv_;
@@ -82,4 +87,5 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     Eigen::Vector2d V_cm_, V_r_, V_s_;
     double K_s_, K_L_, K_D0_, K_D1_;
     double L, D;
+    double gamma_, rudder_angle_prev_{0.0};
 };

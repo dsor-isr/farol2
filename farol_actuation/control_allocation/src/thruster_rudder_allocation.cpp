@@ -1,7 +1,7 @@
 #include <thruster_rudder_allocation.hpp>
 
 /* Constructor */
-ThrusterRudderAllocation::ThrusterRudderAllocation() : Node("thruster_rudder_allocation", 
+ThrusterRudderAllocation::ThrusterRudderAllocation() : Node("thruster_rudder_allocation",
                                       rclcpp::NodeOptions()
                                         .allow_undeclared_parameters(true)
                                         .automatically_declare_parameters_from_overrides(true)) {
@@ -23,11 +23,11 @@ ThrusterRudderAllocation::~ThrusterRudderAllocation() {
  */
 void ThrusterRudderAllocation::initialiseSubscribers() {
   body_wrench_request_sub_ = create_subscription<control_allocation::msg::BodyWrenchRequest>(
-                              get_parameter("actuation.thruster_rudder_allocation.topics.subscribers.body_wrench_request").as_string(), 
+                              get_parameter("actuation.thruster_rudder_allocation.topics.subscribers.body_wrench_request").as_string(),
                               1, std::bind(&ThrusterRudderAllocation::bodyWrenchRequestCallback, this, std::placeholders::_1));
 
   nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
-                    get_parameter("actuation.thruster_rudder_allocation.topics.subscribers.nav_state").as_string(), 
+                    get_parameter("actuation.thruster_rudder_allocation.topics.subscribers.nav_state").as_string(),
                     1, std::bind(&ThrusterRudderAllocation::navStateCallback, this, std::placeholders::_1));
 
   return;
@@ -36,7 +36,7 @@ void ThrusterRudderAllocation::initialiseSubscribers() {
 /**
  * @brief Load parameters
  * Thruster configuration parameters are loaded under some assumptions.
- * In the future, if ROS2 enables native parameter loading for dicts and 
+ * In the future, if ROS2 enables native parameter loading for dicts and
  * other complex types, this method should be adapted for further robustness.
  */
 void ThrusterRudderAllocation::loadParams() {
@@ -82,6 +82,9 @@ void ThrusterRudderAllocation::initialisePublishers() {
 
   rudder_angle_ref_pub_ = create_publisher<std_msgs::msg::Float32>(
                             get_parameter("actuation.thruster_rudder_allocation.topics.publishers.rudder_angle_ref").as_string(), 1);
+
+  debug1_pub_ = create_publisher<std_msgs::msg::Float32>("debug1", 1);
+  // rudder_angle_ref_pub_ = create_publisher<std_msgs::msg::Float32>("debug1", 1);
 }
 
 /**
@@ -123,9 +126,9 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(const control_allocatio
   /* Set requested forces and torques, accounting for drag caused by rudder */
   /* Since common mode is used, all forces and torques are set to 0, except */
   /* for force along X axis */
-  tau_common_mode_ << tau_[0] + rudder_x_body_drag_, 0.0, 0.0, 
+  tau_common_mode_ << tau_[0] + rudder_x_body_drag_, 0.0, 0.0,
                       0.0, 0.0, 0.0;
-  
+
   /* Compute vector of forces for each thruster based on body wrench request */
   /* f = pinv(T).τ */
   forces_ = thrust_allocation_matrix_pseudo_inv_*tau_common_mode_;
@@ -135,7 +138,7 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(const control_allocatio
 
   std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
   thruster_force_msg_.force = forces_vec;
-  
+
   thruster_force_pub_->publish(thruster_force_msg_);
 
   /* Create message to publish rudder angle reference */
@@ -162,13 +165,19 @@ void ThrusterRudderAllocation::computeRudderAngle(double tau_r) {
   V_r_ = Eigen::Vector2d(std::sin(nav_state_.orientation.z), -std::cos(nav_state_.orientation.z)) * rudder_cm_distance_ * nav_state_.orientation_rate.z;
   V_s_ = V_cm_ + V_r_;
 
+  // angle between Vs and x_body of the boat
+  gamma_ = farol_utils::wrapToPi(std::atan2(V_s_(1),V_s_(0)) - nav_state_.orientation.z);
+
   /* Compute rudder angle according to Fossen model, in "A Survey of Control Allocation Methods for Underwater Vehicles", p. 126 */
   /* N = K.l.v^2.δ */
-  rudder_angle_ = tau_r / (K_s_ * rudder_cm_distance_ * V_s_.dot(V_s_));
+  // rudder_angle_ = tau_r / (K_s_ * rudder_cm_distance_ * V_s_.dot(V_s_));
+
+  /* Compute rudder angle using inversion of the function ... See ... i am the documentation bruh */
+  rudder_angle_ = solve_delta_from_tau(tau_r, gamma_, V_s_.dot(V_s_));
 
   /* Saturate rudder_angle */
   rudder_angle_ = (rudder_angle_ > rudder_angle_max_) ? rudder_angle_max_ : ((rudder_angle_ < rudder_angle_min_) ? rudder_angle_min_ : rudder_angle_);
-  
+
   /* Compute fluid flow to rudder angle */
   V_s_angle_ = (V_s_[0] != 0.0) ? atan2(V_s_[1], V_s_[0]) : 0.0;
   flow_to_rudder_angle_ = rudder_angle_ + V_s_angle_ - nav_state_.orientation.z;
@@ -180,6 +189,66 @@ void ThrusterRudderAllocation::computeRudderAngle(double tau_r) {
   /* Compute rudder induced drag along the body X axis */
   rudder_x_body_drag_ = D*std::cos(flow_to_rudder_angle_) + L*std::sin(-flow_to_rudder_angle_);
 }
+
+
+double ThrusterRudderAllocation::solve_delta_from_tau(double tau_r, double gamma, double V_sq)
+{
+  double eps = 1e-12;
+
+  // Solve a*alpha^2 + b*alpha + c = 0 for alpha = delta + gamma
+  const double a = K_D1_ * std::sin(gamma);
+  const double b = K_L_  * std::cos(gamma);
+  const double c = K_D0_ * std::sin(gamma) - tau_r/(rudder_cm_distance_ * V_sq);
+
+
+  // Very small drag (linear)
+  if (std::abs(a) < eps) {
+    if (std::abs(b) < eps) {
+      RCLCPP_WARN_STREAM(get_logger(), "tau_r basically independent of delta");
+      return 0.0;
+    }
+
+    double alpha = -c / b;
+    // RCLCPP_INFO_STREAM(get_logger(), "solution found for small drag");
+    return alpha - gamma;
+  }
+
+  // Quadratic discriminant
+  double D = b*b - 4.0*a*c;
+
+  // Treat tiny negative as zero (floating point noise)
+  if (D < 0.0 && D > -1e-12) D = 0.0;
+
+  // Never happens in practice
+  if (D < 0.0) {
+    RCLCPP_WARN_STREAM(get_logger(), "No real solution: D < 0.0");
+    return 0.0;
+  }
+
+  // Quadratic formula but more stable
+  const double sign_b = (b >= 0.0) ? 1.0 : -1.0;
+  const double q = -0.5 * (b + sign_b * std::sqrt(D));
+
+  double alpha1, alpha2;
+  if (std::abs(q) < eps) {
+    // fallback to classic formula (only if D is close to 0)
+    alpha1 = (-b + std::sqrt(D)) / (2.0*a);
+    alpha2 = (-b - std::sqrt(D)) / (2.0*a);
+  } else {
+    alpha1 = q / a;
+    alpha2 = c / q;
+  }
+
+  const double d1 = alpha1 - gamma;
+  const double d2 = alpha2 - gamma;
+
+  // prefer solution closest to previous rudder angle
+  // double d = (std::abs(d1 - delta_prev) <= std::abs(d2 - delta_prev)) ? d1 : d2;
+  double d = (std::abs(d1) <= std::abs(d2)) ? d1 : d2;
+
+  return d;
+}
+
 
 /**
  * @brief Callback for navigation state.
@@ -197,7 +266,7 @@ void ThrusterRudderAllocation::timerCallback() {
   if (nav_state_.body_velocity_fluid.x == 0.0 && nav_state_.body_velocity_fluid.y == 0.0 && nav_state_.body_velocity_fluid.z == 0.0) {
     RCLCPP_WARN(get_logger(), "Body Velocity relative to the fluid is 0. Is it not being updated?");
   }
-  
+
   return;
 }
 

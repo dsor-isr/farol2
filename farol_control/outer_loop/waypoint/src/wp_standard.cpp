@@ -55,7 +55,8 @@ WpStandard::WpStandard(rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surg
       u_ref = 0;
       yaw_ref = getYawOut();
     }
-    setSurgeOut(u_ref);
+    // setSurgeOut(u_ref);
+    setSurgeOut(0.3); // !!!!! FIX for magic electric open loop !!!!!
     setYawOut(yaw_ref);
 
   }

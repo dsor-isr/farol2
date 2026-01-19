@@ -8,9 +8,9 @@ PID::PID() : Node("pid",
              controller_surge_(0.0, 0.0, 0.0, 0.0, 0.0),
              controller_sway_(0.0, 0.0, 0.0, 0.0, 0.0),
              controller_heave_(0.0, 0.0, 0.0, 0.0, 0.0),
-             controller_yaw_(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true),
-             controller_pitch_(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true),
-             controller_roll_(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true),
+             controller_yaw_(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, 2, "tustin", "bessel"),
+             controller_pitch_(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, 2, "tustin", "bessel"),
+             controller_roll_(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, 2, "tustin", "bessel"),
              controller_yaw_rate_(0.0, 0.0, 0.0, 0.0, 0.0),
              controller_pitch_rate_(0.0, 0.0, 0.0, 0.0, 0.0),
              controller_roll_rate_(0.0, 0.0, 0.0, 0.0, 0.0) {
@@ -95,7 +95,7 @@ void PID::loadParams() {
           controller_parameters_[name].insert({param_name, param.as_bool() ? 1.0 : 0.0});
           RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
         } else if (param_name == "debug") {
-          controller_debug_[name] = param.as_bool();   // ← store here
+          controller_debug_[name] = param.as_bool();
           RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
         } else {
           controller_parameters_[name].insert({param_name, param.as_double()});
@@ -108,9 +108,10 @@ void PID::loadParams() {
       }
     }
   }
-
-
-
+  course_control_ = this->get_parameter("control.inner_loop.pid.course_control").as_bool();
+  lpf_order_ = this->get_parameter("control.inner_loop.pid.lpf_order").as_int();
+  lpf_method_ = this->get_parameter("control.inner_loop.pid.lpf_method").as_string();
+  lpf_design_ = this->get_parameter("control.inner_loop.pid.lpf_design").as_string();
 }
 
 /**
@@ -277,17 +278,17 @@ void PID::createControllers() {
   /* Check if all parameters exist */
   if (controller_parameters_["surge"].count("kp") == 0 ||
       controller_parameters_["surge"].count("ki") == 0 ||
-      controller_parameters_["surge"].count("lpf_pole") == 0 ||
+      controller_parameters_["surge"].count("lpf_wc") == 0 ||
       controller_parameters_["surge"].count("tau_min") == 0 ||
       controller_parameters_["surge"].count("tau_max") == 0) {
-    RCLCPP_ERROR(get_logger(), "Surge Controller missing parameters (kp, ki, lpf_pole, tau_min or tau_max).");
+    RCLCPP_ERROR(get_logger(), "Surge Controller missing parameters (kp, ki, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
 
   /* Create object for the controller itself */
   controller_surge_ = ControllerPI(controller_parameters_["surge"]["kp"],
                                    controller_parameters_["surge"]["ki"],
-                                   controller_parameters_["surge"]["lpf_pole"],
+                                   controller_parameters_["surge"]["lpf_wc"],
                                    controller_parameters_["surge"]["tau_min"],
                                    controller_parameters_["surge"]["tau_max"]);
   
@@ -295,17 +296,17 @@ void PID::createControllers() {
   /* Check if all parameters exist */
   if (controller_parameters_["sway"].count("kp") == 0 ||
       controller_parameters_["sway"].count("ki") == 0 ||
-      controller_parameters_["sway"].count("lpf_pole") == 0 ||
+      controller_parameters_["sway"].count("lpf_wc") == 0 ||
       controller_parameters_["sway"].count("tau_min") == 0 ||
       controller_parameters_["sway"].count("tau_max") == 0) {
-    RCLCPP_ERROR(get_logger(), "Sway Controller missing parameters (kp, ki, lpf_pole, tau_min or tau_max).");
+    RCLCPP_ERROR(get_logger(), "Sway Controller missing parameters (kp, ki, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
 
   /* Create object for the controller itself */
   controller_sway_ = ControllerPI(controller_parameters_["sway"]["kp"],
                                   controller_parameters_["sway"]["ki"],
-                                  controller_parameters_["sway"]["lpf_pole"],
+                                  controller_parameters_["sway"]["lpf_wc"],
                                   controller_parameters_["sway"]["tau_min"],
                                   controller_parameters_["sway"]["tau_max"]);
   
@@ -313,17 +314,17 @@ void PID::createControllers() {
   /* Check if all parameters exist */
   if (controller_parameters_["heave"].count("kp") == 0 ||
       controller_parameters_["heave"].count("ki") == 0 ||
-      controller_parameters_["heave"].count("lpf_pole") == 0 ||
+      controller_parameters_["heave"].count("lpf_wc") == 0 ||
       controller_parameters_["heave"].count("tau_min") == 0 ||
       controller_parameters_["heave"].count("tau_max") == 0) {
-    RCLCPP_ERROR(get_logger(), "Surge Controller parameters gains (kp, ki, lpf_pole, tau_min or tau_max).");
+    RCLCPP_ERROR(get_logger(), "Surge Controller parameters gains (kp, ki, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
 
   /* Create object for the controller itself */
   controller_heave_ = ControllerPI(controller_parameters_["heave"]["kp"],
                                    controller_parameters_["heave"]["ki"],
-                                   controller_parameters_["heave"]["lpf_pole"],
+                                   controller_parameters_["heave"]["lpf_wc"],
                                    controller_parameters_["heave"]["tau_min"],
                                    controller_parameters_["heave"]["tau_max"]);
 
@@ -332,10 +333,13 @@ void PID::createControllers() {
   if (controller_parameters_["yaw"].count("kp") == 0 ||
       controller_parameters_["yaw"].count("ki") == 0 ||
       controller_parameters_["yaw"].count("kd") == 0 ||
-      controller_parameters_["yaw"].count("lpf_pole") == 0 ||
+      controller_parameters_["yaw"].count("kffa") == 0 ||
+      controller_parameters_["yaw"].count("kffv_lin") == 0 ||
+      controller_parameters_["yaw"].count("kffv_sq") == 0 ||
+      controller_parameters_["yaw"].count("lpf_wc") == 0 ||
       controller_parameters_["yaw"].count("tau_min") == 0 ||
       controller_parameters_["yaw"].count("tau_max") == 0) {
-    RCLCPP_ERROR(get_logger(), "Yaw Controller missing parameters (kp, ki, kd, lpf_pole, tau_min or tau_max).");
+    RCLCPP_ERROR(get_logger(), "Yaw Controller missing parameters (kp, ki, kd, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
 
@@ -343,20 +347,26 @@ void PID::createControllers() {
   controller_yaw_ = ControllerPID(controller_parameters_["yaw"]["kp"], 
                                   controller_parameters_["yaw"]["ki"], 
                                   controller_parameters_["yaw"]["kd"],
-                                  controller_parameters_["yaw"]["lpf_pole"],
+                                  controller_parameters_["yaw"]["lpf_wc"],
                                   controller_parameters_["yaw"]["tau_min"],
                                   controller_parameters_["yaw"]["tau_max"],
-                                  true);
+                                  controller_parameters_["yaw"]["kffv_lin"],
+                                  controller_parameters_["yaw"]["kffv_sq"],
+                                  controller_parameters_["yaw"]["kffa"],
+                                  true,
+                                  lpf_order_,
+                                  lpf_method_,
+                                  lpf_design_);
   
   /* PITCH */                                
   /* Check if all parameters exist */
   if (controller_parameters_["pitch"].count("kp") == 0 ||
       controller_parameters_["pitch"].count("ki") == 0 ||
       controller_parameters_["pitch"].count("kd") == 0 ||
-      controller_parameters_["pitch"].count("lpf_pole") == 0 ||
+      controller_parameters_["pitch"].count("lpf_wc") == 0 ||
       controller_parameters_["pitch"].count("tau_min") == 0 ||
       controller_parameters_["pitch"].count("tau_max") == 0) {
-    RCLCPP_ERROR(get_logger(), "Pitch Controller missing parameters (kp, ki, kd, lpf_pole, tau_min or tau_max).");
+    RCLCPP_ERROR(get_logger(), "Pitch Controller missing parameters (kp, ki, kd, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
 
@@ -364,47 +374,59 @@ void PID::createControllers() {
   controller_pitch_ = ControllerPID(controller_parameters_["pitch"]["kp"], 
                                     controller_parameters_["pitch"]["ki"], 
                                     controller_parameters_["pitch"]["kd"],
-                                    controller_parameters_["pitch"]["lpf_pole"],
+                                    controller_parameters_["pitch"]["lpf_wc"],
                                     controller_parameters_["pitch"]["tau_min"],
                                     controller_parameters_["pitch"]["tau_max"],
-                                    true);
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                    true,
+                                    lpf_order_,
+                                    lpf_method_,
+                                    lpf_design_);
   
   /* ROLL */                                  
   /* Check if all parameters exist */
   if (controller_parameters_["roll"].count("kp") == 0 ||
       controller_parameters_["roll"].count("ki") == 0 ||
       controller_parameters_["roll"].count("kd") == 0 ||
-      controller_parameters_["roll"].count("lpf_pole") == 0 ||
+      controller_parameters_["roll"].count("lpf_wc") == 0 ||
       controller_parameters_["roll"].count("tau_min") == 0 ||
       controller_parameters_["roll"].count("tau_max") == 0) {
-    RCLCPP_ERROR(get_logger(), "Roll Controller missing parameters (kp, ki, kd, lpf_pole, tau_min or tau_max).");
+    RCLCPP_ERROR(get_logger(), "Roll Controller missing parameters (kp, ki, kd, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
 
   /* Create object for the controller itself */
   controller_roll_ = ControllerPID(controller_parameters_["roll"]["kp"], 
-                                   controller_parameters_["roll"]["ki"], 
-                                   controller_parameters_["roll"]["kd"],
-                                   controller_parameters_["roll"]["lpf_pole"],
-                                   controller_parameters_["roll"]["tau_min"],
-                                   controller_parameters_["roll"]["tau_max"],
-                                   true);
+                                  controller_parameters_["roll"]["ki"], 
+                                  controller_parameters_["roll"]["kd"],
+                                  controller_parameters_["roll"]["lpf_wc"],
+                                  controller_parameters_["roll"]["tau_min"],
+                                  controller_parameters_["roll"]["tau_max"],
+                                  0.0,
+                                  0.0,
+                                  0.0,
+                                  true,
+                                  lpf_order_,
+                                  lpf_method_,
+                                  lpf_design_);
   
   /* YAW RATE */                                 
   /* Check if all parameters exist */
   if (controller_parameters_["yaw_rate"].count("kp") == 0 ||
       controller_parameters_["yaw_rate"].count("ki") == 0 ||
-      controller_parameters_["yaw_rate"].count("lpf_pole") == 0 ||
+      controller_parameters_["yaw_rate"].count("lpf_wc") == 0 ||
       controller_parameters_["yaw_rate"].count("tau_min") == 0 ||
       controller_parameters_["yaw_rate"].count("tau_max") == 0) {
-    RCLCPP_ERROR(get_logger(), "Yaw Rate Controller missing parameters (kp, ki, lpf_pole, tau_min or tau_max).");
+    RCLCPP_ERROR(get_logger(), "Yaw Rate Controller missing parameters (kp, ki, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
 
   /* Create object for the controller itself */
   controller_yaw_rate_ = ControllerPI(controller_parameters_["yaw_rate"]["kp"],
                                       controller_parameters_["yaw_rate"]["ki"],
-                                      controller_parameters_["yaw_rate"]["lpf_pole"],
+                                      controller_parameters_["yaw_rate"]["lpf_wc"],
                                       controller_parameters_["yaw_rate"]["tau_min"],
                                       controller_parameters_["yaw_rate"]["tau_max"]);
   
@@ -412,17 +434,17 @@ void PID::createControllers() {
   /* Check if all parameters exist */
   if (controller_parameters_["pitch_rate"].count("kp") == 0 ||
       controller_parameters_["pitch_rate"].count("ki") == 0 ||
-      controller_parameters_["pitch_rate"].count("lpf_pole") == 0 ||
+      controller_parameters_["pitch_rate"].count("lpf_wc") == 0 ||
       controller_parameters_["pitch_rate"].count("tau_min") == 0 ||
       controller_parameters_["pitch_rate"].count("tau_max") == 0) {
-    RCLCPP_ERROR(get_logger(), "Pitch Rate Controller missing parameters (kp, ki, lpf_pole, tau_min or tau_max).");
+    RCLCPP_ERROR(get_logger(), "Pitch Rate Controller missing parameters (kp, ki, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
 
   /* Create object for the controller itself */
   controller_pitch_rate_ = ControllerPI(controller_parameters_["pitch_rate"]["kp"],
                                         controller_parameters_["pitch_rate"]["ki"],
-                                        controller_parameters_["pitch_rate"]["lpf_pole"],
+                                        controller_parameters_["pitch_rate"]["lpf_wc"],
                                         controller_parameters_["pitch_rate"]["tau_min"],
                                         controller_parameters_["pitch_rate"]["tau_max"]);
 
@@ -430,17 +452,17 @@ void PID::createControllers() {
   /* Check if all parameters exist */
   if (controller_parameters_["roll_rate"].count("kp") == 0 ||
       controller_parameters_["roll_rate"].count("ki") == 0 ||
-      controller_parameters_["roll_rate"].count("lpf_pole") == 0 ||
+      controller_parameters_["roll_rate"].count("lpf_wc") == 0 ||
       controller_parameters_["roll_rate"].count("tau_min") == 0 ||
       controller_parameters_["roll_rate"].count("tau_max") == 0) {
-    RCLCPP_ERROR(get_logger(), "Roll Rate Controller missing parameters (kp, ki, lpf_pole, tau_min or tau_max).");
+    RCLCPP_ERROR(get_logger(), "Roll Rate Controller missing parameters (kp, ki, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
 
   /* Create object for the controller itself */
   controller_roll_rate_ = ControllerPI(controller_parameters_["roll_rate"]["kp"],
                                        controller_parameters_["roll_rate"]["ki"],
-                                       controller_parameters_["roll_rate"]["lpf_pole"],
+                                       controller_parameters_["roll_rate"]["lpf_wc"],
                                        controller_parameters_["roll_rate"]["tau_min"],
                                        controller_parameters_["roll_rate"]["tau_max"]);
 }
@@ -535,7 +557,7 @@ void PID::changeParamsCallback(const std::shared_ptr<pid::srv::ChangeParams::Req
   }
 
   /* If any parameter is invalid */
-  if (request->kp <= 0 || request->ki <= 0 || request->kd <= 0 || request->lpf_pole <= 0 ||
+  if (request->kp <= 0 || request->ki <= 0 || request->kd <= 0 || request->lpf_wc <= 0 ||
       request->tau_min <= 0 || request->tau_max <= 0 || request->tau_min >= request->tau_max) {
     response->success = false;
     response->message = "Parameter(s) invalid (negative gains/pole/tau, tau_min > tau_max).";
@@ -689,12 +711,17 @@ void PID::callControllerHeave() {
 
 void PID::callControllerYaw() {
   /* Call PID controller */
-  tau_ = controller_yaw_.callController(nav_state_.orientation.z, yaw_ref_, nav_state_.orientation_rate.z, 1.0/freq_);
+  if(course_control_)
+    tau_ = controller_yaw_.callController(nav_state_.course_angle, yaw_ref_, nav_state_.orientation_rate.z, 1.0/freq_);
+  else 
+    tau_ = controller_yaw_.callController(nav_state_.orientation.z, yaw_ref_, nav_state_.orientation_rate.z, 1.0/freq_);
 
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
   debug_msg.error = controller_yaw_.getError();
+  debug_msg.error_rate = controller_yaw_.error_rate_;
+  debug_msg.error_rate_dot = controller_yaw_.error_rate_dot_;
   debug_msg.p_term = controller_yaw_.getProportionalTerm();
   debug_msg.i_term = controller_yaw_.getIntegralTerm();
   debug_msg.d_term = controller_yaw_.getDerivativeTerm();
@@ -703,6 +730,11 @@ void PID::callControllerYaw() {
   debug_msg.tau_sat = controller_yaw_.getTau_sat();
   debug_msg.a_term = controller_yaw_.getAntiWindupTerm();
   debug_msg.tau = tau_;
+  debug_msg.state = controller_yaw_.state_;
+  debug_msg.ref_raw = farol_utils::wrapTo2Pi(controller_yaw_.ref_raw_);
+  debug_msg.ref_filt = farol_utils::wrapTo2Pi(controller_yaw_.ref_);
+  debug_msg.dref_filt = controller_yaw_.dref_;
+  debug_msg.ddref_filt = controller_yaw_.ddref_;
 
   if (controller_debug_["yaw"]) {
   auto it = debug_publishers_.find("yaw");
@@ -870,11 +902,11 @@ void PID::resetBodyWrenchRequest() {
 /************************/
 
 /* Constructor */
-ControllerPI::ControllerPI(double kp, double ki, double lpf_pole, double tau_min, double tau_max) {
+ControllerPI::ControllerPI(double kp, double ki, double lpf_wc, double tau_min, double tau_max) {
   /* Set parameters */
   kp_ = kp; 
   ki_ = ki; 
-  lpf_pole_ = lpf_pole;
+  lpf_wc_ = lpf_wc;
   tau_min_ = tau_min;
   tau_max_ = tau_max;
 }
@@ -895,7 +927,7 @@ double ControllerPI::callController(double state, double state_ref, double dt) {
 
 
     /*Apply low pass filter due to noise amplification from derivative computation*/ 
-  lpf_A_ = std::exp(- lpf_pole_*dt);
+  lpf_A_ = std::exp(- lpf_wc_*dt);
   lpf_B_ = 1 - lpf_A_;
   state_dot_filter_ = lpf_A_*state_dot_filter_prev_ + lpf_B_*state_dot_;
 
@@ -918,18 +950,13 @@ double ControllerPI::callController(double state, double state_ref, double dt) {
   tau_prev_ = tau_;
   tau_sat_prev_ = tau_sat_;
 
-  
-
-
-
-
   return tau_sat_;
 }
 
-void ControllerPI::setParams(double kp, double ki, double lpf_pole, double tau_min, double tau_max) {
+void ControllerPI::setParams(double kp, double ki, double lpf_wc, double tau_min, double tau_max) {
   kp_ = kp; 
   ki_ = ki; 
-  lpf_pole_ = lpf_pole; 
+  lpf_wc_ = lpf_wc; 
   tau_min_ = tau_min; 
   tau_max_ = tau_max;
 }
@@ -939,66 +966,83 @@ void ControllerPI::setParams(double kp, double ki, double lpf_pole, double tau_m
 /************************/
 
 /* Constructor */
-ControllerPID::ControllerPID(double kp, double ki, double kd, double lpf_pole, double tau_min, double tau_max, bool wrapToPi) {
+ControllerPID::ControllerPID(double kp, double ki, double kd, double lpf_wc, double tau_min, double tau_max, double kffv_lin, double kffv_sq, double kffa, bool wrapToPi, int lpf_order, std::string lpf_method, std::string lpf_design) {
   /* Set parameters */
   kp_ = kp;
   ki_ = ki;
   kd_ = kd;
-  lpf_pole_ = lpf_pole;
+  kffv_lin_ = kffv_lin;
+  kffv_sq_ = kffv_sq;
+  kffa_ = kffa;
+  lpf_wc_ = (lpf_wc > 0.0) ? lpf_wc : 1.0;
   tau_min_ = tau_min;
   tau_max_ = tau_max;
   wrapToPi_ = wrapToPi;
+
+  lpf_.configure(lpf_wc_, 0.1, lpf_order, lpf_design, lpf_method, wrapToPi_); 
+  // lpf_.configure(lpf_wc_, 0.1, lpf_design, lpf_method, wrapToPi_); 
 }
 
 /* Delta implementation for PID */
 double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
-  /* Compute error */
-  error_ = state_ref - state;
-
-  /* Wrap to [-pi, pi] if needed */
-  if (wrapToPi_) {
-    error_ = std::fmod(error_ + M_PI, 2*M_PI);
-    if (error_ < 0) error_ += 2*M_PI;
-    error_ = error_ - M_PI;
-  }
-
-  /* Compute derivative of Kd term if not in first iteration */
+  ref_raw_ = state_ref;
+  state_ = state;
+  
+  /* Pass reference signal through LPF to extract reference derivatives for ff terms*/
+  lpf_.step(state_ref, dt);
+  ref_ = lpf_.y();
+  dref_ = lpf_.dy();
+  ddref_ = lpf_.ddy();
+  
+  // Compute error 
+  error_ = state - ref_;
+  if (wrapToPi_) // Wrap to [-pi, pi] if needed */
+    error_ = farol_utils::wrapToPi(error_);  
+  // Compute error derivative
+  error_rate_ = state_rate - dref_;
+  
+  // Compute derivative of all terms execpt the integral
   if (!first_it_) {
     state_rate_dot_ = (state_rate - state_rate_prev_) / dt;
+    error_dot_ = (error_ - error_prev_) / dt;
+    error_rate_dot_ = (error_rate_ - error_rate_prev_) / dt;
+    ddref_dot_ =  (ddref_ - ddref_prev_)/dt; 
+  } else 
+    first_it_ = false; // Reset first iteration flag 
 
-    /* Apply low pass filter due to noise amplification from derivative computation */
-    lpf_A_ = std::exp(- lpf_pole_*dt);
-    lpf_B_ = 1 - lpf_A_;
-    state_rate_dot_filter_ = lpf_A_*state_rate_dot_filter_prev_ + lpf_B_*state_rate_dot_;
-
-  } else {
-    /* Reset first iteration flag */
-    first_it_ = false;
-  }
+  // Compute error second derivative
+  // error_rate_dot_ = state_rate_dot_- ddref_;
 
   /* Add all PID terms */
-  tau_d_ = ki_*error_ - kp_*state_rate - kd_*state_rate_dot_filter_;
+  // tau_d_ = -ki_*error_ - kp_*error_rate_ - kd_*error_rate_dot_ + kffa_*dddref_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
+  tau_d_ = -ki_*error_ - kp_*error_dot_ - kd_*error_rate_dot_ + kffa_*ddref_dot_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
 
   /* Anti-windup */
   Ka_ = 1.0/dt;
   tau_dot_ = tau_d_ - Ka_*(tau_prev_ - tau_sat_prev_);
-  tau_ = tau_prev_ + tau_dot_*dt;
+  tau_ = tau_prev_ + tau_dot_*dt ;
   tau_sat_ = std::clamp(tau_, tau_min_, tau_max_);
 
   /* Set prev values */
+  error_prev_ = error_;
   state_rate_prev_ = state_rate;
+  error_rate_prev_= error_rate_;
   state_rate_dot_filter_prev_ = state_rate_dot_filter_;
   tau_prev_ = tau_;
   tau_sat_prev_ = tau_sat_;
+  ddref_prev_ = ddref_;
 
   return tau_sat_;
 }
 
-void ControllerPID::setParams(double kp, double ki, double kd, double lpf_pole, double tau_min, double tau_max) {
+void ControllerPID::setParams(double kp, double ki, double kd, double lpf_wc, double tau_min, double tau_max, double kffv_lin, double kffv_sq, double kffa) {
   kp_ = kp; 
   ki_ = ki; 
   kd_ = kd; 
-  lpf_pole_ = lpf_pole; 
+  kffv_lin_ = kffv_lin; 
+  kffv_sq_ = kffv_sq; 
+  kffa_ = kffa; 
+  lpf_wc_ = lpf_wc; 
   tau_min_ = tau_min; 
   tau_max_ = tau_max;
 }

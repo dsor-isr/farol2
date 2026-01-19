@@ -2,11 +2,13 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <unsupported/Eigen/MatrixFunctions>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "farol_msgs/msg/navigation_state.hpp"
 #include "farol_msgs/msg/measurement.hpp"
+#include "farol_utils/angles.hpp"
 
 /**
  * @brief   Sample and Hold navigation filter

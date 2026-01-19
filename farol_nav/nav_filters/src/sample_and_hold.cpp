@@ -136,7 +136,7 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
       filter_state_msg_.altitude_ellipsoidal = msg.value[0];
       break;
     /* Inertial velocity expressed in the body */
-    case msg.MEAS_BODY_VELOCITY_INERTIAL:
+    case msg.MEAS_BODY_VELOCITY_INERTIAL: {
       if (msg.value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement BODY_VELOCITY_INERTIAL has incorrect length or type.");
         break;
@@ -152,7 +152,22 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
         filter_state_msg_.body_velocity_fluid.z = msg.value[2];
       }
 
-      break;
+      // Compute course angle 
+      Eigen::Vector3d v_b(msg.value[0], msg.value[1], msg.value[2]);
+      // Build rotation matrix from body to inertial
+      Eigen::Matrix3d R =
+        Eigen::Matrix3d(
+            Eigen::AngleAxisd(filter_state_msg_.orientation.z,   Eigen::Vector3d::UnitZ()) *
+            Eigen::AngleAxisd(filter_state_msg_.orientation.y, Eigen::Vector3d::UnitY()) *
+            Eigen::AngleAxisd(filter_state_msg_.orientation.x,  Eigen::Vector3d::UnitX())
+        );
+      // Rotate velocity from body to inertial
+      Eigen::Vector3d v_i = R * v_b;
+      // Compute course angle
+      filter_state_msg_.course_angle = farol_utils::wrapTo2Pi(std::atan2(v_i.y(), v_i.x()));
+      
+      break;}
+
     /* Velocity expressed in the body relative to the fluid */
     case msg.MEAS_BODY_VELOCITY_FLUID:
       if (msg.value.size() != 3) {

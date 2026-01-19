@@ -252,7 +252,7 @@ bool PathNode::LineService(const std::shared_ptr<paths::srv::SpawnLine::Request>
  
   /* Construct the response back */
   res->success = success;
-  RCLCPP_INFO(get_logger(), "Adding LINE to the path");
+  RCLCPP_INFO_STREAM(get_logger(), "Adding LINE to the path [Start: " << start_point.transpose() << ", End: " << end_point.transpose() << "]");
   return true;
 }
 

@@ -2,6 +2,7 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <iostream>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/parameter.hpp"
@@ -15,6 +16,10 @@
 #include "farol_msgs/msg/navigation_state.hpp"
 #include "pid/srv/change_params.hpp"
 #include "pid/msg/pid_debug.hpp"
+
+#include <farol_utils/filters/low_pass_filter.hpp>
+#include <farol_utils/filters/second_order_lpf.hpp>
+#include <farol_utils/angles.hpp>
 
 enum ControllerType {
   SURGE = 0,
@@ -32,13 +37,13 @@ enum ControllerType {
 class ControllerPI {
   public:
     /* Constructor */
-    ControllerPI(double kp, double ki, double lpf_pole, double tau_min, double tau_max);
+    ControllerPI(double kp, double ki, double lpf_wc, double tau_min, double tau_max);
 
     /* Call for controller */
     double callController(double state, double state_ref, double dt);
 
     /* Methods for setting parameters */
-    void setParams(double kp, double ki, double lpf_pole, double tau_min, double tau_max);
+    void setParams(double kp, double ki, double lpf_wc, double tau_min, double tau_max);
 
     double getError() { return error_; }
     double getIntegralTerm() { return ki_*error_; }
@@ -53,7 +58,7 @@ class ControllerPI {
     /* Controllers' parameters */
     double kp_;
     double ki_;
-    double lpf_pole_;
+    double lpf_wc_;
     double tau_min_;
     double tau_max_;
 
@@ -68,40 +73,65 @@ class ControllerPI {
 class ControllerPID {
   public:
     /* Constructor */
-    ControllerPID(double kp, double ki, double kd, double lpf_pole, double tau_min, double tau_max, bool wrapToPi);
+    ControllerPID(double kp, double ki, double kd, double lpf_wc, double tau_min, double tau_max, double kffv_lin, double kffv_sq, double kffa, bool wrapToPi, int lpf_order, std::string lpf_method, std::string lpf_design);
 
     /* Call for controller */
     double callController(double state, double state_ref, double state_rate, double dt);
 
     /* Methods for setting parameters */
-    void setParams(double kp, double ki, double kd, double lpf_pole, double tau_min, double tau_max);
+    void setParams(double kp, double ki, double kd, double lpf_wc, double tau_min, double tau_max, double kffv_lin, double kffv_sq, double kffa);
 
     double getError() { return error_; }
     double getIntegralTerm() { return ki_*error_; }
-    double getProportionalTerm() { return kp_*state_rate_prev_; }
-    double getDerivativeTerm() { return kd_*state_rate_dot_filter_; }
+    double getProportionalTerm() { return kp_*error_rate_; }
+    double getDerivativeTerm() { return kd_*error_rate_dot_filter_; }
     double getTau_d() { return tau_d_; }
     double getTau_sat() { return tau_sat_; }
     double getAntiWindupTerm() { return Ka_*(tau_prev_ - tau_sat_prev_); }
     double getTauDot() { return tau_dot_; }
     double getTau() { return tau_; }
-  
-  private:
+    
+    double ref_raw_; // unfiltered reference
+    double state_;
+    double ref_;
+    double dref_;
+    double ddref_;
+    double dddref_;
+    double kffv_lin_;
+    double kffv_sq_;
+    double kffa_;
+    
     /* Controllers' parameters */
     double kp_;
     double ki_;
     double kd_;
-    double lpf_pole_;
+    double lpf_wc_;
     double tau_min_;
     double tau_max_;
     bool wrapToPi_;
-
+    
+    
     /* Variables for control algorithm */
-    double error_, tau_d_ ,error_prev_, error_dot_, error_integral_ = 0.0;
+    double error_, error_rate_; // error and error rate computed from measured signals
+    double tau_d_;              //  derivative of output, used before antiwindup  
+    
+    // to compute discrete derivative in controller
     bool first_it_ = true;
-    double state_rate_prev_ = 0.0 , state_rate_dot_ = 0.0, state_rate_dot_filter_ = 0.0, state_rate_dot_filter_prev_ = 0.0;
-    double lpf_A_ = 0.0, lpf_B_ = 0.0;
+    double error_dot_{0.0}, error_rate_dot_{0.0}, state_rate_dot_{0.0},  ddref_dot_{0.0};
+    double error_prev_{0.0}, error_rate_prev_{0.0}, state_rate_prev_{0.0},  ddref_prev_{0.0};
+    
     double Ka_, tau_dot_, tau_, tau_prev_=0.0, tau_sat_, tau_sat_prev_=0.0;
+    
+    // for shitty low pass filter to be deleted
+    double state_rate_dot_filter_ = 0.0, state_rate_dot_filter_prev_ = 0.0;
+    double error_rate_dot_filter_ = 0.0, error_rate_dot_filter_prev_ = 0.0;
+    double lpf_A_ = 0.0, lpf_B_ = 0.0;
+    
+    // low pass filter for reference signal
+    farol_utils::LowPassFilter lpf_;
+    // farol_utils::SecondOrderLowPass lpf_; // set wrap_angle to true
+    private:
+    
 };
 
 /**
@@ -229,6 +259,9 @@ class PID : public rclcpp::Node {
            yaw_ref_ = 0.0, pitch_ref_ = 0.0, roll_ref_ = 0.0,
            yaw_rate_ref_ = 0.0, pitch_rate_ref_ = 0.0, roll_rate_ref_ = 0.0;
     double tau_;
+    bool course_control_{false}; // flag to switch between heading or course control
+    int lpf_order_;
+    std::string lpf_method_, lpf_design_;
 
     std::array<bool, 10> debug_mode_{}; 
 

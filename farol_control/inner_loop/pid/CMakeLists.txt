@@ -12,6 +12,7 @@ find_package(std_msgs REQUIRED)
 find_package(farol_msgs REQUIRED)
 find_package(control_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(farol_utils REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -38,12 +39,12 @@ ament_target_dependencies(
   std_msgs
   farol_msgs
   control_allocation
-
+  farol_utils
 )
 
 # Link generated service types
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
-target_link_libraries(pid_control "${cpp_typesupport_target}")
+target_link_libraries(pid_control "${cpp_typesupport_target}" farol_utils::farol_utils)
 
 target_include_directories(pid_control PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

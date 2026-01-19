@@ -155,7 +155,10 @@ void ConsoleParser::requestPath() {
   /* Call the service to reset the path */
   std::shared_ptr<paths::srv::ResetPath::Request> req = std::make_shared<paths::srv::ResetPath::Request>();
   req->reset_path = true;
+  // reset_path_client_->async_send_request(req);
   reset_path_client_->async_send_request(req);
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
 
   if (p_console_new_){
     xrefpoint = 0;
@@ -181,12 +184,24 @@ void ConsoleParser::requestPath() {
       
         req->ref_point = {0.0, 0.0, 0.0}; 
         spawn_line_client_->async_send_request(req);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        // {auto future = spawn_line_client_->async_send_request(req);
+        // if (future.wait_for(std::chrono::seconds(2)) != std::future_status::ready) {
+        //   RCLCPP_ERROR(this->get_logger(), "spawn_line_client_ timed out");
+        //   return;
+        // }}
 
         /* Call the service to specify the section desired speed for this section */
         std::shared_ptr<paths::srv::SetConstSpeed::Request> speed_req = std::make_shared<paths::srv::SetConstSpeed::Request>();
         speed_req->speed = it->velocity;
         speed_req->default_speed = it->velocity;
         set_path_speed_client_->async_send_request(speed_req);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        // {auto future = set_path_speed_client_->async_send_request(speed_req);
+        // if (future.wait_for(std::chrono::seconds(2)) != std::future_status::ready) {
+        //   RCLCPP_ERROR(this->get_logger(), "set_path_speed_client_ timed out");
+        //   return;
+        // }}
       
         run++;  /* Increment the number of valid sent sections */
       }
@@ -212,12 +227,24 @@ void ConsoleParser::requestPath() {
         req->direction = it->adirection;
         req->z = 0.0;
         spawn_arc_client_->async_send_request(req);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        // {auto future = spawn_arc_client_->async_send_request(req);
+        // if (future.wait_for(std::chrono::seconds(2)) != std::future_status::ready) {
+        //   RCLCPP_ERROR(this->get_logger(), "spawn_arc_client_ timed out");
+        //   return;
+        // }}
       
         /* Call the service to specify the section desired speed for this section */
         std::shared_ptr<paths::srv::SetConstSpeed::Request> speed_req = std::make_shared<paths::srv::SetConstSpeed::Request>();
         speed_req->speed = it->velocity;
         speed_req->default_speed = it->velocity;
         set_path_speed_client_->async_send_request(speed_req);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        // {auto future = set_path_speed_client_->async_send_request(speed_req);
+        // if (future.wait_for(std::chrono::seconds(2)) != std::future_status::ready) {
+        //   RCLCPP_ERROR(this->get_logger(), "set_path_speed_client_ timed out");
+        //   return;
+        // }}
 
         /* Increment the number of valid sent sections */
         run++;
@@ -417,10 +444,10 @@ void ConsoleParser::parseMission(std::istream &is) {
         // +.+  Check direction
         // +.+ Clockwise
         if (newSection.adirection == -1)
-          newSection.gamma_e = Gamma0 + FarolUtils::wrapTo2Pi(psis - psie) * newSection.radius;
+          newSection.gamma_e = Gamma0 + farol_utils::wrapTo2Pi(psis - psie) * newSection.radius;
         // +.+ Counter clockwise
         else
-          newSection.gamma_e = Gamma0 + (2 * M_PI - FarolUtils::wrapTo2Pi(psis - psie)) * newSection.radius;
+          newSection.gamma_e = Gamma0 + (2 * M_PI - farol_utils::wrapTo2Pi(psis - psie)) * newSection.radius;
       } else {
         continue;
       }
@@ -554,11 +581,11 @@ void ConsoleParser::parseMission(std::istream &is) {
         // +.+. Check direction
         // +.+ Clockwise
         if ((*i).adirection == -1) {
-          arc_len = FarolUtils::wrapTo2Pi(phi0 - phie) * R;
+          arc_len = farol_utils::wrapTo2Pi(phi0 - phie) * R;
         }
         // +.+ Counter-clockwise
         else{
-          arc_len = (2 * M_PI - FarolUtils::wrapTo2Pi(phi0 - phie)) * R;
+          arc_len = (2 * M_PI - farol_utils::wrapTo2Pi(phi0 - phie)) * R;
         }
         Form_Topic.length.push_back(arc_len);
       }
@@ -827,7 +854,13 @@ void ConsoleParser::stateCallback(const farol_msgs::msg::NavigationState &msg) {
 int main(int argc, char ** argv) {
   /* initialise ROS2 and start the node */
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<ConsoleParser>());
+  
+  auto node = std::make_shared<ConsoleParser>();
+  rclcpp::executors::MultiThreadedExecutor exec;  // or pass #threads
+  exec.add_node(node);
+  exec.spin();
+
+  // rclcpp::spin(std::make_shared<ConsoleParser>());
   rclcpp::shutdown();
   return 0;
 }

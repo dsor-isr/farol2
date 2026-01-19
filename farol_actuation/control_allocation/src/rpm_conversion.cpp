@@ -90,6 +90,7 @@ void RPMConversion::thrusterForceCallback(const control_allocation::msg::Thruste
   
   /* Convert force to RPM */
   for (int i = 0; i < (int)msg.force.size(); i++) {
+    // uses thrstcurve parameters that are constant and specified in yaml file
     if (mode_ == 1) {
       if (msg.force[i] == 0.0) {
       rpm_command_msg_.rpm.push_back(0.0);
@@ -108,12 +109,8 @@ void RPMConversion::thrusterForceCallback(const control_allocation::msg::Thruste
 
         rpm_command_msg_.rpm.push_back(rpm_value_);
       }
-
-
-
-
-
-      
+    
+    // computes thrstcurve parameters that depend on current surge velocity
     } else if (mode_ == 0) {
       if (msg.force[i] == 0.0) {
         rpm_command_msg_.rpm.push_back(0.0);
@@ -133,15 +130,13 @@ void RPMConversion::thrusterForceCallback(const control_allocation::msg::Thruste
           rpm_value_ = (rpm_value_ > max_rpm_) ? max_rpm_ : rpm_value_;
 
         }
-
-
         rpm_command_msg_.rpm.push_back(rpm_value_);
       }
     }
 
+  }
   /* Publish */
   rpm_command_pub_->publish(rpm_command_msg_);
-  }
 }
 
 /**
