@@ -13,6 +13,7 @@
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include "std_msgs/msg/int8.hpp"
 #include "control_allocation/msg/body_wrench_request.hpp"
 #include "control_allocation/msg/thruster_force.hpp"
 #include "farol_msgs/msg/navigation_state.hpp"
@@ -59,10 +60,12 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_angle_ref_pub_, debug1_pub_;
     rclcpp::Subscription<control_allocation::msg::BodyWrenchRequest>::SharedPtr body_wrench_request_sub_;
     rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr nav_state_sub_;
+    rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr mission_status_sub_;
     
     /* Callbacks */
     void bodyWrenchRequestCallback(const control_allocation::msg::BodyWrenchRequest &msg);
     void navStateCallback(const farol_msgs::msg::NavigationState &msg);
+    void missionStatusCallback(const std_msgs::msg::Int8 &msg);
 
     /* Other functions */
     void computeRudderAngle(double tau_r);
@@ -71,7 +74,10 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     /* Other variables */
     rclcpp::Clock clock_;
     control_allocation::msg::ThrusterForce thruster_force_msg_;
+
     std_msgs::msg::Float32 rudder_angle_ref_msg_, debug1_msg_;
+    int mission_status_ = 0;
+
     std::vector<std::map<std::string, std::variant<std::string, std::vector<double>>>> thruster_configuration_;
     Eigen::Matrix<double, 6, Eigen::Dynamic> thrust_allocation_matrix_;
     Eigen::Matrix<double, Eigen::Dynamic, 6> thrust_allocation_matrix_pseudo_inv_;

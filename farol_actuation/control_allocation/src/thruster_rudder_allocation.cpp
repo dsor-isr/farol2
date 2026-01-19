@@ -30,6 +30,10 @@ void ThrusterRudderAllocation::initialiseSubscribers() {
                     get_parameter("actuation.thruster_rudder_allocation.topics.subscribers.nav_state").as_string(),
                     1, std::bind(&ThrusterRudderAllocation::navStateCallback, this, std::placeholders::_1));
 
+  mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
+                          get_parameter("actuation.thruster_rudder_allocation.topics.subscribers.mission_status").as_string(), 
+                          1, std::bind(&ThrusterRudderAllocation::missionStatusCallback, this, std::placeholders::_1));
+
   return;
 }
 
@@ -139,12 +143,15 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(const control_allocatio
   std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
   thruster_force_msg_.force = forces_vec;
 
-  thruster_force_pub_->publish(thruster_force_msg_);
+  /* If we are not in a mission, don't publish */
+  if (mission_status_ != 0) {
+    thruster_force_pub_->publish(thruster_force_msg_);
 
-  /* Create message to publish rudder angle reference */
-  rudder_angle_ref_msg_.data = rudder_angle_;
+    /* Create message to publish rudder angle reference */
+    rudder_angle_ref_msg_.data = rudder_angle_;
 
-  rudder_angle_ref_pub_->publish(rudder_angle_ref_msg_);
+    rudder_angle_ref_pub_->publish(rudder_angle_ref_msg_);
+  }
 }
 
 void ThrusterRudderAllocation::computeRudderAngle(double tau_r) {
@@ -255,6 +262,13 @@ double ThrusterRudderAllocation::solve_delta_from_tau(double tau_r, double gamma
  */
 void ThrusterRudderAllocation::navStateCallback(const farol_msgs::msg::NavigationState &msg) {
   nav_state_ = msg;
+}
+
+/**
+ * @brief Callback for navigation state.
+ */
+void ThrusterRudderAllocation::missionStatusCallback(const std_msgs::msg::Int8 &msg) {
+  mission_status_ = msg.data;
 }
 
 /**
