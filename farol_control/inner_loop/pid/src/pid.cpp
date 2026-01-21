@@ -995,11 +995,11 @@ double ControllerPID::callController(double state, double state_ref, double stat
   ddref_ = lpf_.ddy();
   
   // Compute error 
-  error_ = state - ref_;
+  error_ = state - state_ref;
   if (wrapToPi_) // Wrap to [-pi, pi] if needed */
     error_ = farol_utils::wrapToPi(error_);  
   // Compute error derivative
-  error_rate_ = state_rate - dref_;
+  error_rate_ = state_rate ;//- dref_;
   
   // Compute derivative of all terms execpt the integral
   if (!first_it_) {
