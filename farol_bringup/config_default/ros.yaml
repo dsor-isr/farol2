@@ -28,6 +28,7 @@
           subscribers:
             body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
             nav_state: "/#vehicle#/nav/filter/state"
+            mission_status: "/#vehicle#/mission_status"
           publishers:
             thruster_force: "/#vehicle#/actuation/thruster_force"
             rudder_angle_ref: "/#vehicle#/control/ref/rudder_angle"

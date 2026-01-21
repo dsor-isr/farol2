@@ -130,7 +130,9 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(const control_allocatio
   /* Set requested forces and torques, accounting for drag caused by rudder */
   /* Since common mode is used, all forces and torques are set to 0, except */
   /* for force along X axis */
-  tau_common_mode_ << tau_[0] + rudder_x_body_drag_, 0.0, 0.0,
+  // tau_common_mode_ << tau_[0] + rudder_x_body_drag_, 0.0, 0.0,
+  //                     0.0, 0.0, 0.0;
+  tau_common_mode_ << tau_[0], 0.0, 0.0,
                       0.0, 0.0, 0.0;
 
   /* Compute vector of forces for each thruster based on body wrench request */
@@ -177,10 +179,10 @@ void ThrusterRudderAllocation::computeRudderAngle(double tau_r) {
 
   /* Compute rudder angle according to Fossen model, in "A Survey of Control Allocation Methods for Underwater Vehicles", p. 126 */
   /* N = K.l.v^2.δ */
-  // rudder_angle_ = tau_r / (K_s_ * rudder_cm_distance_ * V_s_.dot(V_s_));
+  rudder_angle_ = tau_r / (K_s_ * rudder_cm_distance_ * V_s_.dot(V_s_));
 
   /* Compute rudder angle using inversion of the function ... See ... i am the documentation bruh */
-  rudder_angle_ = solve_delta_from_tau(tau_r, gamma_, V_s_.dot(V_s_));
+  // rudder_angle_ = solve_delta_from_tau(tau_r, gamma_, V_s_.dot(V_s_));
 
   /* Saturate rudder_angle */
   rudder_angle_ = (rudder_angle_ > rudder_angle_max_) ? rudder_angle_max_ : ((rudder_angle_ < rudder_angle_min_) ? rudder_angle_min_ : rudder_angle_);
