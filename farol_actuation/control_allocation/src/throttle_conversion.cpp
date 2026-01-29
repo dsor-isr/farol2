@@ -5,6 +5,7 @@ ThrottleConversion::ThrottleConversion() : Node("throttle_conversion",
                                       rclcpp::NodeOptions()
                                         .allow_undeclared_parameters(true)
                                         .automatically_declare_parameters_from_overrides(true)) {
+  clock_ = this->get_clock();
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
@@ -62,7 +63,7 @@ void ThrottleConversion::initialiseServices() {
  * @brief Compute throttle for each thruster based on rpm for that thruster.
  */
 void ThrottleConversion::rpmCommandCallback(const control_allocation::msg::ThrusterRPM &msg) {
-  throttle_command_msg_.header.stamp = clock_.now();
+  throttle_command_msg_.header.stamp = clock_->now();
   throttle_command_msg_.value = {};
   
   for (int i = 0; i < (int)msg.rpm.size(); i++) {

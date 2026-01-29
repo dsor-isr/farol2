@@ -5,6 +5,7 @@ StaticThrusterAllocation::StaticThrusterAllocation() : Node("static_thruster_all
                                       rclcpp::NodeOptions()
                                         .allow_undeclared_parameters(true)
                                         .automatically_declare_parameters_from_overrides(true)) {
+  clock_ = this->get_clock();
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
@@ -85,7 +86,7 @@ void StaticThrusterAllocation::initialiseTimers() {
   int freq = get_parameter("actuation.static_thruster_allocation.node_frequency").as_int();
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&StaticThrusterAllocation::timerCallback, this));
+  timer_ = create_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&StaticThrusterAllocation::timerCallback, this));
 }
 
 /**
@@ -101,7 +102,7 @@ void StaticThrusterAllocation::bodyWrenchRequestCallback(const control_allocatio
   forces_ = thrust_allocation_matrix_pseudo_inv_*tau_;
 
   /* Create message to publish */
-  msg_.header.stamp = clock_.now();
+  msg_.header.stamp = clock_->now();
   
   std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
   msg_.force = forces_vec;

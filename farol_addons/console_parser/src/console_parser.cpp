@@ -110,7 +110,12 @@ void ConsoleParser::initializeTimer() {
   int freq = get_parameter("addons.console_parser.node_frequency").as_int();
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&ConsoleParser::depthCallback, this));
+  timer_ = create_timer(std::chrono::milliseconds(int(1000/freq)), std::bind(&ConsoleParser::depthCallback, this));
+
+
+    // timer_ = create_timer
+    // (std::chrono::milliseconds(int(1.0/freq_*1000)), 
+    // std::bind(&PID::timerCallback, this));
 }
 
 /* 
@@ -197,6 +202,7 @@ void ConsoleParser::requestPath() {
       if(!((it->xi == it->xe && it->yi == it->ye) || 
            (it->xi == it->xc && it->yi == it->yc) ||
            (it->xc == it->xe && it->yc == it->ye))) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         /* Call the service to spawn an arc in the path */
         std::shared_ptr<paths::srv::SpawnArc2D::Request> req = std::make_shared<paths::srv::SpawnArc2D::Request>();
@@ -468,7 +474,7 @@ void ConsoleParser::parseMission(std::istream &is) {
     mission.push_back(newSection);
   }
 
-  FullSection.header.stamp = clock_.now();
+  FullSection.header.stamp = this->now();
   fullpath_pub_->publish(FullSection);
 
   farol_msgs::msg::Formation Form_Topic; 
@@ -721,7 +727,7 @@ void ConsoleParser::startNewSection() {
 
     // +.+ Activate the end of references for depth
     if ((*act_section).time > 0) {
-      depth_end = clock_.now() + rclcpp::Duration((*act_section).time, 0);
+      depth_end = this->now() + rclcpp::Duration::from_seconds((*act_section).time);
     } else {
       gamma_s = 0;
       gamma_e = 0;
@@ -746,7 +752,7 @@ void ConsoleParser::depthCallback() {
   // +.+ Depth with schedule end
   if (depth_end != rclcpp::Time(0,1)) {
     RCLCPP_WARN(get_logger(), "bruh");
-    if ((depth_end - clock_.now()).seconds() <= 0) {
+    if ((depth_end - this->now()).seconds() <= 0.0){
       DesiredDepth = 0.0;
       timer_.reset();
       gamma_s = 0;

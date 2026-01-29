@@ -49,11 +49,12 @@ class ProcessActionType(object):
 
 class Process:
   def __init__(self, name, cmd, vehicle_name, vehicle_id, vehicle_ns, 
-               config_package_path_share, config_package_path_real, args=None, launch_on_startup=False,
-               delay_before_start=0.0, dependencies=None):
+               config_package_path_share, config_package_path_real ,args=None, launch_on_startup=False,
+               delay_before_start=0.0, dependencies=None, use_sim_time=False):
     self.name = name
     self.config_package_path_share = config_package_path_share
     self.config_package_path_real = config_package_path_real
+    self.use_sim_time = use_sim_time
     self.cmd = cmd
     self.args = args if args is not None else []
     self.dependencies = dependencies if dependencies is not None else []
@@ -64,9 +65,10 @@ class Process:
     self.vehicle_id = vehicle_id
     self.vehicle_ns = vehicle_ns
 
+
   def start(self):
     if not self.isActive():
-      cmd = self.cmd.split(' ') + self.args + ["vehicle_ns:=" + self.vehicle_ns] + ["vehicle_name:=" + self.vehicle_name] + ["config_package_path_share:=" + self.config_package_path_share] + ["config_package_path_real:=" + self.config_package_path_real]
+      cmd = self.cmd.split(' ') + self.args + ["vehicle_ns:=" + self.vehicle_ns] + ["vehicle_name:=" + self.vehicle_name]+ ["use_sim_time:=" + str(self.use_sim_time).lower()] + ["config_package_path_share:=" + self.config_package_path_share] + ["config_package_path_real:=" + self.config_package_path_real]
 
       if self.delay_before_start:
         time.sleep(self.delay_before_start)
@@ -130,6 +132,8 @@ class FarolBringup(Node):
     # declare all parameters
     self.declare_parameter('id', 0)
     self.declare_parameter('name', 'vehicle')
+    self.use_sim_time = self.get_parameter_or('use_sim_time', False).value
+    self.use_sim_time = self.get_parameter('use_sim_time').value
     self.declare_parameter('config_package_path_share', 'medusa_bringup')
     self.declare_parameter('farol_bringup_package_path_share', 'farol_bringup')
     self.declare_parameter('processes_path', '')
@@ -137,6 +141,7 @@ class FarolBringup(Node):
     # actually get the parameters
     self.vehicle_id = self.get_parameter('id').get_parameter_value().integer_value
     self.vehicle_name = self.get_parameter('name').get_parameter_value().string_value
+    self.use_sim_time = self.get_parameter_or('use_sim_time', False).value
     self.config_package_path_share = self.get_parameter('config_package_path_share').get_parameter_value().string_value
     self.farol_bringup_package_path_share = self.get_parameter('farol_bringup_package_path_share').get_parameter_value().string_value
     self.processes_path = self.get_parameter('processes_path').get_parameter_value().string_value
@@ -264,6 +269,7 @@ class FarolBringup(Node):
                                        vehicle_name=self.vehicle_name,
                                        vehicle_id=self.vehicle_id,
                                        vehicle_ns=self.vehicle_ns,
+                                       use_sim_time=self.use_sim_time,
                                        config_package_path_share=self.config_package_path_share,
                                        config_package_path_real=self.config_package_path_real))
 

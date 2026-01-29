@@ -43,6 +43,7 @@ ament_target_dependencies(
   simulation
   rclcpp
   std_msgs
+  rosgraph_msgs
   geometry_msgs
   farol_msgs
   control_allocation

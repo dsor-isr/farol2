@@ -87,7 +87,7 @@ void PathFollowingNode::StartPFService(const std::shared_ptr<path_following::srv
   if (this->pf_algorithm_ != nullptr) {
 
     /* Update the last time the iteration of the path following run */
-    this->prev_time_ = clock_.now();
+    this->prev_time_ = this->now();
     this->timer_->reset();
     res->success = true;
 

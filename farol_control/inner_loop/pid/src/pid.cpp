@@ -14,17 +14,41 @@ PID::PID() : Node("pid",
              controller_yaw_rate_(0.0, 0.0, 0.0, 0.0, 0.0),
              controller_pitch_rate_(0.0, 0.0, 0.0, 0.0, 0.0),
              controller_roll_rate_(0.0, 0.0, 0.0, 0.0, 0.0) {
+
+  
+
+
+  clock_ = this->get_clock();
+  last_update_time_ = clock_->now();
+
+  auto now = clock_->now();
+
+  controller_last_reference_ = {
+    {"surge", now},
+    {"sway", now},
+    {"heave", now},
+    {"yaw", now},
+    {"pitch", now},
+    {"roll", now},
+    {"yaw_rate", now},
+    {"pitch_rate", now},
+    {"roll_rate", now},
+    {"attitude", now}
+  };
   
   /* Initialise body wrench request forces and torques as 0 */
   resetBodyWrenchRequest();
   
   loadParams();
+
   initialiseSubscribers();
   initialisePublishers();
   initialiseServices();
   initialiseTimers();
   
   createControllers();
+
+
 }
 
 /* Destructor */
@@ -214,11 +238,13 @@ void PID::initialiseServices() {
  * @brief Initialise Timers
  */
 void PID::initialiseTimers() {
+
+
   /* Get node frequency from parameters */
   freq_ = get_parameter("control.inner_loop.pid.node_frequency").as_int();
 
   /* Create timer */
-  timer_ = create_wall_timer
+  timer_ = create_timer
     (std::chrono::milliseconds(int(1.0/freq_*1000)), 
     std::bind(&PID::timerCallback, this));
 }
@@ -229,47 +255,47 @@ void PID::navStateCallback(const farol_msgs::msg::NavigationState &msg) {
 
 void PID::surgeRefCallback(const std_msgs::msg::Float32 &msg) {
   surge_ref_ = msg.data;
-  controller_last_reference_["surge"] = clock_.now();
+  controller_last_reference_["surge"] = clock_->now();
 }
 
 void PID::swayRefCallback(const std_msgs::msg::Float32 &msg) {
   sway_ref_ = msg.data;
-  controller_last_reference_["sway"] = clock_.now();
+  controller_last_reference_["sway"] = clock_->now();
 }
 
 void PID::heaveRefCallback(const std_msgs::msg::Float32 &msg) {
   heave_ref_ = msg.data;
-  controller_last_reference_["heave"] = clock_.now();
+  controller_last_reference_["heave"] = clock_->now();
 }
 
 void PID::yawRefCallback(const std_msgs::msg::Float32 &msg) {
   yaw_ref_ = msg.data;
-  controller_last_reference_["yaw"] = clock_.now();
+  controller_last_reference_["yaw"] = clock_->now();
 }
 
 void PID::pitchRefCallback(const std_msgs::msg::Float32 &msg) {
   pitch_ref_ = msg.data;
-  controller_last_reference_["pitch"] = clock_.now();
+  controller_last_reference_["pitch"] = clock_->now();
 }
 
 void PID::rollRefCallback(const std_msgs::msg::Float32 &msg) {
   roll_ref_ = msg.data;
-  controller_last_reference_["roll"] = clock_.now();
+  controller_last_reference_["roll"] = clock_->now();
 }
 
 void PID::yawRateRefCallback(const std_msgs::msg::Float32 &msg) {
   yaw_rate_ref_ = msg.data;
-  controller_last_reference_["yaw_rate"] = clock_.now();
+  controller_last_reference_["yaw_rate"] = clock_->now();
 }
 
 void PID::pitchRateRefCallback(const std_msgs::msg::Float32 &msg) {
   pitch_rate_ref_ = msg.data;
-  controller_last_reference_["pitch_rate"] = clock_.now();
+  controller_last_reference_["pitch_rate"] = clock_->now();
 }
 
 void PID::rollRateRefCallback(const std_msgs::msg::Float32 &msg) {
   roll_rate_ref_ = msg.data;
-  controller_last_reference_["roll_rate"] = clock_.now();
+  controller_last_reference_["roll_rate"] = clock_->now();
 }
 
 void PID::createControllers() {
@@ -451,6 +477,21 @@ void PID::createControllers() {
  *        Where the algorithms will constantly run.
  */
 void PID::timerCallback() {
+
+  auto now = clock_->now();
+
+  double dt = (now - last_update_time_).seconds();
+  //RCLCPP_INFO(get_logger(), "dt: %f", dt);
+
+  last_update_time_ = now;
+
+  // Safety
+  if (dt <= 0.0 || dt > 2.0/freq_) { //Check if the dt is correct or if the timer had a big delay
+    RCLCPP_WARN(get_logger(), "PID Timer callback - dt value abnormal (%f). Skipping this iteration.", dt);
+    return;
+  }
+
+
   /* Run controllers to update body wrench request */
   callControllers();
 
@@ -546,15 +587,16 @@ void PID::changeParamsCallback(const std::shared_ptr<pid::srv::ChangeParams::Req
 bool PID::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const int &node_frequency) {
   /* Here it is assumed that a reference must have been received less than 2 times the node period ago */
   /* E.g. if the node is running at 10Hz, the period is 0.1s, so the last reference must have been     */
-  /*      received less than 0.2s ago.                                                                 */
+  /*      received less than 0.2s ago.  
+                                                                 */
 
-  static double threshold = 2.0/(double)node_frequency;
+  double threshold = 2.0/(double)node_frequency;
   static int32_t secs = (int32_t)floor(threshold);
   static uint32_t nanosecs = (uint32_t)((threshold - floor(threshold))*1e9);
   
-  RCLCPP_DEBUG(get_logger(), "Now: %ld, Last: %ld, Duration: %ld.", clock_.now().nanoseconds(), last_reference_timestamp.nanoseconds(), rclcpp::Duration(secs, nanosecs).nanoseconds());
+  RCLCPP_DEBUG(get_logger(), "Now: %ld, Last: %ld, Duration: %ld.", clock_->now().nanoseconds(), last_reference_timestamp.nanoseconds(), rclcpp::Duration(secs, nanosecs).nanoseconds());
 
-  if (clock_.now() - last_reference_timestamp < rclcpp::Duration(secs, nanosecs)) {
+  if (clock_->now() - last_reference_timestamp < rclcpp::Duration(secs, nanosecs)) {
     return true;
   }
 
@@ -614,7 +656,7 @@ void PID::callControllerSurge() {
   tau_ = controller_surge_.callController(nav_state_.body_velocity_fluid.x, surge_ref_, 1.0/freq_);
 
   pid::msg::PidDebug debug_msg;
-  debug_msg.header.stamp = clock_.now();
+  debug_msg.header.stamp = clock_->now();
   debug_msg.error = controller_surge_.getError();
   debug_msg.p_term = controller_surge_.getProportionalTerm();
   debug_msg.i_term = controller_surge_.getIntegralTerm();
@@ -640,7 +682,7 @@ void PID::callControllerSway() {
   tau_ = controller_sway_.callController(nav_state_.body_velocity_fluid.y, sway_ref_, 1.0/freq_);
 
   pid::msg::PidDebug debug_msg;
-  debug_msg.header.stamp = clock_.now();
+  debug_msg.header.stamp = clock_->now();
   debug_msg.error = controller_sway_.getError();
   debug_msg.p_term = controller_sway_.getProportionalTerm();
   debug_msg.i_term = controller_sway_.getIntegralTerm();
@@ -666,7 +708,7 @@ void PID::callControllerHeave() {
   tau_ = controller_heave_.callController(nav_state_.body_velocity_fluid.z, heave_ref_, 1.0/freq_);
 
     pid::msg::PidDebug debug_msg;
-  debug_msg.header.stamp = clock_.now();
+  debug_msg.header.stamp = clock_->now();
   debug_msg.error = controller_heave_.getError();
   debug_msg.p_term = controller_heave_.getProportionalTerm();
   debug_msg.i_term = controller_heave_.getIntegralTerm();
@@ -693,7 +735,7 @@ void PID::callControllerYaw() {
 
 
   pid::msg::PidDebug debug_msg;
-  debug_msg.header.stamp = clock_.now();
+  debug_msg.header.stamp = clock_->now();
   debug_msg.error = controller_yaw_.getError();
   debug_msg.p_term = controller_yaw_.getProportionalTerm();
   debug_msg.i_term = controller_yaw_.getIntegralTerm();
@@ -721,7 +763,7 @@ void PID::callControllerPitch() {
   tau_ = controller_pitch_.callController(nav_state_.orientation.y, pitch_ref_, nav_state_.orientation_rate.y, 1.0/freq_);
 
   pid::msg::PidDebug debug_msg;
-  debug_msg.header.stamp = clock_.now();
+  debug_msg.header.stamp = clock_->now();
   debug_msg.error = controller_pitch_.getError();
   debug_msg.p_term = controller_pitch_.getProportionalTerm();
   debug_msg.i_term = controller_pitch_.getIntegralTerm();
@@ -749,7 +791,7 @@ void PID::callControllerRoll() {
   tau_ = controller_roll_.callController(nav_state_.orientation.x, roll_ref_, nav_state_.orientation_rate.x, 1.0/freq_);
 
   pid::msg::PidDebug debug_msg;
-  debug_msg.header.stamp = clock_.now();
+  debug_msg.header.stamp = clock_->now();
   debug_msg.error = controller_roll_.getError();
   debug_msg.p_term = controller_roll_.getProportionalTerm();
   debug_msg.i_term = controller_roll_.getIntegralTerm();
@@ -777,7 +819,7 @@ void PID::callControllerYawRate() {
   tau_ = controller_yaw_rate_.callController(nav_state_.orientation_rate.z, yaw_rate_ref_, 1.0/freq_);
 
   pid::msg::PidDebug debug_msg;
-  debug_msg.header.stamp = clock_.now();
+  debug_msg.header.stamp = clock_->now();
   debug_msg.error = controller_yaw_rate_.getError();
   debug_msg.p_term = controller_yaw_rate_.getProportionalTerm();
   debug_msg.i_term = controller_yaw_rate_.getIntegralTerm();
@@ -803,7 +845,7 @@ void PID::callControllerPitchRate() {
   tau_ = controller_pitch_rate_.callController(nav_state_.orientation_rate.y, pitch_rate_ref_, 1.0/freq_);
 
   pid::msg::PidDebug debug_msg;
-  debug_msg.header.stamp = clock_.now();
+  debug_msg.header.stamp = clock_->now();
   debug_msg.error = controller_pitch_rate_.getError();
   debug_msg.p_term = controller_pitch_rate_.getProportionalTerm();
   debug_msg.i_term = controller_pitch_rate_.getIntegralTerm();
@@ -829,7 +871,7 @@ void PID::callControllerRollRate() {
   tau_ = controller_roll_rate_.callController(nav_state_.orientation_rate.x, roll_rate_ref_, 1.0/freq_);
 
   pid::msg::PidDebug debug_msg;
-  debug_msg.header.stamp = clock_.now();
+  debug_msg.header.stamp = clock_->now();
   debug_msg.error = controller_roll_rate_.getError();
   debug_msg.p_term = controller_roll_rate_.getProportionalTerm();
   debug_msg.i_term = controller_roll_rate_.getIntegralTerm();

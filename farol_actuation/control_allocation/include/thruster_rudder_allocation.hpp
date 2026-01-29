@@ -64,7 +64,7 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     void computeRudderAngle(double tau_r);
     
     /* Other variables */
-    rclcpp::Clock clock_;
+    rclcpp::Clock::SharedPtr clock_;
     control_allocation::msg::ThrusterForce thruster_force_msg_;
     std_msgs::msg::Float32 rudder_angle_ref_msg_;
     std::vector<std::map<std::string, std::variant<std::string, std::vector<double>>>> thruster_configuration_;

@@ -2,6 +2,9 @@
 
 /* Constructor */
 SampleAndHold::SampleAndHold() : Node("sample_and_hold") {
+
+
+  clock_ = this->get_clock();
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
@@ -69,16 +72,18 @@ void SampleAndHold::initialiseServices() {
  */
 void SampleAndHold::initialiseTimers() {
   /* Get node frequency from parameters */
+  
+
   declare_parameter<int>("nav.sample_and_hold.node_frequency", 5);
   int freq = get_parameter("nav.sample_and_hold.node_frequency").as_int();
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&SampleAndHold::timerCallback, this));
+  timer_ = create_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&SampleAndHold::timerCallback, this));
 }
 
 void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg) {
   /* Update filter state */
-
+  //RCLCPP_INFO(get_logger(), "Received measurement of type %d", msg.type);
   /* Depending on measurement type */
   switch(msg.type){
     /* Orientation: roll, pitch, yaw */
@@ -172,9 +177,12 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
  */
 void SampleAndHold::timerCallback() {
   /* Fill header */
-  filter_state_msg_.header.stamp = clock_.now();
 
-  /* Publish filter state message */
+
+  filter_state_msg_.header.stamp = clock_->now();
+
+
+
   state_pub_->publish(filter_state_msg_);
 }
 

@@ -7,6 +7,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/parameter.hpp"
+#include <rosgraph_msgs/msg/clock.hpp> 
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "control_allocation/msg/thruster_rpm.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
@@ -49,6 +50,12 @@ class Simulation : public rclcpp::Node {
     /* Timer callback */
     void timerCallback();
 
+    // wall-time callback: advance sim time & publish /clock
+    void onClockTick();     
+
+    // ROS-time callback: run one physics step and publish outputs
+    void onSimTick();
+
   private:
     /* Timer for node's callbacks */
     rclcpp::TimerBase::SharedPtr timer_;
@@ -62,15 +69,24 @@ class Simulation : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr linear_acceleration_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_acceleration_pub_;
 
+    rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
+
     rclcpp::Subscription<control_allocation::msg::ThrusterRPM>::SharedPtr thrust_sub_;
     
+    rclcpp::TimerBase::SharedPtr wall_timer_;   
+    rclcpp::TimerBase::SharedPtr sim_timer_;   
+
     /* Callbacks */
     void thrustCallback(const control_allocation::msg::ThrusterRPM::SharedPtr msg);
 
     std::unique_ptr<AUV> auv_;
+    std::chrono::steady_clock::time_point last_wall_tp_;
 
     int freq_;
+    int64_t sim_time_ns_;
     double node_period_;
+    double speedup_;
+    double clock_wall_rate_hz_;
 
     Eigen::VectorXd thrust; 
 

@@ -23,8 +23,9 @@ SimSensors::~SimSensors() {
 /**
  * @brief Load parameters
  */
-void SimSensors::loadParams() {
-  
+void SimSensors::loadParams() {   
+
+  speedup_ = get_parameter("sim.speedup").as_double();
   gnss_activate_ = get_parameter("sim.sim_sensors.sensors.gnss.activate").as_bool();
   gnss_noise_ = get_parameter("sim.sim_sensors.sensors.gnss.noise.activate").as_bool();
   freq_gnss_ = get_parameter("sim.sim_sensors.sensors.gnss.frequency").as_int();
@@ -88,8 +89,9 @@ void SimSensors::initialiseSubscribers() {
  * @brief Initialise Publishers
  */
 void SimSensors::initialisePublishers() {
+  
 
-  utm_pub_ = create_publisher<farol_msgs::msg::UTM>(
+  utm_pub_ = create_publisher<farol_msgs::msg::Measurement>(
       get_parameter("sim.sim_sensors.topics.publishers.gnss").as_string(), 1);
   depth_pub_ = create_publisher<farol_msgs::msg::Measurement>(
       get_parameter("sim.sim_sensors.topics.publishers.depth_sensor").as_string(), 1);
@@ -121,26 +123,27 @@ void SimSensors::initialiseServices() {
  * @brief Initialise Timers
  */
 void SimSensors::initialiseTimers() {
-  /* Get node frequency from parameters */
 
-  if(gnss_activate_){
-    period_gnss_ = 1.0/freq_gnss_;
-    timer_gnss_ = create_wall_timer(std::chrono::duration<double>(period_gnss_),
-                             std::bind(&SimSensors::gnssTimerCallback, this));
+  if (gnss_activate_) {
+    int gnss_period_ms = static_cast<int>(1000.0 / static_cast<double>(freq_gnss_));
+    timer_gnss_ = this->create_wall_timer(
+          std::chrono::milliseconds(gnss_period_ms),
+          std::bind(&SimSensors::gnssTimerCallback, this));
   }
 
-  if(depth_sensor_activate_){
-    period_depth_sensor_ = 1.0/freq_depth_sensor_;
-    timer_depth_sensor_ = create_wall_timer(std::chrono::duration<double>(period_depth_sensor_),
-                             std::bind(&SimSensors::depthTimerCallback, this));
+  if (depth_sensor_activate_) {
+    int depth_period_ms = static_cast<int>(1000.0 / static_cast<double>(freq_depth_sensor_));
+    timer_depth_sensor_ = this->create_wall_timer(
+          std::chrono::milliseconds(depth_period_ms),
+          std::bind(&SimSensors::depthTimerCallback, this));
   }
 
-  if(imu_activate_){
-    period_imu_ = 1.0/freq_imu_;
-    timer_imu_ = create_wall_timer(std::chrono::duration<double>(period_imu_),
-                             std::bind(&SimSensors::imuTimerCallback, this));   
+  if (imu_activate_) {
+    int imu_period_ms = static_cast<int>(1000.0 / static_cast<double>(freq_imu_));
+    timer_imu_ = this->create_wall_timer(
+          std::chrono::milliseconds(imu_period_ms),
+          std::bind(&SimSensors::imuTimerCallback, this));
   }
-                          
 }
 
 /**
@@ -190,7 +193,7 @@ void SimSensors::utmCallback(const farol_msgs::msg::UTM::SharedPtr msg) {
 
 void SimSensors::gnssTimerCallback() {
 
-    farol_msgs::msg::UTM utm_msg;
+    farol_msgs::msg::Measurement utm_msg;
 
     if(gnss_noise_) {
       send_northing = rcv_northing + randn(gnss_bias[0], gnss_variance[0]);
@@ -200,15 +203,50 @@ void SimSensors::gnssTimerCallback() {
       send_northing = rcv_northing;
       send_easting = rcv_easting;
     }
+
+    //Print what goes to the function
+    RCLCPP_INFO(rclcpp::get_logger("SimSensors"), "GNSS Northing: %f", send_northing);
+    RCLCPP_INFO(rclcpp::get_logger("SimSensors"), "GNSS Easting: %f", send_easting);
+
+    if(send_easting < 160000 || send_easting > 840000){
+      RCLCPP_WARN(rclcpp::get_logger("SimSensors"), "GNSS Easting out of UTM bounds: %f", send_easting);
+      return;
+    }
+
+    if(send_northing < 0 || send_northing > 10000000){
+      RCLCPP_WARN(rclcpp::get_logger("SimSensors"), "GNSS Northing out of UTM bounds: %f", send_northing);
+      return;
+    }
+
     //To simulate the true sensor who ouputs lat lon
     GeographicLib::UTMUPS::Reverse(rcv_utm_zone, rcv_northp,send_easting , send_northing, meas_lat, meas_lon);
     GeographicLib::UTMUPS::Forward(meas_lat, meas_lon, send_utm_zone, send_northp, send_easting, send_northing);
     
-    utm_msg.northing = send_northing;
-    utm_msg.easting = send_easting;
-    utm_msg.utm_zone = send_utm_zone;
-    utm_msg.northp = send_northp;
+    utm_msg.type = utm_msg.MEAS_UTM_POSITION;
+
+    if(std::isfinite(send_northing) == false){
+      RCLCPP_ERROR(rclcpp::get_logger("SimSensors"), "GNSS Northing not finite: %f", send_northing);
+      rclcpp::shutdown();                                               
+      std::abort();
+    }
+
+    if(std::isfinite(send_easting) == false){
+      RCLCPP_ERROR(rclcpp::get_logger("SimSensors"), "GNSS Easting not finite: %f", send_easting);
+      rclcpp::shutdown();                                               
+      std::abort();
+    }
+
+    utm_msg.value = {send_northing, send_easting, static_cast<double>(send_utm_zone)};
+    utm_msg.noise = {gnss_variance[0], gnss_variance[1]};
+
+    //Sends the letter to signify the hemisphere
+    if(send_northp){
+      utm_msg.data = "N";
+    }else{
+      utm_msg.data = "S";
+    }
     
+  
     utm_pub_->publish(utm_msg);
     
     return;

@@ -97,7 +97,7 @@ void WrenchManager::initialiseTimers() {
   freq_ = get_parameter("actuation.wrench_manager.node_frequency").as_int();
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq_*1000)), std::bind(&WrenchManager::timerCallback, this));
+  timer_ = create_timer(std::chrono::milliseconds(int(1.0/freq_*1000)), std::bind(&WrenchManager::timerCallback, this));
 }
 
 /**

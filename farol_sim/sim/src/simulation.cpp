@@ -2,9 +2,9 @@
 
 /* Constructor */
 Simulation::Simulation() : Node("simulation", 
-                  rclcpp::NodeOptions()
-                    .allow_undeclared_parameters(true)
-                    .automatically_declare_parameters_from_overrides(true)) {
+              rclcpp::NodeOptions()
+                .allow_undeclared_parameters(true)
+                .automatically_declare_parameters_from_overrides(true)) {
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
@@ -15,7 +15,8 @@ Simulation::Simulation() : Node("simulation",
 /* Destructor */
 Simulation::~Simulation() {
   /* Stop the timer */
-  timer_->cancel();
+  if (wall_timer_) wall_timer_->cancel();
+  if (sim_timer_)  sim_timer_->cancel();
 }
 
 /**
@@ -25,9 +26,6 @@ void Simulation::loadParams() {
   
   freq_ = get_parameter("sim.simulation.node_frequency").as_int(); 
   fluid_density = get_parameter("sim.simulation.fluid_density").as_double();
-
-  originLat = get_parameter("sim.simulation.originLat").as_double();
-  originLon = get_parameter("sim.simulation.originLon").as_double();
 
   mass = get_parameter("sim.simulation.vehicle.mass").as_double();
   zg = get_parameter("sim.simulation.vehicle.zg").as_double();
@@ -55,8 +53,7 @@ void Simulation::loadParams() {
 
   node_period_ = 1.0/freq_;
 
-  /* Convert origin lat/lon to UTM */
-  GeographicLib::UTMUPS::Forward(originLat, originLon, UTMZone, northp, originEasting, originNorthing);
+
 
 
   Eigen::Vector3d inertia_tensor(inertia[0], inertia[1], inertia[2]);
@@ -114,6 +111,7 @@ void Simulation::loadParams() {
  */
 void Simulation::initialiseSubscribers() {
 
+
   thrust_sub_  = create_subscription<control_allocation::msg::ThrusterRPM>(
                           get_parameter("sim.simulation.topics.subscribers.thruster_force").as_string(), 
                           1, std::bind(&Simulation::thrustCallback, this, std::placeholders::_1));
@@ -125,6 +123,7 @@ void Simulation::initialiseSubscribers() {
  * @brief Initialise Publishers
  */
 void Simulation::initialisePublishers() {
+
 
   utm_pub_ = create_publisher<farol_msgs::msg::UTM>(
       get_parameter("sim.simulation.topics.publishers.utm").as_string(), 1);
@@ -161,13 +160,13 @@ void Simulation::initialiseServices() {
  * @brief Initialise Timers
  */
 void Simulation::initialiseTimers() {
-  /* Get node frequency from parameters */
-  node_period_ = 1.0/freq_;
 
-  /* Create timer */
-  timer_ = create_wall_timer(std::chrono::duration<double>(node_period_),
-                             std::bind(&Simulation::timerCallback, this));
+  /* Create wall timer */
+  wall_timer_ = create_timer(
+    std::chrono::milliseconds(int((1.0/freq_)*1000)),
+    std::bind(&Simulation::timerCallback, this));
 }
+
 
 /**
  * @brief Timer callback for this node.
@@ -177,27 +176,18 @@ void Simulation::initialiseTimers() {
 void Simulation::thrustCallback(const control_allocation::msg::ThrusterRPM::SharedPtr msg){
 
   for(int i=0; i < thrust.size(); i++) {
-    thrust[i] = msg->rpm[i];
-    RCLCPP_INFO(this->get_logger(), "Thrust[%d]: %f", i, thrust[i]);
+    thrust[i] = msg->rpm[i]/thruster_gain;
   }
 
 }
 
 void Simulation::timerCallback() {
 
-  
+  //RCLCPP_INFO(this->get_logger(), "Simulation Tick");
   auv_->update(node_period_, thrust);
-
 
   geometry_msgs::msg::Vector3 pos_msg, vel_msg, ori_msg, ang_vel_msg, lin_acc_msg, ang_acc_msg;
   farol_msgs::msg::UTM utm_msg;
-
-  utm_msg.northing = originNorthing + auv_->getX();
-  utm_msg.easting = originEasting + auv_->getY();
-  utm_msg.utm_zone = UTMZone;
-  utm_msg.northp = northp;
-  utm_pub_->publish(utm_msg);
-  
 
   pos_msg.x = auv_->getX();
   pos_msg.y = auv_->getY();
@@ -336,12 +326,12 @@ void AUV::update(double dt, const Eigen::VectorXd &thrust) {
     Eigen::Vector3d ocean_disturbances;
     ocean_disturbances = this->computeOceanDisturbances();
 
-  /* Compute the dynamics of the rigid body - linear and angular acceleration in body frame */
-  Eigen::Vector3d v1_dot, v2_dot;
-  std::tie(v1_dot, v2_dot) = this->updateDynamics(applied_forces_and_torques);
-  // Store the latest accelerations
-  this->last_v1_dot_ = v1_dot;
-  this->last_v2_dot_ = v2_dot;
+    /* Compute the dynamics of the rigid body - linear and angular acceleration in body frame */
+    Eigen::Vector3d v1_dot, v2_dot;
+    std::tie(v1_dot, v2_dot) = this->updateDynamics(applied_forces_and_torques);
+    // Store the latest accelerations
+    this->last_v1_dot_ = v1_dot;
+    this->last_v2_dot_ = v2_dot;
 
     /* Integrate the dynamics */
     Eigen::Vector3d v1(this->state_.v1), v2(this->state_.v2);

@@ -107,7 +107,7 @@ void Waypoint::initialiseTimer() {
   node_frequency_ = (double)freq;
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&Waypoint::timerCallback, this));
+  timer_ = create_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&Waypoint::timerCallback, this));
 
   /* Stop the timer */
   timer_->cancel();

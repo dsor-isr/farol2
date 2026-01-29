@@ -109,7 +109,7 @@ void FilterHandler::initialiseTimers() {
   int freq = get_parameter("nav.filter_handler.node_frequency").as_int();
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&FilterHandler::timerCallback, this));
+  timer_ = create_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&FilterHandler::timerCallback, this));
 }
 
 /**

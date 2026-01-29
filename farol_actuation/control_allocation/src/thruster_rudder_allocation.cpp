@@ -5,11 +5,15 @@ ThrusterRudderAllocation::ThrusterRudderAllocation() : Node("thruster_rudder_all
                                       rclcpp::NodeOptions()
                                         .allow_undeclared_parameters(true)
                                         .automatically_declare_parameters_from_overrides(true)) {
+
+  
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
   initialiseServices();
   initialiseTimers();
+  clock_ = this->get_clock();
+
 }
 
 /* Destructor */
@@ -105,7 +109,8 @@ void ThrusterRudderAllocation::initialiseTimers() {
   int freq = get_parameter("actuation.thruster_rudder_allocation.node_frequency").as_int();
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&ThrusterRudderAllocation::timerCallback, this));
+  
+  timer_ = create_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&ThrusterRudderAllocation::timerCallback, this));
 }
 
 /**
@@ -131,7 +136,7 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(const control_allocatio
   forces_ = thrust_allocation_matrix_pseudo_inv_*tau_common_mode_;
 
   /* Create message to publish thruster force */
-  thruster_force_msg_.header.stamp = clock_.now();
+  thruster_force_msg_.header.stamp = clock_->now();
 
   std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
   thruster_force_msg_.force = forces_vec;
@@ -194,6 +199,7 @@ void ThrusterRudderAllocation::navStateCallback(const farol_msgs::msg::Navigatio
  */
 void ThrusterRudderAllocation::timerCallback() {
   /* Check if body velocity relative to fluid is being published on */
+
   if (nav_state_.body_velocity_fluid.x == 0.0 && nav_state_.body_velocity_fluid.y == 0.0 && nav_state_.body_velocity_fluid.z == 0.0) {
     RCLCPP_WARN(get_logger(), "Body Velocity relative to the fluid is 0. Is it not being updated?");
   }

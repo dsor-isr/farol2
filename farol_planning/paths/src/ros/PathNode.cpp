@@ -71,7 +71,7 @@ void PathNode::initializeTimer() {
   int freq = get_parameter("planning.paths.node_frequency").as_int();
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&PathNode::timerCallback, this));
+  timer_ = create_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&PathNode::timerCallback, this));
 }
 
 void PathNode::timerCallback() {
@@ -122,7 +122,7 @@ void PathNode::timerCallback() {
     if(pd && d_pd && dd_pd && tangent && curvature && derivative_norm) {
 
       /* Header for the message */
-      msg.header.stamp = this->clock_.now();
+      msg.header.stamp = this->now();
       msg.header.frame_id = this->frame_id_;
 
       /* The value of gamma used to make the computations */

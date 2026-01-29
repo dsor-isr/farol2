@@ -257,7 +257,7 @@ void PathFollowingNode::initialiseTimer() {
   int freq = get_parameter("control.outer_loop.path_following.node_frequency").as_int();
 
   /* Create timer */
-  this->timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&PathFollowingNode::timerIterCallback, this));
+  this->timer_ = create_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&PathFollowingNode::timerIterCallback, this));
 
   /* Wait for the start service to start the Path Following */
   this->timer_->cancel();
@@ -277,7 +277,7 @@ void PathFollowingNode::timerIterCallback() {
   this->pf_algorithm_->UpdatePathState(this->path_state_);
 
   /* Get the difference between previous update time and current update time */
-  rclcpp::Time curr_time = clock_.now();
+  rclcpp::Time curr_time = this->now();
   rclcpp::Duration dt = curr_time - this->prev_time_;
   this->prev_time_ = curr_time;
 

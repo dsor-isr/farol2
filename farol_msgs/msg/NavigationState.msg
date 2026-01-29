@@ -22,4 +22,5 @@ geometry_msgs/Vector3 orientation # [roll pitch yaw] (rad)
 # Orientation Rate
 geometry_msgs/Vector3 orientation_rate # [p q r] (rad/s)
 
+
 # If needed: add variances to position, orientation and other estimated variables
