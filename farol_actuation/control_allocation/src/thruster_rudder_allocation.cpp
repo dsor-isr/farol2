@@ -156,13 +156,13 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(const control_allocatio
   }
 }
 
-void ThrusterRudderAllocation::computeRudderAngle(double tau_r) {
-  /* If vehicle has no forward motion, output rudder angle 0 */
-  if (nav_state_.body_velocity_fluid.x == 0.0) {
-    rudder_angle_ = 0.0;
-    rudder_x_body_drag_ = 0.0;
-    return;
-  }
+void ThrusterRudderAllocation::computeRudderAngle(double tau_r) 
+{
+  /* Cap velocity to avoid division by 0 on later computations */
+  nav_state_.body_velocity_fluid.x =
+    (std::abs(nav_state_.body_velocity_fluid.x) < 0.05)
+      ? std::copysign(0.05, nav_state_.body_velocity_fluid.x == 0.0 ? 1.0 : nav_state_.body_velocity_fluid.x)
+      : nav_state_.body_velocity_fluid.x;
 
   /* Course angle = Heading + Sideslip */
   sideslip_angle_ = (nav_state_.body_velocity_fluid.x != 0.0) ? atan2(nav_state_.body_velocity_fluid.y, nav_state_.body_velocity_fluid.x) : 0.0;
