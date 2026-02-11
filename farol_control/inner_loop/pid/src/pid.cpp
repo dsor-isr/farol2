@@ -984,72 +984,38 @@ ControllerPID::ControllerPID(double kp, double ki, double kd, double lpf_wc, dou
 }
 
 /* Delta implementation for PID */
-// double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
-//   ref_raw_ = state_ref;
-//   state_ = state;
-  
-//   /* Pass reference signal through LPF to extract reference derivatives for ff terms*/
-//   lpf_.step(state_ref, dt);
-//   ref_ = lpf_.y();
-//   dref_ = lpf_.dy();
-//   ddref_ = lpf_.ddy();
-  
-//   // Compute error 
-//   error_ = state - state_ref;
-//   if (wrapToPi_) // Wrap to [-pi, pi] if needed */
-//     error_ = farol_utils::wrapToPi(error_);  
-//   // Compute error derivative
-//   error_rate_ = state_rate - dref_;
-  
-//   // Compute derivative of all terms execpt the integral
-//   if (!first_it_) {
-//     state_rate_dot_ = (state_rate - state_rate_prev_) / dt;
-//     error_dot_ = (error_ - error_prev_) / dt;
-//     error_rate_dot_ = (error_rate_ - error_rate_prev_) / dt;
-//     ddref_dot_ =  (ddref_ - ddref_prev_)/dt; 
-//   } else 
-//     first_it_ = false; // Reset first iteration flag 
-
-//   // Compute error second derivative
-//   // error_rate_dot_ = state_rate_dot_- ddref_;
-
-//   /* Add all PID terms */
-//   // tau_d_ = -ki_*error_ - kp_*error_rate_ - kd_*error_rate_dot_ + kffa_*dddref_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
-//   tau_d_ = -ki_*error_ - kp_*error_dot_ - kd_*error_rate_dot_ + kffa_*ddref_dot_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
-
-//   /* Anti-windup */
-//   Ka_ = 1.0/dt;
-//   tau_dot_ = tau_d_ - Ka_*(tau_prev_ - tau_sat_prev_);
-//   tau_ = tau_prev_ + tau_dot_*dt ;
-//   tau_sat_ = std::clamp(tau_, tau_min_, tau_max_);
-
-//   /* Set prev values */
-//   error_prev_ = error_;
-//   state_rate_prev_ = state_rate;
-//   error_rate_prev_= error_rate_;
-//   state_rate_dot_filter_prev_ = state_rate_dot_filter_;
-//   tau_prev_ = tau_;
-//   tau_sat_prev_ = tau_sat_;
-//   ddref_prev_ = ddref_;
-
-//   return tau_sat_;
-// }
-
-/* Regular implementation for PID */
 double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
   ref_raw_ = state_ref;
   state_ = state;
+  
+  /* Pass reference signal through LPF to extract reference derivatives for ff terms*/
+  lpf_.step(state_ref, dt);
+  ref_ = lpf_.y();
+  dref_ = lpf_.dy();
+  ddref_ = lpf_.ddy();
   
   // Compute error 
   error_ = state - state_ref;
   if (wrapToPi_) // Wrap to [-pi, pi] if needed */
     error_ = farol_utils::wrapToPi(error_);  
-
-    // Compute error derivative
-  error_rate_ = state_rate;
+  // Compute error derivative
+  error_rate_ = state_rate - dref_;
   
+  // Compute derivative of all terms execpt the integral
+  if (!first_it_) {
+    state_rate_dot_ = (state_rate - state_rate_prev_) / dt;
+    error_dot_ = (error_ - error_prev_) / dt;
+    error_rate_dot_ = (error_rate_ - error_rate_prev_) / dt;
+    ddref_dot_ =  (ddref_ - ddref_prev_)/dt; 
+  } else 
+    first_it_ = false; // Reset first iteration flag 
 
-  tau_d_ = -ki_*error_;
+  // Compute error second derivative
+  // error_rate_dot_ = state_rate_dot_- ddref_;
+
+  /* Add all PID terms */
+  // tau_d_ = -ki_*error_ - kp_*error_rate_ - kd_*error_rate_dot_ + kffa_*dddref_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
+  tau_d_ = -ki_*error_ - kp_*error_dot_ - kd_*error_rate_dot_ + kffa_*ddref_dot_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
 
   /* Anti-windup */
   Ka_ = 1.0/dt;
@@ -1066,8 +1032,42 @@ double ControllerPID::callController(double state, double state_ref, double stat
   tau_sat_prev_ = tau_sat_;
   ddref_prev_ = ddref_;
 
-  return tau_sat_-kp_ *error_ + -kd_*error_rate_;
+  return tau_sat_;
 }
+
+/* Regular implementation for PID */
+// double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
+//   ref_raw_ = state_ref;
+//   state_ = state;
+  
+//   // Compute error 
+//   error_ = state - state_ref;
+//   if (wrapToPi_) // Wrap to [-pi, pi] if needed */
+//     error_ = farol_utils::wrapToPi(error_);  
+
+//     // Compute error derivative
+//   error_rate_ = state_rate;
+  
+
+//   tau_d_ = -ki_*error_;
+
+//   /* Anti-windup */
+//   Ka_ = 1.0/dt;
+//   tau_dot_ = tau_d_ - Ka_*(tau_prev_ - tau_sat_prev_);
+//   tau_ = tau_prev_ + tau_dot_*dt ;
+//   tau_sat_ = std::clamp(tau_, tau_min_, tau_max_);
+
+//   /* Set prev values */
+//   error_prev_ = error_;
+//   state_rate_prev_ = state_rate;
+//   error_rate_prev_= error_rate_;
+//   state_rate_dot_filter_prev_ = state_rate_dot_filter_;
+//   tau_prev_ = tau_;
+//   tau_sat_prev_ = tau_sat_;
+//   ddref_prev_ = ddref_;
+
+//   return tau_sat_-kp_ *error_ + -kd_*error_rate_;
+// }
 
 void ControllerPID::setParams(double kp, double ki, double kd, double lpf_wc, double tau_min, double tau_max, double kffv_lin, double kffv_sq, double kffa) {
   kp_ = kp; 

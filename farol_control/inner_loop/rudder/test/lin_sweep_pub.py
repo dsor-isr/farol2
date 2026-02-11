@@ -13,12 +13,12 @@ from std_msgs.msg import Float32
 TOPIC = "/magicelectric0/control/ref/rudder_angle"
 RATE_HZ = 10.0      # publish rate (Hz)
 
-A = 0.5              # amplitude
+A = 0.25              # amplitude
 OFFSET = 0.0         # DC offset
 
 W0 = 0.2            # start frequency (rad/s)
 W1 = 1.0           # end frequency (rad/s)
-ALPHA = 2.0e-3       # sweep rate (rad/s^2): w(t) = W0 + ALPHA*t
+ALPHA = 1.0e-3       # sweep rate (rad/s^2): w(t) = W0 + ALPHA*t
 
 HOLD_END_S = 0.0     # optional hold at W1 after sweep (seconds)
 
