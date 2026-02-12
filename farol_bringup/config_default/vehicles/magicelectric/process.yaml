@@ -13,6 +13,7 @@ processes:
       # - prefix:=something_you_want # default prefix is the vehicle's namespace
     dependencies:
       []
+
   - name: 'navigation'
     launch_on_startup: true
     delay_before_start: 0.0
@@ -21,6 +22,7 @@ processes:
       []
     dependencies:
       []
+
   - name: 'actuation'
     launch_on_startup: true
     delay_before_start: 0.1
@@ -30,6 +32,7 @@ processes:
       - thruster_rudder_allocation:=true
     dependencies:
       - navigation
+
   - name: "control"
     launch_on_startup: true
     delay_before_start: 0.3
@@ -39,6 +42,7 @@ processes:
     dependencies:
       - navigation
       - actuation
+
   - name: 'sim'
     launch_on_startup: false
     delay_before_start: 0.4
