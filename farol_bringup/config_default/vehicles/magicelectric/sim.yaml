@@ -42,6 +42,8 @@
             prop_pitch: 0.381
             D: 0.4318
             l_: 3.5
+            deadzone_pos: 0.0
+            deadzone_neg: 0.0
 
       sensor:
         gnss: true
