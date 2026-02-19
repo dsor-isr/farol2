@@ -32,9 +32,9 @@
           yaw:
             enabled: true
             #debug: true
-            kp: 25.0
-            ki: 3.0
-            kd: 1.25 
+            kp: 81.1656
+            ki: 36.8252
+            kd: 78.2209
             lpf_pole: 31.4 # rad/s
             tau_min: -7.0 # N.m 7 for 1.5 m/s
             tau_max: 7.0 # N.m -7 for 1.5 m/s
@@ -152,4 +152,4 @@
               yaw_offset: 0.785
               p_sat: [1.0, 1.0] #x, y
             breivik:
-              delta_h: 2.0 #20.0 magic
+              delta_h: 20.0 #20.0 magic

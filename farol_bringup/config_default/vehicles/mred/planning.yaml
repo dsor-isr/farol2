@@ -1,5 +1,0 @@
-/**:
-  ros__parameters:
-    planning:
-      paths:
-        frame_id: "Path_frame"

@@ -10,10 +10,10 @@ SimClock::SimClock()
   // =========================
   // Declare & read parameters
   // =========================
-  this->declare_parameter<double>("sim_time.real_frequency", 50.0);
+  this->declare_parameter<double>("sim_time.node_frequency", 50.0);
   this->declare_parameter<double>("sim_time.speedup_factor", 1.0);
 
-  real_frequency_ = this->get_parameter("sim_time.real_frequency").as_double();
+  real_frequency_ = this->get_parameter("sim_time.node_frequency").as_double();
   speedup_ = this->get_parameter("sim_time.speedup_factor").as_double();
 
   if (real_frequency_ <= 0.0 || speedup_ <= 0.0) {

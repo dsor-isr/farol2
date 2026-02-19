@@ -41,16 +41,22 @@ def generate_launch_description():
     description='Path to the config package, usually the personal bringup of the workspace, in the src folder'
   )
 
-  launch_simulation_arg = DeclareLaunchArgument(
-    'simulation',
-    default_value='true',
-    description='Boolean to determine if simulation node is launched.'
+  launch_magic_electric_sim_arg = DeclareLaunchArgument(
+    'auv_sim',
+    default_value='false',
+    description='Boolean to determine if auv_sim node is launched.'
   )
 
-  launch_sim_sensors_arg = DeclareLaunchArgument(
-    'sim_sensors',
+  launch_auv_sim_arg = DeclareLaunchArgument(
+    'magic_electric_sim',
     default_value='true',
-    description='Boolean to determine if sim_sensors node is launched.'
+    description='Boolean to determine if magic_electric_sim node is launched.'
+  )
+
+  launch_sim_measurements_arg = DeclareLaunchArgument(
+    'sim_measurements',
+    default_value='true',
+    description='Boolean to determine if sim_measurements node is launched.'
   )
 
   ###################################
@@ -101,23 +107,33 @@ def generate_launch_description():
   ###################
   # Nodes to launch #
   ###################
-  simulation_node = Node(
-    package='sim',
+  auv_sim_node = Node(
+    package='vehicle_sim',
     namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
-    executable='simulation',
-    name='simulation',
+    executable='auv_sim',
+    name='auv_sim',
     output='screen',
-    condition=IfCondition(LaunchConfiguration('simulation')),
+    condition=IfCondition(LaunchConfiguration('auv_sim')),
     parameters=params
   )
 
-  sim_sensors_node = Node(
-    package='sim',
+  magic_electric_sim_node = Node(
+    package='vehicle_sim',
     namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
-    executable='sim_sensors',
-    name='sim_sensors',
+    executable='magic_electric_sim',
+    name= 'magic_electric_sim',
     output='screen',
-    condition=IfCondition(LaunchConfiguration('sim_sensors')),
+    condition=IfCondition(LaunchConfiguration('magic_electric_sim')),
+    parameters=params
+  )
+
+  sim_measurements_node = Node(
+    package='sensor_sim',
+    namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
+    executable='sim_measurements',
+    name='sim_measurements',
+    output='screen',
+    condition=IfCondition(LaunchConfiguration('sim_measurements')),
     parameters=params
   )
 
@@ -131,9 +147,11 @@ def generate_launch_description():
     use_sim_time_arg,
     config_package_path_share_arg,
     config_package_path_real_arg,
-    launch_simulation_arg,
-    launch_sim_sensors_arg,
+    launch_magic_electric_sim_arg,
+    launch_auv_sim_arg,
+    launch_sim_measurements_arg,
     # nodes
-    simulation_node,
-    sim_sensors_node,
+    auv_sim_node,
+    magic_electric_sim_node, 
+    sim_measurements_node
   ])

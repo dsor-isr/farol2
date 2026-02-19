@@ -58,8 +58,18 @@ def generate_launch_description():
     ###################
     sim_clock_node = Node(
         package='sim_time',
-        executable='sim_clock_node',  
+        executable='sim_clock_node', 
+        namespace=['/sim_time'], 
         name='sim_clock',
+        output='screen',
+        parameters=params
+    )
+
+    clock_checker_node = Node(
+        package='sim_time',
+        executable='clock_checker_node',
+        namespace=['/sim_time'],   
+        name='clock_checker',
         output='screen',
         parameters=params
     )
@@ -68,4 +78,5 @@ def generate_launch_description():
         vehicle_ns_arg,
         config_package_path_real_arg,
         sim_clock_node,
+        clock_checker_node
     ])

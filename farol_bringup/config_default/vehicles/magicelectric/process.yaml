@@ -1,8 +1,3 @@
-########################################################
-# This process.yaml is just an example to be copied to #
-# the personal bringup under the newly created colcon  #
-# workspace.                                           #
-########################################################
 processes:
   - name: 'bag_record'
     launch_on_startup: false
@@ -13,37 +8,85 @@ processes:
       # - prefix:=something_you_want # default prefix is the vehicle's namespace
     dependencies:
       []
+
   - name: 'navigation'
     launch_on_startup: true
-    delay_before_start: 0.0
+    delay_before_start: 0.2
     cmd: 'ros2 launch farol_bringup nav.launch.py'
     args:
       []
     dependencies:
       []
+
+  - name: 'addons'
+    launch_on_startup: false
+    delay_before_start: 0.3
+    cmd: 'ros2 launch farol_bringup addons.launch.py'
+    args:
+      []
+    dependencies:
+      - navigation
+      - planning
+      - control
+
   - name: 'actuation'
     launch_on_startup: true
-    delay_before_start: 0.1
+    delay_before_start: 0.3
     cmd: 'ros2 launch farol_bringup actuation.launch.py'
     args:
       - static_thruster_allocation:=false
       - thruster_rudder_allocation:=true
     dependencies:
       - navigation
+
+  - name: 'drivers'
+    launch_on_startup: false
+    delay_before_start: 0.2
+    cmd: 'ros2 launch magicelectric_bringup drivers.launch.py'
+    args:
+      - vn310:=true
+      - can_thrusters:=true
+      - can_instrumentation:=true
+      - airmar200wx:=true
+      - airmardx900:=true
+    dependencies:
+      []
+
   - name: "control"
     launch_on_startup: true
-    delay_before_start: 0.3
+    delay_before_start: 0.5
     cmd: 'ros2 launch farol_bringup control.launch.py'
     args:
       []
     dependencies:
       - navigation
       - actuation
-  - name: 'sim'
+
+  - name: "planning"
     launch_on_startup: false
-    delay_before_start: 0.4
+    delay_before_start: 0.6
+    cmd: 'ros2 launch farol_bringup planning.launch.py'
+    args:
+      []
+    dependencies:
+      - control
+      
+  - name: 'sim'
+    launch_on_startup: true
+    delay_before_start: 0.7
     cmd: 'ros2 launch farol_bringup sim.launch.py'
     args:
-      - simulation:=true
+      - magic_electric_sim:=true
+      - auv_sim:=false
+      - sim_measurements:=true
+    dependencies:
+      []
+  
+  - name: 'time'
+    launch_on_startup: true
+    delay_before_start: 0.1
+    cmd: 'ros2 launch farol_bringup time.launch.py'
+    args:
+      []
     dependencies:
       []

@@ -11,26 +11,25 @@
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "control_allocation/msg/thruster_rpm.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
-#include "AUV.hpp"
-#include "Utilis.hpp"
+#include "sim_utilis/AUV.hpp"
+#include "sim_utilis/Utilis.hpp"
 #include <Eigen/Dense>
-#include <GeographicLib/UTMUPS.hpp>
-#include <GeographicLib/Geodesic.hpp>
 #include "farol_msgs/msg/utm.hpp"
+#include "std_msgs/msg/float32.hpp"
 
-#include "sim/msg/placeholder.hpp"
+
 
 /**
  * @brief   Sim
  * @author  Eduardo Cunha
  */
-class Simulation : public rclcpp::Node {
+class AuvSim : public rclcpp::Node {
   public:
     /* Constructor */
-    Simulation();
+    AuvSim();
 
     /* Destructor */
-    ~Simulation();
+    ~AuvSim();
 
     /* Load parameters */
     void loadParams();
@@ -58,37 +57,32 @@ class Simulation : public rclcpp::Node {
 
   private:
     /* Timer for node's callbacks */
-    rclcpp::TimerBase::SharedPtr timer_;
 
     /* Declare publishers, subscribers, services, etc. */
     rclcpp::Publisher<farol_msgs::msg::UTM>::SharedPtr utm_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr position_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr velocity_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr body_velocity_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr orientation_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_velocity_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr linear_acceleration_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr orientation_rate_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr body_acceleration_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_acceleration_pub_;
 
     rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
 
-    rclcpp::Subscription<control_allocation::msg::ThrusterRPM>::SharedPtr thrust_sub_;
+    rclcpp::Subscription<control_allocation::msg::ThrusterRPM>::SharedPtr rpm_sub_;
     
-    rclcpp::TimerBase::SharedPtr wall_timer_;   
-    rclcpp::TimerBase::SharedPtr sim_timer_;   
+    rclcpp::TimerBase::SharedPtr timer_;   
+    rclcpp::Clock::SharedPtr clock_;
+  
 
     /* Callbacks */
-    void thrustCallback(const control_allocation::msg::ThrusterRPM::SharedPtr msg);
+    void rpmCallback(const control_allocation::msg::ThrusterRPM::SharedPtr msg);
 
     std::unique_ptr<AUV> auv_;
-    std::chrono::steady_clock::time_point last_wall_tp_;
 
     int freq_;
-    int64_t sim_time_ns_;
     double node_period_;
-    double speedup_;
-    double clock_wall_rate_hz_;
-
-    Eigen::VectorXd thrust; 
+    Eigen::VectorXd rpm_; 
 
     double originLat;
     double originLon;

@@ -38,7 +38,7 @@ void SampleAndHold::initialiseSubscribers() {
 
   measurement_sub_ = create_subscription<farol_msgs::msg::Measurement>(
                       get_parameter("nav.sample_and_hold.topics.subscribers.measurement").as_string(), 
-                      1, std::bind(&SampleAndHold::measurement_callback, this, std::placeholders::_1));
+                      10, std::bind(&SampleAndHold::measurement_callback, this, std::placeholders::_1));
 
   return;
 }
@@ -74,7 +74,7 @@ void SampleAndHold::initialiseTimers() {
   /* Get node frequency from parameters */
   
 
-  declare_parameter<int>("nav.sample_and_hold.node_frequency", 5);
+  declare_parameter<int>("nav.sample_and_hold.node_frequency", 10);
   int freq = get_parameter("nav.sample_and_hold.node_frequency").as_int();
 
   /* Create timer */
@@ -83,7 +83,6 @@ void SampleAndHold::initialiseTimers() {
 
 void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg) {
   /* Update filter state */
-  //RCLCPP_INFO(get_logger(), "Received measurement of type %d", msg.type);
   /* Depending on measurement type */
   switch(msg.type){
     /* Orientation: roll, pitch, yaw */
@@ -92,6 +91,7 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
         RCLCPP_ERROR(get_logger(), "Measurement ORIENTATION has incorrect length or type.");
         break;
       }
+      //RCLCPP_INFO(get_logger(), "Received orientation measurement: roll: %f, pitch: %f, yaw: %f", msg.value[0], msg.value[1], msg.value[2]);
       filter_state_msg_.orientation.x = msg.value[0];
       filter_state_msg_.orientation.y = msg.value[1];
       filter_state_msg_.orientation.z = msg.value[2];

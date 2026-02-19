@@ -1,5 +1,9 @@
 /**:
   ros__parameters:
+    use_sim_time: true
+    sim_time:
+      node_frequency: 10.0  # Sim time Node frequency in sim time
+      speedup_factor: 1.0   # wall_frequency = node_frequency * speedup_factor
     actuation:
       rpm_conversion:
         node_frequency: 10
@@ -32,7 +36,7 @@
             thruster_force: "/#vehicle#/actuation/thruster_force"
             rudder_angle_ref: "/#vehicle#/control/ref/rudder_angle"
       wrench_manager:
-        node_frequency: 10
+        node_frequency: 10 
         topics:
           subscribers:
             thrust_x: "/#vehicle#/actuation/thrust_x"
@@ -212,18 +216,49 @@
           publishers:
             state: "/#vehicle#/nav/sample_and_hold/state"
     sim:
-      simulation:
-        node_frequency: 10
-        topics:
-          subscribers:
-            thruster_force: "/#vehicle#/actuation/thruster_force"
-          publishers:
-            position: "/#vehicle#/sim/position"
-            orientation: "/#vehicle#/sim/orientation"
-            velocity: "/#vehicle#/sim/velocity"
-            angular_velocity: "/#vehicle#/sim/angular_velocity"
-          services:
-            test2: "/#vehicle#/sim/change_something"
+      vehicle_sim:
+        auv_sim:
+          node_frequency: 10
+          topics:
+            subscribers:
+              rpm_command: "/#vehicle#/actuation/rpm_command"
+            publishers:
+              position: "/#vehicle#/sim/position"
+              orientation: "/#vehicle#/sim/orientation"
+              body_velocity: "/#vehicle#/sim/body_velocity"
+              orientation_rate: "/#vehicle#/sim/orientation_rate"
+              body_acceleration: "/#vehicle#/sim/body_acceleration"
+              angular_acceleration: "/#vehicle#/sim/angular_acceleration"
+            services:
+              test2: "/#vehicle#/sim/change_something"
+        magic_electric_sim:
+          node_frequency: 10
+          topics:
+            subscribers:
+              rpm_command: "/#vehicle#/actuation/rpm_command"
+              rudder_cmd: "/#vehicle#/rudder_command"
+              rudder_ref: "/#vehicle#/control/ref/rudder_angle"
+            publishers:
+              position: "/#vehicle#/sim/position"
+              orientation: "/#vehicle#/sim/orientation"
+              body_velocity: "/#vehicle#/sim/body_velocity"
+              orientation_rate: "/#vehicle#/sim/orientation_rate"
+              body_acceleration: "/#vehicle#/sim/body_acceleration"
+              angular_acceleration: "/#vehicle#/sim/angular_acceleration"
+              rudder_angle: "/#vehicle#/drivers/can_instrumentation/rudder_angle"
+            services:
+              test2: "/#vehicle#/sim/change_something"
+      sensor_sim:
+        sim_measurements:
+          node_frequency: 10
+          topics:
+            subscribers:
+              position: "/#vehicle#/sim/position"
+              orientation: "/#vehicle#/sim/orientation"
+              body_velocity: "/#vehicle#/sim/body_velocity"
+              orientation_rate: "/#vehicle#/sim/orientation_rate"
+            publishers:
+              measurement: "/#vehicle#/measurement"
     planning:
       paths:
         node_frequency: 10
