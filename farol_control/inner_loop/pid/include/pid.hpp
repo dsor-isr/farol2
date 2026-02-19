@@ -12,13 +12,12 @@
 #include "std_msgs/msg/float32.hpp"
 #include "geometry_msgs/msg/wrench.hpp"
 
-#include "control_allocation/msg/body_wrench_request.hpp"
+#include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "farol_msgs/msg/navigation_state.hpp"
 #include "pid/srv/change_params.hpp"
 #include "pid/msg/pid_debug.hpp"
 
 #include <farol_utils/filters/low_pass_filter.hpp>
-#include <farol_utils/filters/second_order_lpf.hpp>
 #include <farol_utils/angles.hpp>
 
 enum ControllerType {
@@ -118,6 +117,7 @@ class ControllerPID {
     // to compute discrete derivative in controller
     bool first_it_ = true;
     double error_dot_{0.0}, error_rate_dot_{0.0}, state_rate_dot_{0.0},  ddref_dot_{0.0};
+    double state_dot_{0.0}, state_prev_{0.0};
     double error_prev_{0.0}, error_rate_prev_{0.0}, state_rate_prev_{0.0},  ddref_prev_{0.0};
     
     double Ka_, tau_dot_, tau_, tau_prev_=0.0, tau_sat_, tau_sat_prev_=0.0;
@@ -129,7 +129,6 @@ class ControllerPID {
     
     // low pass filter for reference signal
     farol_utils::LowPassFilter lpf_;
-    // farol_utils::SecondOrderLowPass lpf_; // set wrap_angle to true
     private:
     
 };
@@ -247,8 +246,8 @@ class PID : public rclcpp::Node {
 
     /* Other variables */
     rclcpp::Clock clock_;
-    int freq_;
-    control_allocation::msg::BodyWrenchRequest body_wrench_request_msg_;
+    double node_frequency_;
+    geometry_msgs::msg::WrenchStamped body_wrench_request_msg_;
     std_msgs::msg::Float32 float32_msg_;
     farol_msgs::msg::NavigationState nav_state_;
     std::set<std::string> controller_names_;

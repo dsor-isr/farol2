@@ -3,7 +3,6 @@
 /* Constructor */
 Nav2ConsoleState::Nav2ConsoleState() : Node("nav2console_state", 
                                             rclcpp::NodeOptions()
-                                              .allow_undeclared_parameters(true)
                                               .automatically_declare_parameters_from_overrides(true)) {
   loadParams();
   initialiseSubscribers();
@@ -27,7 +26,7 @@ void Nav2ConsoleState::loadParams() {
  */
 void Nav2ConsoleState::initialiseSubscribers() {
   nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
-                get_parameter("addons.nav2console_state.topics.subscribers.nav_state").as_string(), 
+                get_parameter("topics.subscribers.nav_state").as_string(), 
                 1, std::bind(&Nav2ConsoleState::nav_state_callback, this, std::placeholders::_1));
 
   return;
@@ -38,7 +37,7 @@ void Nav2ConsoleState::initialiseSubscribers() {
  */
 void Nav2ConsoleState::initialisePublishers() {
   console_state_pub_ = create_publisher<farol_msgs::msg::StateConsole>(
-                        get_parameter("addons.nav2console_state.topics.publishers.console_state").as_string(), 1);
+                        get_parameter("topics.publishers.console_state").as_string(), 1);
 }
 
 void Nav2ConsoleState::nav_state_callback(const farol_msgs::msg::NavigationState &msg) {

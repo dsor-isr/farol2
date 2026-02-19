@@ -81,7 +81,7 @@ def generate_launch_description():
   ###################
   console_parser_node = Node(
     package='console_parser',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/addons'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'addons']),
     executable='console_parser_node',
     name='console_parser',
     output='screen',
@@ -90,7 +90,7 @@ def generate_launch_description():
 
   console_server_node = Node(
     package='console_server',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/addons'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'addons']),
     executable='console_server',
     name='console_server',
     output='screen',
@@ -99,7 +99,7 @@ def generate_launch_description():
 
   nav2console_state_node = Node(
     package='nav2console_state',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/addons'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'addons']),
     executable='nav2console_state_node',
     name='nav2console_state',
     output='screen',

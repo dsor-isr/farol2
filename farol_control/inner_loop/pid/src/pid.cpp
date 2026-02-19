@@ -3,7 +3,7 @@
 /* Constructor */
 PID::PID() : Node("pid", 
                   rclcpp::NodeOptions()
-                    .allow_undeclared_parameters(true)
+                    .allow_undeclared_parameters(false)
                     .automatically_declare_parameters_from_overrides(true)),
              controller_surge_(0.0, 0.0, 0.0, 0.0, 0.0),
              controller_sway_(0.0, 0.0, 0.0, 0.0, 0.0),
@@ -49,7 +49,7 @@ void PID::loadParams() {
   /* - topics.publishers.body_wrench_request */
   /* - topics.subscribers.nav_state */
   if (!get_node_parameters_interface()->get_parameters_by_prefix(
-        "control.inner_loop.pid", raw_controllers_configuration)) {
+        "", raw_controllers_configuration)) {
     /* If no controller configurations were found */
     RCLCPP_ERROR(get_logger(), "No controllers found in control config file.");
     rclcpp::shutdown();
@@ -108,10 +108,10 @@ void PID::loadParams() {
       }
     }
   }
-  course_control_ = this->get_parameter("control.inner_loop.pid.course_control").as_bool();
-  lpf_order_ = this->get_parameter("control.inner_loop.pid.lpf_order").as_int();
-  lpf_method_ = this->get_parameter("control.inner_loop.pid.lpf_method").as_string();
-  lpf_design_ = this->get_parameter("control.inner_loop.pid.lpf_design").as_string();
+  course_control_ = this->get_parameter("course_control").as_bool();
+  lpf_order_ = this->get_parameter("lpf_order").as_int();
+  lpf_method_ = this->get_parameter("lpf_method").as_string();
+  lpf_design_ = this->get_parameter("lpf_design").as_string();
 }
 
 /**
@@ -119,43 +119,43 @@ void PID::loadParams() {
  */
 void PID::initialiseSubscribers() {
   nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
-                    get_parameter("control.inner_loop.pid.topics.subscribers.nav_state").as_string(), 
+                    get_parameter("topics.subscribers.nav_state").as_string(), 
                     1, std::bind(&PID::navStateCallback, this, std::placeholders::_1));
 
   surge_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.subscribers.surge_ref").as_string(), 
+                    get_parameter("topics.subscribers.surge_ref").as_string(), 
                     1, std::bind(&PID::surgeRefCallback, this, std::placeholders::_1));
 
   sway_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.subscribers.sway_ref").as_string(), 
+                    get_parameter("topics.subscribers.sway_ref").as_string(), 
                     1, std::bind(&PID::swayRefCallback, this, std::placeholders::_1));
 
   heave_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.subscribers.heave_ref").as_string(), 
+                    get_parameter("topics.subscribers.heave_ref").as_string(), 
                     1, std::bind(&PID::heaveRefCallback, this, std::placeholders::_1));
 
   yaw_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.subscribers.yaw_ref").as_string(), 
+                    get_parameter("topics.subscribers.yaw_ref").as_string(), 
                     1, std::bind(&PID::yawRefCallback, this, std::placeholders::_1));
 
   pitch_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.subscribers.pitch_ref").as_string(), 
+                    get_parameter("topics.subscribers.pitch_ref").as_string(), 
                     1, std::bind(&PID::pitchRefCallback, this, std::placeholders::_1));
 
   roll_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.subscribers.roll_ref").as_string(), 
+                    get_parameter("topics.subscribers.roll_ref").as_string(), 
                     1, std::bind(&PID::rollRefCallback, this, std::placeholders::_1));
 
   yaw_rate_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.subscribers.yaw_rate_ref").as_string(), 
+                    get_parameter("topics.subscribers.yaw_rate_ref").as_string(), 
                     1, std::bind(&PID::yawRateRefCallback, this, std::placeholders::_1));
 
   pitch_rate_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.subscribers.pitch_rate_ref").as_string(), 
+                    get_parameter("topics.subscribers.pitch_rate_ref").as_string(), 
                     1, std::bind(&PID::pitchRateRefCallback, this, std::placeholders::_1));
 
   roll_rate_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.subscribers.roll_rate_ref").as_string(), 
+                    get_parameter("topics.subscribers.roll_rate_ref").as_string(), 
                     1, std::bind(&PID::rollRateRefCallback, this, std::placeholders::_1));
 
   
@@ -166,31 +166,31 @@ void PID::initialiseSubscribers() {
  */
 void PID::initialisePublishers() {
   thrust_x_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.publishers.thrust_x").as_string(), 1);
+                    get_parameter("topics.publishers.thrust_x").as_string(), 1);
 
   thrust_y_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.publishers.thrust_y").as_string(), 1);
+                    get_parameter("topics.publishers.thrust_y").as_string(), 1);
 
   thrust_z_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.publishers.thrust_z").as_string(), 1);
+                    get_parameter("topics.publishers.thrust_z").as_string(), 1);
 
   torque_x_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.publishers.torque_x").as_string(), 1);
+                    get_parameter("topics.publishers.torque_x").as_string(), 1);
 
   torque_y_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.publishers.torque_y").as_string(), 1);
+                    get_parameter("topics.publishers.torque_y").as_string(), 1);
 
   torque_z_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("control.inner_loop.pid.topics.publishers.torque_z").as_string(), 1);
+                    get_parameter("topics.publishers.torque_z").as_string(), 1);
   /*
   body_wrench_request_pub_ = create_publisher<control_allocation::msg::BodyWrenchRequest>(
-                    get_parameter("control.inner_loop.pid.topics.publishers.body_wrench_request").as_string(), 1);
+                    get_parameter("topics.publishers.body_wrench_request").as_string(), 1);
   
   */
   for (const auto& [name, dbg] : controller_debug_) {
     if (!dbg) continue;
     const auto topic =
-        get_parameter("control.inner_loop.pid.topics.publishers.debug." + name).as_string();
+        get_parameter("topics.publishers.debug." + name).as_string();
     debug_publishers_[name] = create_publisher<pid::msg::PidDebug>(topic, 1);
   }          
 }
@@ -202,7 +202,7 @@ void PID::initialiseServices() {
   /* Service servers */
   /* Service to change controllers' parameters */
   change_params_srv_ = create_service<pid::srv::ChangeParams>(
-                        get_parameter("control.inner_loop.pid.topics.services.change_params").as_string(),
+                        get_parameter("topics.services.change_params").as_string(),
                         std::bind(&PID::changeParamsCallback, this, std::placeholders::_1, std::placeholders::_2));
 
   /* service clients */
@@ -216,11 +216,11 @@ void PID::initialiseServices() {
  */
 void PID::initialiseTimers() {
   /* Get node frequency from parameters */
-  freq_ = get_parameter("control.inner_loop.pid.node_frequency").as_int();
+  node_frequency_ = get_parameter("node_frequency").as_double();
 
   /* Create timer */
   timer_ = create_wall_timer
-    (std::chrono::milliseconds(int(1.0/freq_*1000)), 
+    (std::chrono::milliseconds(int(1.0/node_frequency_*1000)), 
     std::bind(&PID::timerCallback, this));
 }
 
@@ -481,7 +481,7 @@ void PID::timerCallback() {
   static std::set<std::string>::iterator it;
   for (it = controller_names_.begin(); it != controller_names_.end(); it++) {
     /* If controller is not enabled or hasn't received a reference, skip it publishing */
-    if (!controller_parameters_[*it]["enabled"] || !hasRecentReference(controller_last_reference_[*it], freq_)) {
+    if (!controller_parameters_[*it]["enabled"] || !hasRecentReference(controller_last_reference_[*it], node_frequency_)) {
       continue;
     }
 
@@ -555,12 +555,27 @@ void PID::changeParamsCallback(const std::shared_ptr<pid::srv::ChangeParams::Req
     response->message = "Controller " + request->controller + " does not exist - it's not (correctly?) configured in control.yaml.";
     return;
   }
-
-  /* If any parameter is invalid */
-  if (request->kp <= 0 || request->ki <= 0 || request->kd <= 0 || request->lpf_wc <= 0 ||
-      request->tau_min <= 0 || request->tau_max <= 0 || request->tau_min >= request->tau_max) {
-    response->success = false;
-    response->message = "Parameter(s) invalid (negative gains/pole/tau, tau_min > tau_max).";
+  // /* If any parameter is invalid */
+  // if (request->kp <= 0 || request->ki <= 0 || request->kd <= 0 || request->lpf_wc <= 0 ||
+  //     request->tau_min <= 0 || request->tau_max <= 0 || request->tau_min >= request->tau_max) {
+  //   response->success = false;
+  //   response->message = "Parameter(s) invalid (negative gains/pole/tau, tau_min > tau_max).";
+  // }
+  if(request->w0 >= 0 && request->xi >= 0){
+    controller_yaw_.kp_ = 0.0;
+    controller_yaw_.ki_ = 0.0;
+    controller_yaw_.kd_ = 0.0;
+    response->success = true;
+    response->message = "Changed " + request->controller + " controller's params based on w0 and xi";
+    return;
+  }
+  if(request->kp >= 0 && request->ki >= 0 && request->kd >= 0){
+    controller_yaw_.kp_ = request->kp;
+    controller_yaw_.ki_ = request->ki;
+    controller_yaw_.kd_ = request->kd;
+    response->success = true;
+    response->message = "Changed " + request->controller + " controller's params to specified (kp, ki, kd)";
+    return;
   }
 
 }
@@ -589,7 +604,7 @@ void PID::callControllers() {
   /* Go through existing controllers */
   for (it = controller_names_.begin(); it != controller_names_.end(); it++) {
     /* If controller is not enabled or hasn't received a reference, skip it */
-    if (!controller_parameters_[*it]["enabled"] || !hasRecentReference(controller_last_reference_[*it], freq_)) {
+    if (!controller_parameters_[*it]["enabled"] || !hasRecentReference(controller_last_reference_[*it], node_frequency_)) {
       continue;
     }
 
@@ -633,7 +648,7 @@ void PID::callControllers() {
 
 void PID::callControllerSurge() {
   /* Call PI controller */
-  tau_ = controller_surge_.callController(nav_state_.body_velocity_fluid.x, surge_ref_, 1.0/freq_);
+  tau_ = controller_surge_.callController(nav_state_.body_velocity_fluid.x, surge_ref_, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -659,7 +674,7 @@ void PID::callControllerSurge() {
 
 void PID::callControllerSway() {
   /* Call PI controller */
-  tau_ = controller_sway_.callController(nav_state_.body_velocity_fluid.y, sway_ref_, 1.0/freq_);
+  tau_ = controller_sway_.callController(nav_state_.body_velocity_fluid.y, sway_ref_, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -685,7 +700,7 @@ void PID::callControllerSway() {
 
 void PID::callControllerHeave() {
   /* Call PI controller */
-  tau_ = controller_heave_.callController(nav_state_.body_velocity_fluid.z, heave_ref_, 1.0/freq_);
+  tau_ = controller_heave_.callController(nav_state_.body_velocity_fluid.z, heave_ref_, 1.0/node_frequency_);
 
     pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -712,15 +727,15 @@ void PID::callControllerHeave() {
 void PID::callControllerYaw() {
   /* Call PID controller */
   if(course_control_)
-    tau_ = controller_yaw_.callController(nav_state_.course_angle, yaw_ref_, nav_state_.orientation_rate.z, 1.0/freq_);
+    tau_ = controller_yaw_.callController(nav_state_.course_angle, yaw_ref_, nav_state_.orientation_rate.z, 1.0/node_frequency_);
   else 
-    tau_ = controller_yaw_.callController(nav_state_.orientation.z, yaw_ref_, nav_state_.orientation_rate.z, 1.0/freq_);
+    tau_ = controller_yaw_.callController(nav_state_.orientation.z, yaw_ref_, nav_state_.orientation_rate.z, 1.0/node_frequency_);
 
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
   debug_msg.error = controller_yaw_.getError();
-  debug_msg.error_rate = controller_yaw_.error_rate_;
+  debug_msg.error_rate = controller_yaw_.error_dot_;
   debug_msg.error_rate_dot = controller_yaw_.error_rate_dot_;
   debug_msg.p_term = controller_yaw_.getProportionalTerm();
   debug_msg.i_term = controller_yaw_.getIntegralTerm();
@@ -750,7 +765,7 @@ void PID::callControllerYaw() {
 
 void PID::callControllerPitch() {
   /* Call PID controller */
-  tau_ = controller_pitch_.callController(nav_state_.orientation.y, pitch_ref_, nav_state_.orientation_rate.y, 1.0/freq_);
+  tau_ = controller_pitch_.callController(nav_state_.orientation.y, pitch_ref_, nav_state_.orientation_rate.y, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -778,7 +793,7 @@ void PID::callControllerPitch() {
 
 void PID::callControllerRoll() {
   /* Call PID controller */
-  tau_ = controller_roll_.callController(nav_state_.orientation.x, roll_ref_, nav_state_.orientation_rate.x, 1.0/freq_);
+  tau_ = controller_roll_.callController(nav_state_.orientation.x, roll_ref_, nav_state_.orientation_rate.x, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -806,7 +821,7 @@ void PID::callControllerRoll() {
 
 void PID::callControllerYawRate() {
   /* Call PI controller */
-  tau_ = controller_yaw_rate_.callController(nav_state_.orientation_rate.z, yaw_rate_ref_, 1.0/freq_);
+  tau_ = controller_yaw_rate_.callController(nav_state_.orientation_rate.z, yaw_rate_ref_, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -832,7 +847,7 @@ void PID::callControllerYawRate() {
 
 void PID::callControllerPitchRate() {
   /* Call PI controller */
-  tau_ = controller_pitch_rate_.callController(nav_state_.orientation_rate.y, pitch_rate_ref_, 1.0/freq_);
+  tau_ = controller_pitch_rate_.callController(nav_state_.orientation_rate.y, pitch_rate_ref_, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -858,7 +873,7 @@ void PID::callControllerPitchRate() {
 
 void PID::callControllerRollRate() {
   /* Call PI controller */
-  tau_ = controller_roll_rate_.callController(nav_state_.orientation_rate.x, roll_rate_ref_, 1.0/freq_);
+  tau_ = controller_roll_rate_.callController(nav_state_.orientation_rate.x, roll_rate_ref_, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -980,7 +995,6 @@ ControllerPID::ControllerPID(double kp, double ki, double kd, double lpf_wc, dou
   wrapToPi_ = wrapToPi;
 
   lpf_.configure(lpf_wc_, 0.1, lpf_order, lpf_design, lpf_method, wrapToPi_); 
-  // lpf_.configure(lpf_wc_, 0.1, lpf_design, lpf_method, wrapToPi_); 
 }
 
 /* Delta implementation for PID */
@@ -999,12 +1013,13 @@ double ControllerPID::callController(double state, double state_ref, double stat
   if (wrapToPi_) // Wrap to [-pi, pi] if needed */
     error_ = farol_utils::wrapToPi(error_);  
   // Compute error derivative
-  error_rate_ = state_rate - dref_;
+  error_rate_ = state_rate;// - dref_;
   
   // Compute derivative of all terms execpt the integral
+  error_dot_ = (error_ - error_prev_) / dt;
   if (!first_it_) {
     state_rate_dot_ = (state_rate - state_rate_prev_) / dt;
-    error_dot_ = (error_ - error_prev_) / dt;
+    state_dot_ = farol_utils::wrapToPi(state_ - state_prev_) / dt;
     error_rate_dot_ = (error_rate_ - error_rate_prev_) / dt;
     ddref_dot_ =  (ddref_ - ddref_prev_)/dt; 
   } else 
@@ -1015,7 +1030,8 @@ double ControllerPID::callController(double state, double state_ref, double stat
 
   /* Add all PID terms */
   // tau_d_ = -ki_*error_ - kp_*error_rate_ - kd_*error_rate_dot_ + kffa_*dddref_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
-  tau_d_ = -ki_*error_ - kp_*error_dot_ - kd_*error_rate_dot_ + kffa_*ddref_dot_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
+  // tau_d_ = -ki_*error_ - kp_*error_dot_ - kd_*error_rate_dot_ + kffa_*ddref_dot_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
+  tau_d_ = -ki_*error_ - kp_*error_dot_ - kd_*error_rate_dot_;// + kffa_*ddref_dot_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
 
   /* Anti-windup */
   Ka_ = 1.0/dt;
@@ -1025,6 +1041,7 @@ double ControllerPID::callController(double state, double state_ref, double stat
 
   /* Set prev values */
   error_prev_ = error_;
+  state_prev_ = state_;
   state_rate_prev_ = state_rate;
   error_rate_prev_= error_rate_;
   state_rate_dot_filter_prev_ = state_rate_dot_filter_;
@@ -1035,7 +1052,7 @@ double ControllerPID::callController(double state, double state_ref, double stat
   return tau_sat_;
 }
 
-/* Regular implementation for PID */
+// /* Regular implementation for PID */
 // double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
 //   ref_raw_ = state_ref;
 //   state_ = state;
@@ -1067,6 +1084,40 @@ double ControllerPID::callController(double state, double state_ref, double stat
 //   ddref_prev_ = ddref_;
 
 //   return tau_sat_-kp_ *error_ + -kd_*error_rate_;
+// }
+
+// /* Regular implementation for PID */
+// double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
+//   ref_raw_ = state_ref;
+//   state_ = state;
+  
+//   // Compute error 
+//   error_ = state - state_ref;
+//   if (wrapToPi_) // Wrap to [-pi, pi] if needed */
+//     error_ = farol_utils::wrapToPi(error_);  
+
+//     // Compute error derivative
+//   error_rate_ = state_rate;
+
+//   tau_d_ = -ki_*error_;
+
+//   /* Anti-windup */
+//   Ka_ = 1.0/dt;
+//   tau_dot_ = tau_d_ - Ka_*(tau_prev_ - tau_sat_prev_);
+//   tau_ = tau_prev_ + tau_dot_*dt ;
+//   double tau_tau_ = tau_ -kp_ *error_  -kd_*error_rate_;
+//   tau_sat_ = std::clamp(tau_tau_, tau_min_, tau_max_);
+
+//   /* Set prev values */
+//   error_prev_ = error_;
+//   state_rate_prev_ = state_rate;
+//   error_rate_prev_= error_rate_;
+//   state_rate_dot_filter_prev_ = state_rate_dot_filter_;
+//   tau_prev_ = tau_tau_;
+//   tau_sat_prev_ = tau_sat_;
+//   ddref_prev_ = ddref_;
+
+//   return tau_sat_;
 // }
 
 void ControllerPID::setParams(double kp, double ki, double kd, double lpf_wc, double tau_min, double tau_max, double kffv_lin, double kffv_sq, double kffa) {

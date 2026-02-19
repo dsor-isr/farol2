@@ -3,6 +3,8 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from launch.conditions import IfCondition
+
 
 def generate_launch_description():
   
@@ -31,6 +33,18 @@ def generate_launch_description():
     'config_package_path_real',
     default_value='',
     description='Path to the config package, usually the personal bringup of the workspace, in the src folder'
+  )
+
+  launch_waypoint_arg = DeclareLaunchArgument(
+    'waypoint',
+    default_value='true',
+    description='Boolean to determine if "waypoint" node is launched.'
+  )
+  
+  launch_path_following_arg = DeclareLaunchArgument(
+    'path_following',
+    default_value='true',
+    description='Boolean to determine if "path_following" node is launched.'
   )
 
   ###################################
@@ -62,7 +76,7 @@ def generate_launch_description():
               'config_default',
               'vehicles',
               LaunchConfiguration('vehicle_name'),
-              'control.yaml'
+              'outer_loop.yaml'
             ]),
             
             # override with personal control configs
@@ -71,7 +85,7 @@ def generate_launch_description():
               'config_personal',
               'vehicles',
               LaunchConfiguration('vehicle_name'),
-              'control.yaml'
+              'outer_loop.yaml'
             ]),
           ]
 
@@ -79,41 +93,27 @@ def generate_launch_description():
   ###################
   # Nodes to launch #
   ###################
-  pid_node = Node(
-    package='pid',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/inner_loop'],
-    executable='pid_control',
-    name='pid',
-    output='screen',
-    parameters=params
-  )
 
   waypoint_node = Node(
     package='waypoint',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/outer_loop'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'control', 'outer_loop']),
     executable='waypoint_node',
     name='waypoint',
     output='screen',
+    condition=IfCondition(LaunchConfiguration('waypoint')),
     parameters=params
   )
 
   path_following_node = Node(
     package='path_following',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/outer_loop'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'control', 'outer_loop']),
     executable='path_following_node',
     name='path_following',
     output='screen',
+    condition=IfCondition(LaunchConfiguration('path_following')),
     parameters=params
   )
 
-  open_loop_node = Node(
-    package='open_loop',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/control', '/inner_loop'],
-    executable='open_loop_control',
-    name='open_loop',
-    output='screen',
-    parameters=params
-  )
 
   ######################################################
   # Return launch description with arguments and nodes #
@@ -124,9 +124,9 @@ def generate_launch_description():
     vehicle_name_arg,
     config_package_path_share_arg,
     config_package_path_real_arg,
+    launch_waypoint_arg,
+    launch_path_following_arg,
     # nodes
-    pid_node,
     waypoint_node,
     path_following_node,
-    open_loop_node,
   ])

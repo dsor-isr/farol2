@@ -6,7 +6,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float32.hpp"
-#include "control_allocation/msg/body_wrench_request.hpp"
+#include "geometry_msgs/msg/wrench_stamped.hpp"
 
 /**
  * @brief   Open Loop Control
@@ -39,7 +39,7 @@ class OpenLoop : public rclcpp::Node {
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr surge_ref_sub_;
 
     /* Callbacks */
-    void surgeRefCallback(const std_msgs::msg::Float32 &msg);
+    void surgeRefCallback(std_msgs::msg::Float32::SharedPtr msg);
 
     /* Other variables */
     std_msgs::msg::Float32 float32_msg_;

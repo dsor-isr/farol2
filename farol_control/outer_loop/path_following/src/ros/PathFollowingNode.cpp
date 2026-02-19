@@ -4,7 +4,6 @@
 
 PathFollowingNode::PathFollowingNode() : Node("path_following", 
                                               rclcpp::NodeOptions()
-                                                .allow_undeclared_parameters(true)
                                                 .automatically_declare_parameters_from_overrides(true)) {
   this->initialiseSubscribers();
   this->initialisePublishers();
@@ -18,7 +17,7 @@ PathFollowingNode::PathFollowingNode() : Node("path_following",
   /* Set PF Debug publisher */
   pf_algorithm_->setPFollowingDebugPublisher(
     create_publisher<farol_msgs::msg::PFDebug>(
-      get_parameter("control.outer_loop.path_following.topics.publishers.pfollowing_debug").as_string(), 1)
+      get_parameter("topics.publishers.pfollowing_debug").as_string(), 1)
   );
 }
 
@@ -42,22 +41,22 @@ PathFollowingNode::~PathFollowingNode() {
 PathFollowing *PathFollowingNode::getDefaultControllerLapierre() {
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("control.outer_loop.path_following.topics.publishers.surge").as_string(), 1));
+                                get_parameter("topics.publishers.surge").as_string(), 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("control.outer_loop.path_following.topics.publishers.yaw_rate").as_string(), 1));
+                                get_parameter("topics.publishers.yaw_rate").as_string(), 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("control.outer_loop.path_following.topics.publishers.rabbit").as_string(), 1));
+                                get_parameter("topics.publishers.rabbit").as_string(), 1));
 
   /* Read the gains for the controller */
   double k1, k2, k3, theta, k_delta;
   
-  k1 = get_parameter("control.outer_loop.path_following.controller_gains.lapierre.k1").as_double();
-  k2 = get_parameter("control.outer_loop.path_following.controller_gains.lapierre.k2").as_double();
-  k3 = get_parameter("control.outer_loop.path_following.controller_gains.lapierre.k3").as_double();
-  theta = get_parameter("control.outer_loop.path_following.controller_gains.lapierre.theta").as_double();
-  k_delta = get_parameter("control.outer_loop.path_following.controller_gains.lapierre.k_delta").as_double();
+  k1 = get_parameter("controller_gains.lapierre.k1").as_double();
+  k2 = get_parameter("controller_gains.lapierre.k2").as_double();
+  k3 = get_parameter("controller_gains.lapierre.k3").as_double();
+  theta = get_parameter("controller_gains.lapierre.theta").as_double();
+  k_delta = get_parameter("controller_gains.lapierre.k_delta").as_double();
 
   /* Return the Path Following object */
   return new Lapierre(k1, k2, k3, theta, k_delta,
@@ -70,18 +69,18 @@ PathFollowing *PathFollowingNode::getDefaultControllerLapierre() {
 PathFollowing *PathFollowingNode::getDefaultControllerBreivik() {
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("control.outer_loop.path_following.topics.publishers.surge").as_string(), 1));
+                                get_parameter("topics.publishers.surge").as_string(), 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("control.outer_loop.path_following.topics.publishers.yaw").as_string(), 1));
+                                get_parameter("topics.publishers.yaw").as_string(), 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("control.outer_loop.path_following.topics.publishers.rabbit").as_string(), 1));
+                                get_parameter("topics.publishers.rabbit").as_string(), 1));
 
   /* Read the gains for the controller */
   double delta_h;
 
-  delta_h = get_parameter("control.outer_loop.path_following.controller_gains.breivik.delta_h").as_double();
+  delta_h = get_parameter("controller_gains.breivik.delta_h").as_double();
  
   /* Assign the new controller */
   return new Breivik(this->publishers_[0], this->publishers_[1], this->publishers_[2], delta_h);
@@ -90,13 +89,13 @@ PathFollowing *PathFollowingNode::getDefaultControllerBreivik() {
 PathFollowing *PathFollowingNode::getDefaultControllerAguiar() {
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("control.outer_loop.path_following.topics.publishers.surge").as_string(), 1));
+                                get_parameter("topics.publishers.surge").as_string(), 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("control.outer_loop.path_following.topics.publishers.yaw_rate").as_string(), 1));
+                                get_parameter("topics.publishers.yaw_rate").as_string(), 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("control.outer_loop.path_following.topics.publishers.rabbit").as_string(), 1));
+                                get_parameter("topics.publishers.rabbit").as_string(), 1));
 
   double delta, kz;
   double kk[2];
@@ -104,12 +103,12 @@ PathFollowing *PathFollowingNode::getDefaultControllerAguiar() {
   double k_currents;
 
   /* Read the gains for the controller */
-  delta = get_parameter("control.outer_loop.path_following.controller_gains.aguiar.delta").as_double();
-  kk[0] = get_parameter("control.outer_loop.path_following.controller_gains.aguiar.kx").as_double();
-  kk[1] = get_parameter("control.outer_loop.path_following.controller_gains.aguiar.ky").as_double();
-  kz = get_parameter("control.outer_loop.path_following.controller_gains.aguiar.kz").as_double();
-  k_pos = get_parameter("control.outer_loop.path_following.controller_gains.aguiar.k_pos").as_double();
-  k_currents = get_parameter("control.outer_loop.path_following.controller_gains.aguiar.k_currents").as_double();
+  delta = get_parameter("controller_gains.aguiar.delta").as_double();
+  kk[0] = get_parameter("controller_gains.aguiar.kx").as_double();
+  kk[1] = get_parameter("controller_gains.aguiar.ky").as_double();
+  kz = get_parameter("controller_gains.aguiar.kz").as_double();
+  k_pos = get_parameter("controller_gains.aguiar.k_pos").as_double();
+  k_currents = get_parameter("controller_gains.aguiar.k_currents").as_double();
 
   /* Assign the new controller */
   return new Aguiar(delta, kk, kz, k_pos, k_currents, 
@@ -137,19 +136,19 @@ void PathFollowingNode::deleteCurrentController() {
 void PathFollowingNode::initialiseSubscribers() {
 
   this->state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
-                      get_parameter("control.outer_loop.path_following.topics.subscribers.state").as_string(), 
+                      get_parameter("topics.subscribers.state").as_string(), 
                       1, std::bind(&PathFollowingNode::vehicleStateCallback, this, std::placeholders::_1));
 
   this->path_data_sub_ = create_subscription<paths::msg::PathData>(
-                          get_parameter("control.outer_loop.path_following.topics.subscribers.path_data").as_string(), 
+                          get_parameter("topics.subscribers.path_data").as_string(), 
                           1, std::bind(&PathFollowingNode::pathStateCallback, this, std::placeholders::_1));
 
   this->vc_sub_ = create_subscription<std_msgs::msg::Float32>(
-                    get_parameter("control.outer_loop.path_following.topics.subscribers.vc").as_string(), 
+                    get_parameter("topics.subscribers.vc").as_string(), 
                     1, std::bind(&PathFollowingNode::vcCallback, this, std::placeholders::_1));
 
   this->mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
-                                get_parameter("control.outer_loop.path_following.topics.subscribers.mission_status").as_string(), 
+                                get_parameter("topics.subscribers.mission_status").as_string(), 
                                 1, std::bind(&PathFollowingNode::missionStatusCallback, this, std::placeholders::_1));
 }
 
@@ -159,7 +158,7 @@ void PathFollowingNode::initialiseSubscribers() {
 void PathFollowingNode::initialisePublishers() {
 
   this->mission_status_pub_ = create_publisher<std_msgs::msg::Int8>(
-                                get_parameter("control.outer_loop.path_following.topics.publishers.mission_status").as_string(), 1);
+                                get_parameter("topics.publishers.mission_status").as_string(), 1);
 }
 
 /**
@@ -254,10 +253,11 @@ void PathFollowingNode::vehicleStateCallback(const farol_msgs::msg::NavigationSt
  */
 void PathFollowingNode::initialiseTimer() {
   /* Get node frequency from parameters */
-  int freq = get_parameter("control.outer_loop.path_following.node_frequency").as_int();
-
+  node_frequency_ = get_parameter("node_frequency").as_double();
+  
   /* Create timer */
-  this->timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&PathFollowingNode::timerIterCallback, this));
+  auto period = std::chrono::nanoseconds( static_cast<int64_t>(1e9 / node_frequency_));
+  this->timer_ = create_wall_timer(period, [this]() {timerIterCallback();});
 
   /* Wait for the start service to start the Path Following */
   this->timer_->cancel();

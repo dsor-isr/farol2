@@ -3,6 +3,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from launch.conditions import IfCondition
 
 
 def generate_launch_description():
@@ -34,6 +35,18 @@ def generate_launch_description():
     description='Path to the config package, usually the personal bringup of the workspace, in the src folder'
   )
 
+  launch_pid_arg = DeclareLaunchArgument(
+    'pid',
+    default_value='true',
+    description='Boolean to determine if "pid" node is launched.'
+  )
+
+  launch_open_loop_arg = DeclareLaunchArgument(
+    'open_loopo',
+    default_value='false',
+    description='Boolean to determine if "open_loop" node is launched.'
+  )
+
   ###################################
   # Define parameters for all nodes #
   ###################################
@@ -57,22 +70,22 @@ def generate_launch_description():
               PythonExpression(["'personal_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
             ]),
 
-            # load default planning configs
+            # load default control configs
             PathJoinSubstitution([
               FindPackageShare('farol_bringup'),
               'config_default',
               'vehicles',
               LaunchConfiguration('vehicle_name'),
-              'planning.yaml'
+              'inner_loop.yaml'
             ]),
             
-            # override with personal planning configs
+            # override with personal control configs
             PathJoinSubstitution([
               LaunchConfiguration('config_package_path_share'),
               'config_personal',
               'vehicles',
               LaunchConfiguration('vehicle_name'),
-              'planning.yaml'
+              'inner_loop.yaml'
             ]),
           ]
 
@@ -80,12 +93,23 @@ def generate_launch_description():
   ###################
   # Nodes to launch #
   ###################
-  paths_node = Node(
-    package='paths',
-    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'planning']),
-    executable='path_node',
-    name='paths',
+  pid_node = Node(
+    package='pid',
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'inner_loop']),
+    executable='pid_control',
+    name='pid',
     output='screen',
+    condition=IfCondition(LaunchConfiguration('pid')),
+    parameters=params
+  )
+
+  open_loop_node = Node(
+    package='open_loop',
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'inner_loop']),
+    executable='open_loop_control',
+    name='open_loop',
+    output='screen',
+    condition=IfCondition(LaunchConfiguration('open_loop')),
     parameters=params
   )
 
@@ -98,6 +122,9 @@ def generate_launch_description():
     vehicle_name_arg,
     config_package_path_share_arg,
     config_package_path_real_arg,
+    launch_pid_arg,
+    launch_open_loop_arg,
     # nodes
-    paths_node,
+    pid_node,
+    open_loop_node,
   ])

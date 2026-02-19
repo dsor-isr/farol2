@@ -1,40 +1,34 @@
 #include <thruster_rudder_allocation.hpp>
 
 /* Constructor */
-ThrusterRudderAllocation::ThrusterRudderAllocation() : Node("thruster_rudder_allocation",
-                                      rclcpp::NodeOptions()
-                                        .allow_undeclared_parameters(true)
-                                        .automatically_declare_parameters_from_overrides(true)) {
+ThrusterRudderAllocation::ThrusterRudderAllocation() : Node("thruster_rudder_allocation") {
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
   initialiseServices();
-  initialiseTimers();
 }
 
 /* Destructor */
-ThrusterRudderAllocation::~ThrusterRudderAllocation() {
-  /* Stop the timer */
-  timer_->cancel();
-}
+ThrusterRudderAllocation::~ThrusterRudderAllocation() = default;
 
 /**
  * @brief Initialise Subscribers
  */
 void ThrusterRudderAllocation::initialiseSubscribers() {
-  body_wrench_request_sub_ = create_subscription<control_allocation::msg::BodyWrenchRequest>(
-                              get_parameter("actuation.thruster_rudder_allocation.topics.subscribers.body_wrench_request").as_string(),
-                              1, std::bind(&ThrusterRudderAllocation::bodyWrenchRequestCallback, this, std::placeholders::_1));
+  body_wrench_request_sub_ = create_subscription<geometry_msgs::msg::WrenchStamped>(
+    declare_parameter<std::string>("topics.subscribers.body_wrench_request"),
+    rclcpp::QoS(1),
+    [this](geometry_msgs::msg::WrenchStamped::SharedPtr msg){bodyWrenchRequestCallback(msg);});
 
   nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
-                    get_parameter("actuation.thruster_rudder_allocation.topics.subscribers.nav_state").as_string(),
-                    1, std::bind(&ThrusterRudderAllocation::navStateCallback, this, std::placeholders::_1));
-
+    declare_parameter<std::string>("topics.subscribers.nav_state"),
+    rclcpp::QoS(1),
+    [this](farol_msgs::msg::NavigationState::SharedPtr msg){navStateCallback(msg);});
+  
   mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
-                          get_parameter("actuation.thruster_rudder_allocation.topics.subscribers.mission_status").as_string(), 
-                          1, std::bind(&ThrusterRudderAllocation::missionStatusCallback, this, std::placeholders::_1));
-
-  return;
+    declare_parameter<std::string>("topics.subscribers.mission_status"),
+    rclcpp::QoS(1),
+    [this](std_msgs::msg::Int8::SharedPtr msg){missionStatusCallback(msg);});
 }
 
 /**
@@ -44,24 +38,32 @@ void ThrusterRudderAllocation::initialiseSubscribers() {
  * other complex types, this method should be adapted for further robustness.
  */
 void ThrusterRudderAllocation::loadParams() {
+  node_frequency_ = declare_parameter<double>("node_frequency");
+  nr_thrusters_ = declare_parameter<int>("actuation.thrusters.n_thrusters");
+  for (size_t i = 0; i < nr_thrusters_; ++i){
+    declare_parameter<std::string>("actuation.thrusters.configuration."+ std::to_string(i) + ".name");
+    declare_parameter<std::vector<double>>("actuation.thrusters.configuration."+ std::to_string(i) + ".moment_arms");
+    declare_parameter<std::vector<double>>("actuation.thrusters.configuration."+ std::to_string(i) + ".angles");
+  }
+
   /* Angular limits for the rudder */
-  rudder_angle_min_ = get_parameter("actuation.rudder.limits.min").as_double()/180*M_PI;
-  rudder_angle_max_ = get_parameter("actuation.rudder.limits.max").as_double()/180*M_PI;
+  rudder_angle_min_ = declare_parameter<double>("actuation.rudder.limits.min")/180*M_PI;
+  rudder_angle_max_ = declare_parameter<double>("actuation.rudder.limits.max")/180*M_PI;
 
   /* Rudder distance to center of mass */
-  rudder_cm_distance_ = get_parameter("actuation.rudder.cm_distance").as_double();
+  rudder_cm_distance_ = declare_parameter<double>("actuation.rudder.cm_distance");
 
   /* Gains */
-  K_s_ = get_parameter("actuation.model.K_s").as_double();
-  K_L_ = get_parameter("actuation.model.K_L").as_double();
-  K_D0_ = get_parameter("actuation.model.K_D0").as_double();
-  K_D1_ = get_parameter("actuation.model.K_D1").as_double();
+  K_s_ = declare_parameter<double>("actuation.model.K_s");
+  K_L_ = declare_parameter<double>("actuation.model.K_L");
+  K_D0_ = declare_parameter<double>("actuation.model.K_D0");
+  K_D1_ = declare_parameter<double>("actuation.model.K_D1");
 
   /* Get thruster configuration */
   thruster_configuration_ = getThrusterConfiguration(*this);
 
   /* Number of thrusters */
-  nr_thrusters_ = (int)thruster_configuration_.size();
+  // nr_thrusters_ = (int)thruster_configuration_.size();
 
   /* Get thrust allocation matrix */
   thrust_allocation_matrix_ = getThrustAllocationMatrix(thruster_configuration_, nr_thrusters_);
@@ -69,7 +71,7 @@ void ThrusterRudderAllocation::loadParams() {
   /* Set size of pseudo-inverse and forces output */
   thrust_allocation_matrix_pseudo_inv_.resize(nr_thrusters_, 6);
   forces_.resize(nr_thrusters_);
-
+  
   /* Compute pseudo inverse */
   thrust_allocation_matrix_pseudo_inv_ = thrust_allocation_matrix_.completeOrthogonalDecomposition().pseudoInverse();
 
@@ -82,46 +84,27 @@ void ThrusterRudderAllocation::loadParams() {
  */
 void ThrusterRudderAllocation::initialisePublishers() {
   thruster_force_pub_ = create_publisher<control_allocation::msg::ThrusterForce>(
-                          get_parameter("actuation.thruster_rudder_allocation.topics.publishers.thruster_force").as_string(), 1);
+    declare_parameter<std::string>("topics.publishers.thruster_force"),
+    rclcpp::QoS(1));
 
   rudder_angle_ref_pub_ = create_publisher<std_msgs::msg::Float32>(
-                            get_parameter("actuation.thruster_rudder_allocation.topics.publishers.rudder_angle_ref").as_string(), 1);
-
-  debug1_pub_ = create_publisher<std_msgs::msg::Float32>("debug1", 1);
-  // rudder_angle_ref_pub_ = create_publisher<std_msgs::msg::Float32>("debug1", 1);
+    declare_parameter<std::string>("topics.publishers.rudder_angle_ref"),
+    rclcpp::QoS(1));
 }
 
 /**
  * @brief Initialise Services
  */
-void ThrusterRudderAllocation::initialiseServices() {
-  /* Service servers */
-  /* ... */
+void ThrusterRudderAllocation::initialiseServices() {}
 
-  /* service clients */
-  /* ... */
-
-  return;
-}
-
-/**
- * @brief Initialise Timers
- */
-void ThrusterRudderAllocation::initialiseTimers() {
-  /* Get node frequency from parameters */
-  int freq = get_parameter("actuation.thruster_rudder_allocation.node_frequency").as_int();
-
-  /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&ThrusterRudderAllocation::timerCallback, this));
-}
 
 /**
  * @brief Compute force for each thruster based on body wrench (force and torque) request.
  */
-void ThrusterRudderAllocation::bodyWrenchRequestCallback(const control_allocation::msg::BodyWrenchRequest &msg) {
+void ThrusterRudderAllocation::bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped::SharedPtr msg) {
   /* Body wrench request */
-  tau_ << msg.wrench.force.x, msg.wrench.force.y, msg.wrench.force.z,
-          msg.wrench.torque.x, msg.wrench.torque.y, msg.wrench.torque.z;
+  tau_ << msg->wrench.force.x, msg->wrench.force.y, msg->wrench.force.z,
+          msg->wrench.torque.x, msg->wrench.torque.y, msg->wrench.torque.z;
 
   /* Compute rudder angle based on requested torque around the Z axis */
   /* and expected drag along the body's X axis                        */
@@ -158,6 +141,8 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(const control_allocatio
 
 void ThrusterRudderAllocation::computeRudderAngle(double tau_r) 
 {
+  // if (nav_state_.body_velocity_fluid.x == 0.0 && nav_state_.body_velocity_fluid.y == 0.0 && nav_state_.body_velocity_fluid.z == 0.0)
+    // RCLCPP_WARN(get_logger(), "Body Velocity relative to the fluid is 0. Is it not being updated?");
   /* Cap velocity to avoid division by 0 on later computations */
   nav_state_.body_velocity_fluid.x =
     (std::abs(nav_state_.body_velocity_fluid.x) < 0.05)
@@ -262,29 +247,17 @@ double ThrusterRudderAllocation::solve_delta_from_tau(double tau_r, double gamma
 /**
  * @brief Callback for navigation state.
  */
-void ThrusterRudderAllocation::navStateCallback(const farol_msgs::msg::NavigationState &msg) {
-  nav_state_ = msg;
+void ThrusterRudderAllocation::navStateCallback(farol_msgs::msg::NavigationState::SharedPtr msg) {
+  nav_state_ = *msg;
 }
 
 /**
  * @brief Callback for navigation state.
  */
-void ThrusterRudderAllocation::missionStatusCallback(const std_msgs::msg::Int8 &msg) {
-  mission_status_ = msg.data;
+void ThrusterRudderAllocation::missionStatusCallback(std_msgs::msg::Int8::SharedPtr msg) {
+  mission_status_ = msg->data;
 }
 
-/**
- * @brief Timer callback for this node.
- *        Where the algorithms will constantly run.
- */
-void ThrusterRudderAllocation::timerCallback() {
-  /* Check if body velocity relative to fluid is being published on */
-  if (nav_state_.body_velocity_fluid.x == 0.0 && nav_state_.body_velocity_fluid.y == 0.0 && nav_state_.body_velocity_fluid.z == 0.0) {
-    RCLCPP_WARN(get_logger(), "Body Velocity relative to the fluid is 0. Is it not being updated?");
-  }
-
-  return;
-}
 
 /**
  * @brief Main function

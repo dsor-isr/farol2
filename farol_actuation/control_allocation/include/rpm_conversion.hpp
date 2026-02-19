@@ -44,8 +44,8 @@ class RPMConversion : public rclcpp::Node {
     rclcpp::Publisher<control_allocation::msg::ThrusterRPM>::SharedPtr rpm_command_pub_;
     
     /* Callbacks */
-    void thrusterForceCallback(const control_allocation::msg::ThrusterForce &msg);
-    void navStateCallback(const farol_msgs::msg::NavigationState &msg);
+    void thrusterForceCallback(control_allocation::msg::ThrusterForce::SharedPtr msg);
+    void navStateCallback(farol_msgs::msg::NavigationState::SharedPtr msg);
 
     /* Other functions */
     

@@ -5,6 +5,8 @@ float64 kd
 float64 lpf_wc
 float64 tau_min
 float64 tau_max
+float64 w0
+float64 xi
 ---
 bool success
 string message

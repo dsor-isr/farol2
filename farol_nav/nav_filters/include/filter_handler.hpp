@@ -1,66 +1,45 @@
-#include <cstdio>
-#include <chrono>
-#include <memory>
+#pragma once
+
+#include <rclcpp/rclcpp.hpp>
+
+#include <farol_msgs/msg/navigation_state.hpp>
+#include <nav_filters/srv/change_filter.hpp>
+
 #include <string>
+#include <vector>
+#include <unordered_map>
 
-#include "rclcpp/rclcpp.hpp"
-#include "rclcpp/parameter.hpp"
-#include "rclcpp/node_interfaces/node_parameters_interface.hpp"
-#include "std_msgs/msg/string.hpp"
-#include "farol_msgs/msg/navigation_state.hpp"
-#include "nav_filters/srv/change_filter.hpp"
+class FilterHandler : public rclcpp::Node
+{
+public:
+  FilterHandler();
+  ~FilterHandler() override;
 
-/**
- * @brief   Filter Handler
- * @author  Eduardo Cunha
- */
-class FilterHandler : public rclcpp::Node {
-  public:
-    /* Constructor */
-    FilterHandler();
+private:
+  // Init
+  void loadParams();
+  void initialisePublishers();
+  void initialiseServices();
+  void initialiseSubscribers();
 
-    /* Destructor */
-    ~FilterHandler();
+  // Core
+  bool switchSubscription(const std::string & filter_name);
 
-    /* Load parameters */
-    void loadParams();
+  // Service
+  void changeFilterCallback(
+      const std::shared_ptr<nav_filters::srv::ChangeFilter::Request> request,
+      std::shared_ptr<nav_filters::srv::ChangeFilter::Response> response);
 
-    /* Initialise Subscribers */
-    void initialiseSubscribers();
+  // Params / config
+  std::vector<std::string> filters_;
+  std::string current_filter_;
+  std::unordered_map<std::string, std::string> topic_by_filter_;  // filter -> topic
 
-    /* Initialise Publishers */
-    void initialisePublishers();
+  // ROS interfaces
+  rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr active_sub_;
+  rclcpp::Publisher<farol_msgs::msg::NavigationState>::SharedPtr state_pub_;
+  rclcpp::Service<nav_filters::srv::ChangeFilter>::SharedPtr change_filter_srv_;
 
-    /* Initialise Services */
-    void initialiseServices();
-
-    /* Initialise Timers */
-    void initialiseTimers();
-    
-    /* Timer callback */
-    void timerCallback();
-
-  private:
-    /* Timer for node's callbacks */
-    rclcpp::TimerBase::SharedPtr timer_;
-
-    /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<farol_msgs::msg::NavigationState>::SharedPtr state_pub_;
-    
-    std::map<std::string, rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr> subscription_map_;
-
-    rclcpp::Service<nav_filters::srv::ChangeFilter>::SharedPtr change_filter_srv_;
-
-    /* Callbacks */
-    void nav_filter_callback(const farol_msgs::msg::NavigationState &msg, std::string filter_key);
-    void changeFilterCallback(const std::shared_ptr<nav_filters::srv::ChangeFilter::Request> request,
-                              std::shared_ptr<nav_filters::srv::ChangeFilter::Response> response);
-
-    /* Other variables */
-    farol_msgs::msg::NavigationState filter_state_msg_;
-    rclcpp::Clock clock_;
-    std::map<std::string, rclcpp::Parameter> subscription_topic_map_;
-    std::map<std::string, farol_msgs::msg::NavigationState> nav_state_map_;
-    std::vector<std::string> filters_;
-    std::string current_filter_;
+  // Messages
+  farol_msgs::msg::NavigationState filter_state_msg_;
 };

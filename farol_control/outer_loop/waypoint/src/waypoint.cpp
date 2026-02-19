@@ -1,11 +1,7 @@
 #include "waypoint.hpp"
 
 /* Constructor */
-Waypoint::Waypoint() : Node("waypoint", 
-                                    rclcpp::NodeOptions()
-                                      .allow_undeclared_parameters(true)
-                                      .automatically_declare_parameters_from_overrides(true)) {
-  
+Waypoint::Waypoint() : Node("waypoint"){
   loadParams();
   initialiseSubscribers();
   initialiseServices();
@@ -14,27 +10,25 @@ Waypoint::Waypoint() : Node("waypoint",
 }
 
 /* Destructor */
-Waypoint::~Waypoint() {
-  /* Stop the timer */
-  timer_->cancel();
-}
+Waypoint::~Waypoint() = default;
 
 /**
  * @brief Load parameters
  */
 void Waypoint::loadParams() {
-  cdist_ = get_parameter("control.outer_loop.waypoint.cdist").as_double();
-  delta_t_ = get_parameter("control.outer_loop.waypoint.delta_t").as_double();
+  node_frequency_ = declare_parameter<double>("node_frequency");
+  cdist_ = declare_parameter<double>("cdist");
+  delta_t_ = declare_parameter<double>("delta_t");
 
   /* Waypoint type 1 gains */
-  ku_ = get_parameter("control.outer_loop.waypoint.type1.gains.ku").as_double();
-  ks_ = get_parameter("control.outer_loop.waypoint.type1.gains.ks").as_double();
-  speed_turn_ = get_parameter("control.outer_loop.waypoint.type1.gains.speed_turn").as_double();
+  ku_ = declare_parameter<double>("type1.gains.ku");
+  ks_ = declare_parameter<double>("type1.gains.ks");
+  speed_turn_ = declare_parameter<double>("type1.gains.speed_turn");
 
   /* Waypoint type 2 (with heading) gains */
-  k1_ = get_parameter("control.outer_loop.waypoint.type2.gains.k1").as_double();
-  k2_ = get_parameter("control.outer_loop.waypoint.type2.gains.k2").as_double();
-  k3_ = get_parameter("control.outer_loop.waypoint.type2.gains.k3").as_double();
+  k1_ = declare_parameter<double>("type2.gains.k1");
+  k2_ = declare_parameter<double>("type2.gains.k2");
+  k3_ = declare_parameter<double>("type2.gains.k3");
 }
 
 /**
@@ -42,16 +36,19 @@ void Waypoint::loadParams() {
  */
 void Waypoint::initialiseSubscribers() {
   mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
-                          get_parameter("control.outer_loop.waypoint.topics.subscribers.mission_status").as_string(), 
-                          1, std::bind(&Waypoint::missionStatusCallback, this, std::placeholders::_1));
-
+    declare_parameter<std::string>("topics.subscribers.mission_status"),
+    rclcpp::QoS(1),
+    [this](std_msgs::msg::Int8::SharedPtr msg){missionStatusCallback(msg);});
+  
   state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
-                get_parameter("control.outer_loop.waypoint.topics.subscribers.state").as_string(), 
-                1, std::bind(&Waypoint::stateCallback, this, std::placeholders::_1));
+    declare_parameter<std::string>("topics.subscribers.state"),
+    rclcpp::QoS(1),
+    [this](farol_msgs::msg::NavigationState::SharedPtr msg){stateCallback(msg);});
 
   turn_radius_flag_sub_ = create_subscription<std_msgs::msg::Bool>(
-                            get_parameter("control.outer_loop.waypoint.topics.subscribers.turn_radius_flag").as_string(), 
-                            1, std::bind(&Waypoint::turnRadiusFlagCallback, this, std::placeholders::_1));
+    declare_parameter<std::string>("topics.subscribers.turn_radius_flag"),
+    rclcpp::QoS(1),
+    [this](std_msgs::msg::Bool::SharedPtr msg){turnRadiusFlagCallback(msg);});
 }
 
 /**
@@ -59,19 +56,20 @@ void Waypoint::initialiseSubscribers() {
  */
 void Waypoint::initialisePublishers() {
   yaw_ref_pub_ = create_publisher<std_msgs::msg::Float32>(
-                  get_parameter("control.outer_loop.waypoint.topics.publishers.yaw_ref").as_string(), 1);
-
+    declare_parameter<std::string>("topics.publishers.yaw_ref"),
+    rclcpp::QoS(1));
   yaw_rate_ref_pub_ = create_publisher<std_msgs::msg::Float32>(
-                        get_parameter("control.outer_loop.waypoint.topics.publishers.yaw_rate_ref").as_string(), 1);
-
+    declare_parameter<std::string>("topics.publishers.yaw_rate_ref"),
+    rclcpp::QoS(1));
   u_ref_pub_ = create_publisher<std_msgs::msg::Float32>(
-                get_parameter("control.outer_loop.waypoint.topics.publishers.u_ref").as_string(), 1);
-
+    declare_parameter<std::string>("topics.publishers.u_ref"),
+    rclcpp::QoS(1));
   v_ref_pub_ = create_publisher<std_msgs::msg::Float32>(
-                get_parameter("control.outer_loop.waypoint.topics.publishers.v_ref").as_string(), 1);
-
+    declare_parameter<std::string>("topics.publishers.v_ref"),
+    rclcpp::QoS(1));
   mission_status_pub_ = create_publisher<std_msgs::msg::Int8>(
-                          get_parameter("control.outer_loop.waypoint.topics.publishers.mission_status").as_string(), 1);
+    declare_parameter<std::string>("topics.publishers.mission_status"),
+    rclcpp::QoS(1));
 }
 
 /**
@@ -79,37 +77,36 @@ void Waypoint::initialisePublishers() {
  */
 void Waypoint::initialiseServices() {
   /* Service servers */
-  /* Service to change current filter */
   wp_standard_srv_ = create_service<waypoint::srv::SendWpType1>(
-                      get_parameter("control.outer_loop.waypoint.topics.services.wp_standard").as_string(),
-                      std::bind(&Waypoint::sendWpStandardService, this, std::placeholders::_1, std::placeholders::_2));
+    declare_parameter<std::string>("topics.services.wp_standard"),
+    [this](const std::shared_ptr<waypoint::srv::SendWpType1::Request> request,
+      std::shared_ptr<waypoint::srv::SendWpType1::Response> response){
+      this->sendWpStandardService(request, response);
+    });
 
   wp_loose_srv_ = create_service<waypoint::srv::SendWpType1>(
-                    get_parameter("control.outer_loop.waypoint.topics.services.wp_loose").as_string(),
-                    std::bind(&Waypoint::sendWpLooseService, this, std::placeholders::_1, std::placeholders::_2));
-
-  wp_heading_srv_ = create_service<waypoint::srv::SendWpType1>(
-                      get_parameter("control.outer_loop.waypoint.topics.services.wp_heading").as_string(),
-                      std::bind(&Waypoint::sendWpHeadingService, this, std::placeholders::_1, std::placeholders::_2));
+    declare_parameter<std::string>("topics.services.wp_loose"),
+    [this](const std::shared_ptr<waypoint::srv::SendWpType1::Request> request,
+      std::shared_ptr<waypoint::srv::SendWpType1::Response> response){
+      this->sendWpLooseService(request, response);
+    });
   
-  /* Service clients */
-  /*... */
-
-  return;
+  wp_heading_srv_ = create_service<waypoint::srv::SendWpType1>(
+    declare_parameter<std::string>("topics.services.wp_heading"),
+    [this](const std::shared_ptr<waypoint::srv::SendWpType1::Request> request,
+      std::shared_ptr<waypoint::srv::SendWpType1::Response> response){
+      this->sendWpHeadingService(request, response);
+    });
 }
 
 /**
  * @brief Initialise Timer
  */
 void Waypoint::initialiseTimer() {
-  /* Get node frequency from parameters */
-  int freq = get_parameter("control.outer_loop.waypoint.node_frequency").as_int();
-  node_frequency_ = (double)freq;
+  auto period = std::chrono::nanoseconds( static_cast<int64_t>(1e9 / node_frequency_));
+  timer_ = create_wall_timer(period, [this]() {timerCallback();});
 
-  /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&Waypoint::timerCallback, this));
-
-  /* Stop the timer */
+  // Stop the timer because no waypoint active yet
   timer_->cancel();
 }
 
@@ -122,32 +119,32 @@ void Waypoint::timerCallback() {
   wp_controller_->compute(veh_state_, wp_ref_, turn_radius_flag_);
 }
 
-void Waypoint::stateCallback(const farol_msgs::msg::NavigationState &msg) {
+void Waypoint::stateCallback(farol_msgs::msg::NavigationState::SharedPtr msg) {
   // update vehicle state
-  veh_state_.eta1[0] = msg.utm_position.northing;
-  veh_state_.eta1[1] = msg.utm_position.easting;
-  veh_state_.eta2[2] = msg.orientation.z;
-  veh_state_.v1[0] = msg.body_velocity_inertial.x;
-  veh_state_.v1[1] = msg.body_velocity_inertial.y;
+  veh_state_.eta1[0] = msg->utm_position.northing;
+  veh_state_.eta1[1] = msg->utm_position.easting;
+  veh_state_.eta2[2] = msg->orientation.z;
+  veh_state_.v1[0] = msg->body_velocity_inertial.x;
+  veh_state_.v1[1] = msg->body_velocity_inertial.y;
 
   // // send message if error and stop timer
-  // if (!(msg.status & msg.STATUS_ALL_OK) && !timer_->is_canceled()) {
+  // if (!(msg->status & msg->STATUS_ALL_OK) && !timer_->is_canceled()) {
   //   RCLCPP_ERROR(get_logger(), "The filter estimate is not good, disabling WayPoint");
   //   timer_->cancel();
   // }
 }
 
-void Waypoint::missionStatusCallback(const std_msgs::msg::Int8 &msg) {
+void Waypoint::missionStatusCallback(std_msgs::msg::Int8::SharedPtr msg) {
   // stop the waypoint controller if the mission status has been changed to other value
   // than 4
-  if (!timer_->is_canceled() && msg.data != 4) {
+  if (!timer_->is_canceled() && msg->data != 4) {
     timer_->cancel();
-    RCLCPP_INFO(get_logger(), "Some process changed the mission status to %d", msg.data);
+    RCLCPP_INFO(get_logger(), "Some process changed the mission status to %d", msg->data);
   }
 }
 
-void Waypoint::turnRadiusFlagCallback(const std_msgs::msg::Bool &msg) {
-  turn_radius_flag_ = msg.data;
+void Waypoint::turnRadiusFlagCallback(std_msgs::msg::Bool::SharedPtr msg) {
+  turn_radius_flag_ = msg->data;
 }
 
 void Waypoint::createWaypoint(WaypointController *new_wp) {

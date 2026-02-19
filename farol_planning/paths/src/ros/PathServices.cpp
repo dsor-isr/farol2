@@ -6,36 +6,52 @@
  */
 void PathNode::initializeServices() {
   this->reset_path_srv_ = create_service<paths::srv::ResetPath>(
-                            get_parameter("planning.paths.topics.services.reset_path").as_string(),
-                            std::bind(&PathNode::ResetPathService, this, std::placeholders::_1, std::placeholders::_2));
+      declare_parameter<std::string>("topics.services.reset_path"),
+      [this](const std::shared_ptr<paths::srv::ResetPath::Request> request,
+        std::shared_ptr<paths::srv::ResetPath::Response> response){
+        ResetPathService(request, response);});
 
   this->set_mode_srv_ = create_service<paths::srv::SetMode>(
-                          get_parameter("planning.paths.topics.services.set_mode").as_string(),
-                          std::bind(&PathNode::SetModeService, this, std::placeholders::_1, std::placeholders::_2));
-
+      declare_parameter<std::string>("topics.services.set_mode"),
+      [this](const std::shared_ptr<paths::srv::SetMode::Request> request,
+        std::shared_ptr<paths::srv::SetMode::Response> response){
+        SetModeService(request, response);});
+  
   this->arc2d_srv_ = create_service<paths::srv::SpawnArc2D>(
-                      get_parameter("planning.paths.topics.services.arc2d_path").as_string(),
-                      std::bind(&PathNode::Arc2DService, this, std::placeholders::_1, std::placeholders::_2));
+      declare_parameter<std::string>("topics.services.arc2d_path"),
+      [this](const std::shared_ptr<paths::srv::SpawnArc2D::Request> request,
+        std::shared_ptr<paths::srv::SpawnArc2D::Response> response){
+        Arc2DService(request, response);});
 
   this->bernoulli_srv_ = create_service<paths::srv::SpawnBernoulli>(
-                          get_parameter("planning.paths.topics.services.bernoulli_path").as_string(),
-                          std::bind(&PathNode::BernoulliService, this, std::placeholders::_1, std::placeholders::_2));
-
+      declare_parameter<std::string>("topics.services.bernoulli_path"),
+      [this](const std::shared_ptr<paths::srv::SpawnBernoulli::Request> request,
+        std::shared_ptr<paths::srv::SpawnBernoulli::Response> response){
+        BernoulliService(request, response);});
+  
   this->circle2D_srv_ = create_service<paths::srv::SpawnCircle2D>(
-                          get_parameter("planning.paths.topics.services.circle2d_path").as_string(),
-                          std::bind(&PathNode::Circle2DService, this, std::placeholders::_1, std::placeholders::_2));
-
+      declare_parameter<std::string>("topics.services.circle2d_path"),
+      [this](const std::shared_ptr<paths::srv::SpawnCircle2D::Request> request,
+        std::shared_ptr<paths::srv::SpawnCircle2D::Response> response){
+        Circle2DService(request, response);});
+  
   this->line_srv_ = create_service<paths::srv::SpawnLine>(
-                      get_parameter("planning.paths.topics.services.line_path").as_string(),
-                      std::bind(&PathNode::LineService, this, std::placeholders::_1, std::placeholders::_2));
+      declare_parameter<std::string>("topics.services.line_path"),
+      [this](const std::shared_ptr<paths::srv::SpawnLine::Request> request,
+        std::shared_ptr<paths::srv::SpawnLine::Response> response){
+        LineService(request, response);});
 
   this->rabbit_const_speed_srv_ = create_service<paths::srv::SetConstSpeed>(
-                                    get_parameter("planning.paths.topics.services.speed.const_rabbit_speed").as_string(),
-                                    std::bind(&PathNode::RabbitConstSpeedService, this, std::placeholders::_1, std::placeholders::_2));
-
+      declare_parameter<std::string>("topics.services.speed.const_rabbit_speed"),
+      [this](const std::shared_ptr<paths::srv::SetConstSpeed::Request> request,
+        std::shared_ptr<paths::srv::SetConstSpeed::Response> response){
+        RabbitConstSpeedService(request, response);});
+  
   this->vehicle_const_speed_srv_ = create_service<paths::srv::SetConstSpeed>(
-                                    get_parameter("planning.paths.topics.services.speed.const_vehicle_speed").as_string(),
-                                    std::bind(&PathNode::VehicleConstSpeedService, this, std::placeholders::_1, std::placeholders::_2));
+      declare_parameter<std::string>("topics.services.speed.const_vehicle_speed"),
+      [this](const std::shared_ptr<paths::srv::SetConstSpeed::Request> request,
+        std::shared_ptr<paths::srv::SetConstSpeed::Response> response){
+        VehicleConstSpeedService(request, response);});
 }
 
 /**

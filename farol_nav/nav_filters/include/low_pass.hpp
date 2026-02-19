@@ -9,18 +9,19 @@
 #include "farol_msgs/msg/navigation_state.hpp"
 #include "farol_msgs/msg/measurement.hpp"
 #include "farol_utils/angles.hpp"
+#include "farol_utils/filters/low_pass_filter.hpp"
 
 /**
- * @brief   Sample and Hold navigation filter
- * @author  Eduardo Cunha
+ * @brief   Low pass navigation filter
+ * @author  Ravi Regalo
  */
-class SampleAndHold : public rclcpp::Node {
+class LowPass : public rclcpp::Node {
   public:
     /* Constructor */
-    SampleAndHold();
+    LowPass();
 
     /* Destructor */
-    ~SampleAndHold();
+    ~LowPass();
 
     /* Load parameters */
     void loadParams();
@@ -50,12 +51,17 @@ class SampleAndHold : public rclcpp::Node {
     rclcpp::Subscription<farol_msgs::msg::Measurement>::SharedPtr measurement_sub_;
 
     /* Callbacks */
-    void measurement_callback(farol_msgs::msg::Measurement::ConstSharedPtr msg);
+    void measurement_callback(farol_msgs::msg::Measurement::SharedPtr msg);
 
 
     /* Other variables */
     farol_msgs::msg::NavigationState filter_state_msg_;
     rclcpp::Clock clock_;
     bool neglect_current_;
+
+    std::array<farol_utils::LowPassFilter, 17> lpfs_;
+    std::array<double, 17> last_meas_{};
+    std::string utm_zone_;
     double node_frequency_;
+    
 };

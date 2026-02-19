@@ -10,7 +10,6 @@ find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 add_library(${PROJECT_NAME}
-  src/second_order_lpf.cpp
   src/low_pass_filter.cpp
 )
 

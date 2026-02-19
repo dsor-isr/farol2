@@ -1,32 +1,24 @@
 #include <static_thruster_allocation.hpp>
 
 /* Constructor */
-StaticThrusterAllocation::StaticThrusterAllocation() : Node("static_thruster_allocation", 
-                                      rclcpp::NodeOptions()
-                                        .allow_undeclared_parameters(true)
-                                        .automatically_declare_parameters_from_overrides(true)) {
+StaticThrusterAllocation::StaticThrusterAllocation() : Node("static_thruster_allocation"){
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
-  initialiseServices();
-  initialiseTimers();
+  // initialiseServices();
 }
 
 /* Destructor */
-StaticThrusterAllocation::~StaticThrusterAllocation() {
-  /* Stop the timer */
-  timer_->cancel();
-}
+StaticThrusterAllocation::~StaticThrusterAllocation() = default;
 
 /**
  * @brief Initialise Subscribers
  */
 void StaticThrusterAllocation::initialiseSubscribers() {
-  body_wrench_request_sub_ = create_subscription<control_allocation::msg::BodyWrenchRequest>(
-                              get_parameter("actuation.static_thruster_allocation.topics.subscribers.body_wrench_request").as_string(), 
-                              1, std::bind(&StaticThrusterAllocation::bodyWrenchRequestCallback, this, std::placeholders::_1));
-
-  return;
+  body_wrench_request_sub_ = create_subscription<geometry_msgs::msg::WrenchStamped>(
+    declare_parameter<std::string>("topics.subscribers.body_wrench_request"),
+    rclcpp::QoS(1),
+    [this](geometry_msgs::msg::WrenchStamped::SharedPtr msg){bodyWrenchRequestCallback(msg);});
 }
 
 /**
@@ -36,6 +28,15 @@ void StaticThrusterAllocation::initialiseSubscribers() {
  * other complex types, this method should be adapted for further robustness.
  */
 void StaticThrusterAllocation::loadParams() {
+  node_frequency_ = declare_parameter<double>("node_frequency");  
+
+  nr_thrusters_ = declare_parameter<int>("actuation.thrusters.n_thrusters");
+  for (size_t i = 0; i < nr_thrusters_; ++i){
+    declare_parameter<std::string>("actuation.thrusters.configuration."+ std::to_string(i) + ".name");
+    declare_parameter<std::vector<double>>("actuation.thrusters.configuration."+ std::to_string(i) + ".moment_arms");
+    declare_parameter<std::vector<double>>("actuation.thrusters.configuration."+ std::to_string(i) + ".angles");
+  }
+
   /* Get thruster configuration */
   thruster_configuration_ = getThrusterConfiguration(*this);
 
@@ -61,40 +62,22 @@ void StaticThrusterAllocation::loadParams() {
  */
 void StaticThrusterAllocation::initialisePublishers() {
   thruster_force_pub_ = create_publisher<control_allocation::msg::ThrusterForce>(
-                          get_parameter("actuation.static_thruster_allocation.topics.publishers.thruster_force").as_string(), 1);
+    declare_parameter<std::string>("topics.publishers.thruster_force"),
+    rclcpp::QoS(1));
 }
 
 /**
  * @brief Initialise Services
  */
-void StaticThrusterAllocation::initialiseServices() {
-  /* Service servers */
-  /* ... */
-
-  /* service clients */
-  /* ... */
-
-  return;
-}
-
-/**
- * @brief Initialise Timers
- */
-void StaticThrusterAllocation::initialiseTimers() {
-  /* Get node frequency from parameters */
-  int freq = get_parameter("actuation.static_thruster_allocation.node_frequency").as_int();
-
-  /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&StaticThrusterAllocation::timerCallback, this));
-}
+void StaticThrusterAllocation::initialiseServices() {}
 
 /**
  * @brief Compute force for each thruster based on body wrench (force and torque) request.
  */
-void StaticThrusterAllocation::bodyWrenchRequestCallback(const control_allocation::msg::BodyWrenchRequest &msg) {
+void StaticThrusterAllocation::bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped::SharedPtr msg) {
   /* Body wrench request */
-  tau_ << msg.wrench.force.x, msg.wrench.force.y, msg.wrench.force.z,
-          msg.wrench.torque.x, msg.wrench.torque.y, msg.wrench.torque.z;
+  tau_ << msg->wrench.force.x, msg->wrench.force.y, msg->wrench.force.z,
+          msg->wrench.torque.x, msg->wrench.torque.y, msg->wrench.torque.z;
   
   /* Compute vector of forces for each thruster based on body wrench request */
   /* f = pinv(T).τ */
@@ -107,14 +90,6 @@ void StaticThrusterAllocation::bodyWrenchRequestCallback(const control_allocatio
   msg_.force = forces_vec;
   
   thruster_force_pub_->publish(msg_);
-}
-
-/**
- * @brief Timer callback for this node.
- *        Where the algorithms will constantly run.
- */
-void StaticThrusterAllocation::timerCallback() {
-  return;
 }
 
 /**

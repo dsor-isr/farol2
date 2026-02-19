@@ -43,7 +43,7 @@ class ThrottleConversion : public rclcpp::Node {
     rclcpp::Publisher<farol_msgs::msg::Thruster>::SharedPtr throttle_command_pub_;
     
     /* Callbacks */
-    void rpmCommandCallback(const control_allocation::msg::ThrusterRPM &msg);
+    void rpmCommandCallback(control_allocation::msg::ThrusterRPM::SharedPtr msg);
 
     /* Other functions */
     

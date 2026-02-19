@@ -4,7 +4,7 @@
   <name>nav_filters</name>
   <version>0.0.0</version>
   <description>Nav Filters: Navigation Filters</description>
-  <maintainer email="eduardo.m.a.cunha@tecnico.ulisboa.pt">Eduardo Cunha</maintainer>
+  <maintainer email="ravi.regalo@tecnico.ulisboa.pt">Ravi Regalo</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

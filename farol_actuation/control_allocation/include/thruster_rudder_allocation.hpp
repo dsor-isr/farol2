@@ -14,7 +14,7 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/int8.hpp"
-#include "control_allocation/msg/body_wrench_request.hpp"
+#include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "control_allocation/msg/thruster_force.hpp"
 #include "farol_msgs/msg/navigation_state.hpp"
 
@@ -58,14 +58,14 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     /* Declare publishers, subscribers, services, etc. */
     rclcpp::Publisher<control_allocation::msg::ThrusterForce>::SharedPtr thruster_force_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_angle_ref_pub_, debug1_pub_;
-    rclcpp::Subscription<control_allocation::msg::BodyWrenchRequest>::SharedPtr body_wrench_request_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr body_wrench_request_sub_;
     rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr nav_state_sub_;
     rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr mission_status_sub_;
     
     /* Callbacks */
-    void bodyWrenchRequestCallback(const control_allocation::msg::BodyWrenchRequest &msg);
-    void navStateCallback(const farol_msgs::msg::NavigationState &msg);
-    void missionStatusCallback(const std_msgs::msg::Int8 &msg);
+    void bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped::SharedPtr msg);
+    void navStateCallback(farol_msgs::msg::NavigationState::SharedPtr msg);
+    void missionStatusCallback(std_msgs::msg::Int8::SharedPtr msg);
 
     /* Other functions */
     void computeRudderAngle(double tau_r);
@@ -85,7 +85,7 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     Eigen::Vector<double, 6> tau_common_mode_;
     Eigen::Vector<double, Eigen::Dynamic> forces_;
     double rudder_angle_, rudder_x_body_drag_ = 0; /* [rad], [N] */
-    int nr_thrusters_;
+    size_t nr_thrusters_;
     farol_msgs::msg::NavigationState nav_state_;
     double rudder_angle_max_, rudder_angle_min_; /* [rad] */
     double rudder_cm_distance_;
@@ -94,4 +94,5 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     double K_s_, K_L_, K_D0_, K_D1_;
     double L, D;
     double gamma_, rudder_angle_prev_{0.0};
+    double node_frequency_;
 };

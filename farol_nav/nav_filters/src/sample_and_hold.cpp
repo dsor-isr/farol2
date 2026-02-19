@@ -19,24 +19,18 @@ SampleAndHold::~SampleAndHold() {
  * @brief Load parameters
  */
 void SampleAndHold::loadParams() {
-  /* Declare parameters */
-  declare_parameter<bool>("nav.sample_and_hold.neglect_current", true);
-
-  /* Actually get the parameters */
-  neglect_current_ = get_parameter("nav.sample_and_hold.neglect_current").as_bool();
+  neglect_current_ = declare_parameter<bool>("neglect_current");
+  node_frequency_ = declare_parameter<double>("node_frequency");  
 }
 
 /**
  * @brief Initialise Subscribers
  */
 void SampleAndHold::initialiseSubscribers() {
-  /* Declare parameters */
-  declare_parameter<std::string>("nav.sample_and_hold.topics.subscribers.measurement","dummy");
-
   measurement_sub_ = create_subscription<farol_msgs::msg::Measurement>(
-                      get_parameter("nav.sample_and_hold.topics.subscribers.measurement").as_string(), 
-                      1, std::bind(&SampleAndHold::measurement_callback, this, std::placeholders::_1));
-
+    declare_parameter<std::string>("topics.subscribers.measurement"),
+    rclcpp::QoS(1),
+    [this](farol_msgs::msg::Measurement::SharedPtr msg){measurement_callback(msg);});
   return;
 }
 
@@ -44,23 +38,16 @@ void SampleAndHold::initialiseSubscribers() {
  * @brief Initialise Publishers
  */
 void SampleAndHold::initialisePublishers() {
-  /* Declare parameters */
-  declare_parameter<std::string>("nav.sample_and_hold.topics.publishers.state", "state");
-
   state_pub_ = create_publisher<farol_msgs::msg::NavigationState>(
-                get_parameter("nav.sample_and_hold.topics.publishers.state").as_string(), 1);
+    declare_parameter<std::string>("topics.publishers.state"),
+    rclcpp::QoS(1));
+  return;
 }
 
 /**
  * @brief Initialise Services
  */
 void SampleAndHold::initialiseServices() {
-  // service servers
-  // ...
-
-  // service clients
-  // ...
-
   return;
 }
 
@@ -68,92 +55,87 @@ void SampleAndHold::initialiseServices() {
  * @brief Initialise Timers
  */
 void SampleAndHold::initialiseTimers() {
-  /* Get node frequency from parameters */
-  declare_parameter<int>("nav.sample_and_hold.node_frequency", 5);
-  int freq = get_parameter("nav.sample_and_hold.node_frequency").as_int();
-
-  /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&SampleAndHold::timerCallback, this));
+  auto period = std::chrono::nanoseconds( static_cast<int64_t>(1e9 / node_frequency_));
+  timer_ = create_wall_timer(period, [this]() {timerCallback();});
+  return;
 }
 
-void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg) {
-  /* Update filter state */
-
-  /* Depending on measurement type */
-  switch(msg.type){
+void SampleAndHold::measurement_callback(farol_msgs::msg::Measurement::ConstSharedPtr msg) {
+  // Update filter state depending on measurement type 
+  switch(msg->type){
     /* Orientation: roll, pitch, yaw */
-    case msg.MEAS_ORIENTATION:
-      if (msg.value.size() != 3) {
+    case farol_msgs::msg::Measurement::MEAS_ORIENTATION:
+      if (msg->value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement ORIENTATION has incorrect length or type.");
         break;
       }
-      filter_state_msg_.orientation.x = msg.value[0];
-      filter_state_msg_.orientation.y = msg.value[1];
-      filter_state_msg_.orientation.z = msg.value[2];
+      filter_state_msg_.orientation.x = msg->value[0];
+      filter_state_msg_.orientation.y = msg->value[1];
+      filter_state_msg_.orientation.z = msg->value[2];
       break;
     /* Orientation rate: roll rate, pitch rate, yaw rate */
-    case msg.MEAS_ORIENTATION_RATE:
-      if (msg.value.size() != 3) {
+    case farol_msgs::msg::Measurement::MEAS_ORIENTATION_RATE:
+      if (msg->value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement ORIENTATION_RATE has incorrect length or type.");
         break;
       }
-      filter_state_msg_.orientation_rate.x = msg.value[0];
-      filter_state_msg_.orientation_rate.y = msg.value[1];
-      filter_state_msg_.orientation_rate.z = msg.value[2];
+      filter_state_msg_.orientation_rate.x = msg->value[0];
+      filter_state_msg_.orientation_rate.y = msg->value[1];
+      filter_state_msg_.orientation_rate.z = msg->value[2];
       break;
     /* UTM position (easting, northing) and UTM zone */
-    case msg.MEAS_UTM_POSITION:
-      if (msg.value.size() != 3) {
+    case farol_msgs::msg::Measurement::MEAS_UTM_POSITION:
+      if (msg->value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement UTM_POSITION has incorrect length or type.");
         break;
       }
-      filter_state_msg_.utm_position.northing = msg.value[0];
-      filter_state_msg_.utm_position.easting = msg.value[1];
-      filter_state_msg_.utm_position.utm_zone = msg.value[2];
+      filter_state_msg_.utm_position.northing = msg->value[0];
+      filter_state_msg_.utm_position.easting = msg->value[1];
+      filter_state_msg_.utm_position.utm_zone = msg->value[2];
       break;
     /* Depth */
-    case msg.MEAS_DEPTH:
-      if (msg.value.size() != 1) {
+    case farol_msgs::msg::Measurement::MEAS_DEPTH:
+      if (msg->value.size() != 1) {
         RCLCPP_ERROR(get_logger(), "Measurement DEPTH has incorrect length or type.");
         break;
       }
-      filter_state_msg_.depth = msg.value[0];
+      filter_state_msg_.depth = msg->value[0];
       break;
     /* Altimeter */
-    case msg.MEAS_ALTIMETER:
-      if (msg.value.size() != 1) {
+    case farol_msgs::msg::Measurement::MEAS_ALTIMETER:
+      if (msg->value.size() != 1) {
         RCLCPP_ERROR(get_logger(), "Measurement ALTIMETER has incorrect length or type.");
         break;
       }
-      filter_state_msg_.altimeter = msg.value[0];
+      filter_state_msg_.altimeter = msg->value[0];
       break;
     /* Altitude realtive to the ellipsoid, WGS84 */
-    case msg.MEAS_ALTITUDE_WGS84:
-      if (msg.value.size() != 1) {
+    case farol_msgs::msg::Measurement::MEAS_ALTITUDE_WGS84:
+      if (msg->value.size() != 1) {
         RCLCPP_ERROR(get_logger(), "Measurement ALTITUDE_WGS84 has incorrect length or type.");
         break;
       }
-      filter_state_msg_.altitude_ellipsoidal = msg.value[0];
+      filter_state_msg_.altitude_ellipsoidal = msg->value[0];
       break;
     /* Inertial velocity expressed in the body */
-    case msg.MEAS_BODY_VELOCITY_INERTIAL: {
-      if (msg.value.size() != 3) {
+    case farol_msgs::msg::Measurement::MEAS_BODY_VELOCITY_INERTIAL: {
+      if (msg->value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement BODY_VELOCITY_INERTIAL has incorrect length or type.");
         break;
       }
-      filter_state_msg_.body_velocity_inertial.x = msg.value[0];
-      filter_state_msg_.body_velocity_inertial.y = msg.value[1];
-      filter_state_msg_.body_velocity_inertial.z = msg.value[2];
+      filter_state_msg_.body_velocity_inertial.x = msg->value[0];
+      filter_state_msg_.body_velocity_inertial.y = msg->value[1];
+      filter_state_msg_.body_velocity_inertial.z = msg->value[2];
 
       /* If current is neglected, body velocity relative to the fluid will be the same as inertial one */
       if (neglect_current_) {
-        filter_state_msg_.body_velocity_fluid.x = msg.value[0];
-        filter_state_msg_.body_velocity_fluid.y = msg.value[1];
-        filter_state_msg_.body_velocity_fluid.z = msg.value[2];
+        filter_state_msg_.body_velocity_fluid.x = msg->value[0];
+        filter_state_msg_.body_velocity_fluid.y = msg->value[1];
+        filter_state_msg_.body_velocity_fluid.z = msg->value[2];
       }
 
       // Compute course angle 
-      Eigen::Vector3d v_b(msg.value[0], msg.value[1], msg.value[2]);
+      Eigen::Vector3d v_b(msg->value[0], msg->value[1], msg->value[2]);
       // Build rotation matrix from body to inertial
       Eigen::Matrix3d R =
         Eigen::Matrix3d(
@@ -169,14 +151,14 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
       break;}
 
     /* Velocity expressed in the body relative to the fluid */
-    case msg.MEAS_BODY_VELOCITY_FLUID:
-      if (msg.value.size() != 3) {
+    case farol_msgs::msg::Measurement::MEAS_BODY_VELOCITY_FLUID:
+      if (msg->value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement BODY_VELOCITY_FLUID has incorrect length or type.");
         break;
       }
-      filter_state_msg_.body_velocity_fluid.x = msg.value[0];
-      filter_state_msg_.body_velocity_fluid.y = msg.value[1];
-      filter_state_msg_.body_velocity_fluid.z = msg.value[2];
+      filter_state_msg_.body_velocity_fluid.x = msg->value[0];
+      filter_state_msg_.body_velocity_fluid.y = msg->value[1];
+      filter_state_msg_.body_velocity_fluid.z = msg->value[2];
       break;
   }
 }
@@ -186,10 +168,10 @@ void SampleAndHold::measurement_callback(const farol_msgs::msg::Measurement &msg
  *        Where the algorithms will constantly run.
  */
 void SampleAndHold::timerCallback() {
-  /* Fill header */
+  // Fill header 
   filter_state_msg_.header.stamp = clock_.now();
 
-  /* Publish filter state message */
+  // Publish filter state message 
   state_pub_->publish(filter_state_msg_);
 }
 

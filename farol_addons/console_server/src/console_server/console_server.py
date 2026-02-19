@@ -743,9 +743,9 @@ def cmd_set_topic(args, console_server: Node):
     
     # print("Publishing topic: %s type: %s value: %s"%(topic_name, topic_type, pub_args))
 
-    if(console_server.get_parameter('addons.console_server.topics.console.waypoint').get_parameter_value().string_value in topic_name):
+    if(console_server.get_parameter('topics.console.waypoint').get_parameter_value().string_value in topic_name):
       try:
-        actual_service_topic = console_server.get_parameter('addons.console_server.topics.services.wp_standard').get_parameter_value().string_value
+        actual_service_topic = console_server.get_parameter('topics.services.wp_standard').get_parameter_value().string_value
 
         send_wp_standard = console_server.create_client(SendWpType1, actual_service_topic)
 
@@ -1511,13 +1511,13 @@ class ConsoleServer(Node):
 
     self.declare_parameter('addons.console_parser.path_folder', '~/paths_from_console')
     self.declare_parameter('pages_folder', "/home/farol/farol-sw/farol_common/http_server/pages/") # should point to the package's own directory
-    self.declare_parameter('addons.console_server.PORT', 7080)
-    self.declare_parameter('addons.console_server.topics.console.waypoint', 'wp_standard')
-    self.declare_parameter('addons.console_server.topics.services.wp_standard', 'wp_standard')
+    self.declare_parameter('PORT', 7080)
+    self.declare_parameter('topics.console.waypoint', 'wp_standard')
+    self.declare_parameter('topics.services.wp_standard', 'wp_standard')
 
     MISSION_PATH = self.get_parameter('addons.console_parser.path_folder').get_parameter_value().string_value
     pages_folder = self.get_parameter('pages_folder').get_parameter_value().string_value
-    server_port = self.get_parameter('addons.console_server.PORT').get_parameter_value().integer_value
+    server_port = self.get_parameter('PORT').get_parameter_value().integer_value
 
     return
 

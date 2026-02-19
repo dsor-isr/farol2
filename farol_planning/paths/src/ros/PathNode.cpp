@@ -4,10 +4,7 @@
  * @brief  PathNode constructor. Initializes the subscribers, publishers, 
  * timers, parameters, etc...
  */
-PathNode::PathNode() : Node("paths", 
-                            rclcpp::NodeOptions()
-                              .allow_undeclared_parameters(true)
-                              .automatically_declare_parameters_from_overrides(true)) {
+PathNode::PathNode() : Node("paths") {
 
   /* Instantiate the ROS subscribers, publishers, etc */
   this->loadParams();
@@ -24,30 +21,30 @@ PathNode::PathNode() : Node("paths",
  * @brief  Class destructor. Called when deleting the class object.
  */
 PathNode::~PathNode() {
-  /* Stop the timer */
-  this->timer_->cancel();
-
   /* Free the memory used by the path */
   delete this->path_;
 }
 
 void PathNode::loadParams() {
-  this->frame_id_ = get_parameter("planning.paths.frame_id").as_string();
+  this->frame_id_ = declare_parameter<std::string>("frame_id");
+  this->node_frequency_ = declare_parameter<double>("node_frequency");
 }
 
 /**
  * @brief  A method for initializing all the subscribers. This method is called
  * by the constructor of the PathNode class upon object creation
  */
-void PathNode::initializeSubscribers() {
+void PathNode::initializeSubscribers() {  
   this->gamma_sub_ = create_subscription<std_msgs::msg::Float32>(
-                      get_parameter("planning.paths.topics.subscribers.gamma").as_string(), 
-                      1, std::bind(&PathNode::gammaCallback, this, std::placeholders::_1));
-
-  this->vehicle_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
-                        get_parameter("planning.paths.topics.subscribers.vehicle_state").as_string(), 
-                        1, std::bind(&PathNode::vehicleStateCallback, this, std::placeholders::_1));
-
+		declare_parameter<std::string>("topics.subscribers.gamma"),
+		rclcpp::QoS(1),
+		[this](std_msgs::msg::Float32::SharedPtr msg){this->gamma_ = msg->data;});
+	
+	this->vehicle_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
+		declare_parameter<std::string>("topics.subscribers.vehicle_state"),
+		rclcpp::QoS(1),
+		[this](farol_msgs::msg::NavigationState::SharedPtr msg){
+			this->vehicle_pos_ <<  msg->utm_position.northing, msg->utm_position.easting, msg->altimeter;});
 }
 
 /**
@@ -56,10 +53,12 @@ void PathNode::initializeSubscribers() {
  */
 void PathNode::initializePublishers() {	  
   this->path_pub_ = create_publisher<paths::msg::PathData>(
-                      get_parameter("planning.paths.topics.publishers.path_data").as_string(), 1);
+                      declare_parameter<std::string>("topics.publishers.path_data"),
+											rclcpp::QoS(1));
 
   this->virtual_target_pub_ = create_publisher<farol_msgs::msg::StateConsole>(
-                                get_parameter("planning.paths.topics.publishers.virtual_target_state").as_string(), 1);
+											declare_parameter<std::string>("topics.publishers.virtual_target_state"),
+											rclcpp::QoS(1));
 }
 
 /**
@@ -67,11 +66,8 @@ void PathNode::initializePublishers() {
  * constructor of the PathNode class upon object creation
  */
 void PathNode::initializeTimer() {
-  /* Get node frequency from parameters */
-  int freq = get_parameter("planning.paths.node_frequency").as_int();
-
-  /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&PathNode::timerCallback, this));
+	auto period = std::chrono::nanoseconds( static_cast<int64_t>(1e9 / node_frequency_));
+  timer_ = create_wall_timer(period, [this]() {timerCallback();});
 }
 
 void PathNode::timerCallback() {
@@ -163,27 +159,6 @@ void PathNode::timerCallback() {
   }
 }
 
-/**
- * @brief  Callback to update the current gamma of the path
- *
- * @param msg  A Float32/Double with the current value of gamma
- */
-void PathNode::gammaCallback(const std_msgs::msg::Float32 &msg) {
-
-  /* Update the current gamma value */
-  this->gamma_ = msg.data;
-}
-
-/**
- * @brief  Callback to update the current vehicle position
- *
- * @param msg  A auv_msgs/NavigationStatus messages with the current state of the vehicle
- */
-void PathNode::vehicleStateCallback(const farol_msgs::msg::NavigationState &msg) {
-  
-  /* Update the vehicle position */
-  this->vehicle_pos_ <<  msg.utm_position.northing, msg.utm_position.easting, msg.altimeter;
-}
 
 /**
  * @brief  Main method. The entry point of the PathNode program

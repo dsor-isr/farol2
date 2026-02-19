@@ -95,7 +95,7 @@ def generate_launch_description():
   ###################
   simulation_node = Node(
     package='sim',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'sim']),
     executable='simulation',
     name='simulation',
     output='screen',
@@ -105,7 +105,7 @@ def generate_launch_description():
 
   sim_sensors_node = Node(
     package='sim',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'sim']),
     executable='sim_sensors',
     name='sim_sensors',
     output='screen',

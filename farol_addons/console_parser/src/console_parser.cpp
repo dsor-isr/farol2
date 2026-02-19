@@ -5,7 +5,6 @@
  */
 ConsoleParser::ConsoleParser() : Node("console_parser",
                                       rclcpp::NodeOptions()
-                                        .allow_undeclared_parameters(true)
                                         .automatically_declare_parameters_from_overrides(true)) {
     loadParams();
     initializeSubscribers();
@@ -29,15 +28,15 @@ ConsoleParser::~ConsoleParser() {
  */
 void ConsoleParser::initializeSubscribers() {
   missionstring_sub_ = create_subscription<std_msgs::msg::String>(
-                        get_parameter("addons.console_parser.topics.subscribers.Mission_String").as_string(), 
+                        get_parameter("topics.subscribers.Mission_String").as_string(), 
                         1, std::bind(&ConsoleParser::missionStringCallback, this, std::placeholders::_1));
   
   state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
-                get_parameter("addons.console_parser.topics.subscribers.state").as_string(), 
+                get_parameter("topics.subscribers.state").as_string(), 
                 1, std::bind(&ConsoleParser::stateCallback, this, std::placeholders::_1));
 
   mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
-                          get_parameter("addons.console_parser.topics.subscribers.mission_status").as_string(), 
+                          get_parameter("topics.subscribers.mission_status").as_string(), 
                           1, std::bind(&ConsoleParser::missionStatusCallback, this, std::placeholders::_1));
 }
 
@@ -47,25 +46,25 @@ void ConsoleParser::initializeSubscribers() {
  */
 void ConsoleParser::initializePublishers() {
   section_pub_ = create_publisher<farol_msgs::msg::Section>(
-                  get_parameter("addons.console_parser.topics.publishers.Path_Section").as_string(), 1);
+                  get_parameter("topics.publishers.Path_Section").as_string(), 1);
 
   formation_pub_ = create_publisher<farol_msgs::msg::Formation>(
-                    get_parameter("addons.console_parser.topics.publishers.Formation").as_string(), 1);
+                    get_parameter("topics.publishers.Formation").as_string(), 1);
 
   biased_formation_pub_ = create_publisher<farol_msgs::msg::Formation>(
-                            get_parameter("addons.console_parser.topics.publishers.biased_formation").as_string(), 1);
+                            get_parameter("topics.publishers.biased_formation").as_string(), 1);
 
   wpref_pub_ = create_publisher<geometry_msgs::msg::PointStamped>(
-                get_parameter("addons.console_parser.topics.publishers.WPRef").as_string(), 1);
+                get_parameter("topics.publishers.WPRef").as_string(), 1);
 
   altitude_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("addons.console_parser.topics.publishers.DepthRef").as_string(), 1);
+                    get_parameter("topics.publishers.DepthRef").as_string(), 1);
 
   depth_pub_ = create_publisher<std_msgs::msg::Float32>(
-                get_parameter("addons.console_parser.topics.publishers.AltRef").as_string(), 1);
+                get_parameter("topics.publishers.AltRef").as_string(), 1);
 
   fullpath_pub_ = create_publisher<farol_msgs::msg::MultiSection>(
-                    get_parameter("addons.console_parser.topics.publishers.FullMission").as_string(), 1);
+                    get_parameter("topics.publishers.FullMission").as_string(), 1);
 }
 
 /**
@@ -74,32 +73,32 @@ void ConsoleParser::initializePublishers() {
 void ConsoleParser::initializeServices() {
   /* Service clients */
   reset_path_client_ = create_client<paths::srv::ResetPath>(
-                        get_parameter("addons.console_parser.topics.services.reset_path").as_string());
+                        get_parameter("topics.services.reset_path").as_string());
 
   spawn_arc_client_ = create_client<paths::srv::SpawnArc2D>(
-                        get_parameter("addons.console_parser.topics.services.arc2d_path").as_string());
+                        get_parameter("topics.services.arc2d_path").as_string());
 
   spawn_line_client_ = create_client<paths::srv::SpawnLine>(
-                        get_parameter("addons.console_parser.topics.services.line_path").as_string());
+                        get_parameter("topics.services.line_path").as_string());
 
   set_path_speed_client_ = create_client<paths::srv::SetConstSpeed>(
-                            get_parameter("addons.console_parser.topics.services.set_speed").as_string());
+                            get_parameter("topics.services.set_speed").as_string());
 
   start_pf_client_ = create_client<path_following::srv::StartPF>(
-                      get_parameter("addons.console_parser.topics.services.pf_start").as_string());
+                      get_parameter("topics.services.pf_start").as_string());
 
   stop_pf_client_ = create_client<path_following::srv::StopPF>(
-                      get_parameter("addons.console_parser.topics.services.pf_stop").as_string());
+                      get_parameter("topics.services.pf_stop").as_string());
 }
 
 /**
  * @brief  Method to load all the parameters 
  */
 void ConsoleParser::loadParams() {
-  path_folder = get_parameter("addons.console_parser.path_folder").as_string();
+  path_folder = get_parameter("path_folder").as_string();
   // TODO: probably not being used, legacy
-  own_id = get_parameter("addons.console_parser.vehicle_id").as_int();
-  p_console_new_ = get_parameter("addons.console_parser.console_new").as_bool();
+  own_id = get_parameter("vehicle_id").as_int();
+  p_console_new_ = get_parameter("console_new").as_bool();
 }
 
 /**
@@ -107,7 +106,7 @@ void ConsoleParser::loadParams() {
  */
 void ConsoleParser::initializeTimer() {
   /* Get node frequency from parameters */
-  int freq = get_parameter("addons.console_parser.node_frequency").as_int();
+  double freq = get_parameter("node_frequency").as_double();
 
   /* Create timer */
   timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&ConsoleParser::depthCallback, this));

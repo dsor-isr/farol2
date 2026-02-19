@@ -6,11 +6,11 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float32.hpp"
-#include "control_allocation/msg/body_wrench_request.hpp"
+#include "geometry_msgs/msg/wrench_stamped.hpp"
 
 /**
- * @brief   Open Loop Control
- * @author  Eduardo Cunha
+ * @brief   Wrench manager (groups forces and torques into a single topic)
+ * @author  Ravi Regalo
  */
 class WrenchManager : public rclcpp::Node {
   public:
@@ -43,7 +43,7 @@ class WrenchManager : public rclcpp::Node {
     rclcpp::TimerBase::SharedPtr timer_;
     
     /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<control_allocation::msg::BodyWrenchRequest>::SharedPtr body_wrench_request_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>::SharedPtr body_wrench_request_pub_;
 
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr thrust_x_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr thrust_y_sub_;
@@ -61,7 +61,7 @@ class WrenchManager : public rclcpp::Node {
     void torqueZCallback(const std_msgs::msg::Float32 &msg);
 
     /* Other variables */
-    control_allocation::msg::BodyWrenchRequest body_wrench_request_msg_;
+    geometry_msgs::msg::WrenchStamped body_wrench_request_msg_;
     rclcpp::Clock clock_;
     int freq_;
     bool surge_enabled_;
@@ -69,4 +69,5 @@ class WrenchManager : public rclcpp::Node {
     std::vector<double> wrench_ = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     std::vector<rclcpp::Time> last_received_ = {rclcpp::Time(0,1), rclcpp::Time(0,1), rclcpp::Time(0,1), 
                                                 rclcpp::Time(0,1), rclcpp::Time(0,1), rclcpp::Time(0,1)};
+    double node_frequency_;
 };

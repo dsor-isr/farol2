@@ -8,3 +8,20 @@
           - "complementary"
       sample_and_hold:
         test: 2
+      low_pass:
+        position:
+          omega_cutoff: 1.0
+          design: "bessel" # design options ("butterworth", "bessel")
+          method: "tustin" # descretization method ("tustin", "zoh", "euler")
+        velocity:
+          omega_cutoff: 1.0
+          design: "bessel" # design options ("butterworth", "bessel")
+          method: "tustin" # descretization method ("tustin", "zoh", "euler")
+        orientation:
+          omega_cutoff: 1.0
+          design: "bessel" # design options ("butterworth", "bessel")
+          method: "tustin" # descretization method ("tustin", "zoh", "euler")
+        orientation_rate:
+          omega_cutoff: 1.0
+          design: "bessel" # design options ("butterworth", "bessel")
+          method: "tustin" # descretization method ("tustin", "zoh", "euler")
