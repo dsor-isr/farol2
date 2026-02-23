@@ -16,6 +16,7 @@
           min: -36.0 # [deg]
         cm_distance: 4.0 # [m]
       thrusters:
+        open_loop: true
         n_thrusters: 2
         configuration:
           0:

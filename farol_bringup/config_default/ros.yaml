@@ -115,7 +115,7 @@
         subscribers:
           surge_ref: "/#vehicle#/control/ref/surge"
         publishers:
-          thrust_x: "/#vehicle#/actuation/thrust_x"
+          rpm_command: "/#vehicle#/actuation/rpm_command"
           # thrust_y: "/#vehicle#/actuation/thrust_y"
           # thrust_z: "/#vehicle#/actuation/thrust_z"
           # torque_x: "/#vehicle#/actuation/torque_x"

@@ -561,10 +561,10 @@ void PID::changeParamsCallback(const std::shared_ptr<pid::srv::ChangeParams::Req
   //   response->success = false;
   //   response->message = "Parameter(s) invalid (negative gains/pole/tau, tau_min > tau_max).";
   // }
-  if(request->w0 >= 0 && request->xi >= 0){
-    controller_yaw_.kp_ = 0.0;
-    controller_yaw_.ki_ = 0.0;
-    controller_yaw_.kd_ = 0.0;
+  if(request->w0 >= 0 && request->xi >= 0 && request->mr >= 0){
+    controller_yaw_.kp_ = request->mr*(request->w0*request->w0 + 20*request->xi*request->xi*request->w0*request->w0);
+    controller_yaw_.ki_ = request->mr*(10*request->xi*request->w0*request->w0*request->w0);
+    controller_yaw_.kd_ = request->mr*(12*request->xi*request->w0);
     response->success = true;
     response->message = "Changed " + request->controller + " controller's params based on w0 and xi";
     return;
@@ -577,7 +577,6 @@ void PID::changeParamsCallback(const std::shared_ptr<pid::srv::ChangeParams::Req
     response->message = "Changed " + request->controller + " controller's params to specified (kp, ki, kd)";
     return;
   }
-
 }
 
 bool PID::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const int &node_frequency) {
@@ -1001,6 +1000,8 @@ ControllerPID::ControllerPID(double kp, double ki, double kd, double lpf_wc, dou
 double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
   ref_raw_ = state_ref;
   state_ = state;
+
+  std::cout << "| " << kp_ << " " << ki_ << " " << kd_ << " |"<< std::endl;
   
   /* Pass reference signal through LPF to extract reference derivatives for ff terms*/
   lpf_.step(state_ref, dt);

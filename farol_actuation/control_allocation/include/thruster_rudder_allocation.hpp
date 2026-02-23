@@ -95,4 +95,5 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     double L, D;
     double gamma_, rudder_angle_prev_{0.0};
     double node_frequency_;
+    bool open_loop_{false};
 };

@@ -23,12 +23,12 @@ void ThrusterRudderAllocation::initialiseSubscribers() {
   nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
     declare_parameter<std::string>("topics.subscribers.nav_state"),
     rclcpp::QoS(1),
-    [this](farol_msgs::msg::NavigationState::SharedPtr msg){navStateCallback(msg);});
+    [this](farol_msgs::msg::NavigationState::SharedPtr msg){nav_state_ = *msg;});
   
   mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
     declare_parameter<std::string>("topics.subscribers.mission_status"),
     rclcpp::QoS(1),
-    [this](std_msgs::msg::Int8::SharedPtr msg){missionStatusCallback(msg);});
+    [this](std_msgs::msg::Int8::SharedPtr msg){mission_status_ = msg->data;});
 }
 
 /**
@@ -77,6 +77,8 @@ void ThrusterRudderAllocation::loadParams() {
 
   // std::cout << "TAM:\n" << thrust_allocation_matrix_ << std::endl;
   // std::cout << "pinv(TAM):\n" << thrust_allocation_matrix_pseudo_inv_ << std::endl;
+
+  open_loop_ = declare_parameter<bool>("actuation.thrusters.open_loop");
 }
 
 /**
@@ -102,6 +104,8 @@ void ThrusterRudderAllocation::initialiseServices() {}
  * @brief Compute force for each thruster based on body wrench (force and torque) request.
  */
 void ThrusterRudderAllocation::bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped::SharedPtr msg) {
+  /* If we are not in a mission, don't publish */
+  if (mission_status_ == 0) {return;}
   /* Body wrench request */
   tau_ << msg->wrench.force.x, msg->wrench.force.y, msg->wrench.force.z,
           msg->wrench.torque.x, msg->wrench.torque.y, msg->wrench.torque.z;
@@ -123,20 +127,16 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(geometry_msgs::msg::Wre
   forces_ = thrust_allocation_matrix_pseudo_inv_*tau_common_mode_;
 
   /* Create message to publish thruster force */
-  thruster_force_msg_.header.stamp = clock_.now();
-
-  std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
-  thruster_force_msg_.force = forces_vec;
-
-  /* If we are not in a mission, don't publish */
-  if (mission_status_ != 0) {
+  if(!open_loop_){
+    thruster_force_msg_.header.stamp = clock_.now();
+    std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
+    thruster_force_msg_.force = forces_vec;
     thruster_force_pub_->publish(thruster_force_msg_);
-
-    /* Create message to publish rudder angle reference */
-    rudder_angle_ref_msg_.data = rudder_angle_;
-
-    rudder_angle_ref_pub_->publish(rudder_angle_ref_msg_);
   }
+  
+  /* Create message to publish rudder angle reference */
+  rudder_angle_ref_msg_.data = rudder_angle_;
+  rudder_angle_ref_pub_->publish(rudder_angle_ref_msg_);
 }
 
 void ThrusterRudderAllocation::computeRudderAngle(double tau_r) 
@@ -241,21 +241,6 @@ double ThrusterRudderAllocation::solve_delta_from_tau(double tau_r, double gamma
   double d = (std::abs(d1) <= std::abs(d2)) ? d1 : d2;
 
   return d;
-}
-
-
-/**
- * @brief Callback for navigation state.
- */
-void ThrusterRudderAllocation::navStateCallback(farol_msgs::msg::NavigationState::SharedPtr msg) {
-  nav_state_ = *msg;
-}
-
-/**
- * @brief Callback for navigation state.
- */
-void ThrusterRudderAllocation::missionStatusCallback(std_msgs::msg::Int8::SharedPtr msg) {
-  mission_status_ = msg->data;
 }
 
 

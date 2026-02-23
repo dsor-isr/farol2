@@ -3,9 +3,9 @@
 /* Constructor */
 ThrottleConversion::ThrottleConversion() : Node("throttle_conversion") {
   loadParams();
-  initialiseSubscribers();
   initialisePublishers();
-  initialiseServices();
+  initialiseSubscribers();
+  // initialiseServices();
 }
 
 /* Destructor */
@@ -23,9 +23,6 @@ void ThrottleConversion::initialiseSubscribers() {
 
 /**
  * @brief Load parameters
- * Thruster configuration parameters are loaded under some assumptions.
- * In the future, if ROS2 enables native parameter loading for dicts and 
- * other complex types, this method should be adapted for further robustness.
  */
 void ThrottleConversion::loadParams() {
   k_ = declare_parameter<double>("k");

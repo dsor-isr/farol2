@@ -7,6 +7,7 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
+#include "control_allocation/msg/thruster_rpm.hpp"
 
 /**
  * @brief   Open Loop Control
@@ -34,7 +35,8 @@ class OpenLoop : public rclcpp::Node {
     void initialiseServices();
     
     /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr thrust_x_pub_;
+    rclcpp::Publisher<control_allocation::msg::ThrusterRPM>::SharedPtr rpm_command_pub_;
+
     
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr surge_ref_sub_;
 
@@ -42,7 +44,7 @@ class OpenLoop : public rclcpp::Node {
     void surgeRefCallback(std_msgs::msg::Float32::SharedPtr msg);
 
     /* Other variables */
-    std_msgs::msg::Float32 float32_msg_;
+    control_allocation::msg::ThrusterRPM rpm_command_msg_;
     rclcpp::Clock clock_;
     bool surge_enabled_;
     double surge_gain_;

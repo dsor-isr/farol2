@@ -3,8 +3,8 @@
 /* Constructor */
 RPMConversion::RPMConversion() : Node("rpm_conversion") {
   loadParams();
-  initialiseSubscribers();
   initialisePublishers();
+  initialiseSubscribers();
   // initialiseServices();
 }
 
@@ -23,14 +23,11 @@ void RPMConversion::initialiseSubscribers() {
   nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
     declare_parameter<std::string>("topics.subscribers.nav_state"),
     rclcpp::QoS(1),
-    [this](farol_msgs::msg::NavigationState::SharedPtr msg){navStateCallback(msg);});
+    [this](farol_msgs::msg::NavigationState::SharedPtr msg){surge_ = msg->body_velocity_fluid.x;});
 }
 
 /**
  * @brief Load parameters
- * Thruster configuration parameters are loaded under some assumptions.
- * In the future, if ROS2 enables native parameter loading for dicts and 
- * other complex types, this method should be adapted for further robustness.
  */
 void RPMConversion::loadParams() {
   mode_ = declare_parameter<int>("mode");
@@ -43,7 +40,6 @@ void RPMConversion::loadParams() {
   K_T_BP_ = declare_parameter<double>("mode0.K_T_BP");
   prop_pitch_ = declare_parameter<double>("mode0.prop_pitch");
   D_ = declare_parameter<double>("mode0.D");
-  
   
   /* Thruster coefficients */
   coef_fwd_ = declare_parameter<std::vector<double>>("mode1.coef_fwd");
@@ -125,13 +121,6 @@ void RPMConversion::thrusterForceCallback(control_allocation::msg::ThrusterForce
   }
   /* Publish */
   rpm_command_pub_->publish(rpm_command_msg_);
-}
-
-/**
- * @brief Callback for navigation state.
- */
-void RPMConversion::navStateCallback(farol_msgs::msg::NavigationState::SharedPtr msg) {
-  surge_ = msg->body_velocity_fluid.x;
 }
 
 /**

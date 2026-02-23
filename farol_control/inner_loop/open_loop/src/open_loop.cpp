@@ -33,8 +33,8 @@ void OpenLoop::initialiseSubscribers() {
  * @brief Initialise Publishers
  */
 void OpenLoop::initialisePublishers() {
-  thrust_x_pub_ = create_publisher<std_msgs::msg::Float32>(
-  declare_parameter<std::string>("topics.publishers.thrust_x"),
+  rpm_command_pub_ = create_publisher<control_allocation::msg::ThrusterRPM>(
+  declare_parameter<std::string>("topics.publishers.rpm_command"),
   rclcpp::QoS(1));
 }
 
@@ -45,14 +45,13 @@ void OpenLoop::initialiseServices() {}
 
 void OpenLoop::surgeRefCallback(std_msgs::msg::Float32::SharedPtr msg) {
   /* If open loop for surge is not enabled */
-  if (!surge_enabled_) {
-    return;
-  }
+  if (!surge_enabled_) return;
 
-  /* Compute thrust force in surge based on surge reference */
-  float32_msg_.data = msg->data * surge_gain_;
-
-  thrust_x_pub_->publish(float32_msg_);
+  // this is just for magicelectric
+  rpm_command_msg_.rpm = {};
+  rpm_command_msg_.rpm.push_back(msg->data*surge_gain_);
+  rpm_command_msg_.rpm.push_back(msg->data*surge_gain_);
+  rpm_command_pub_->publish(rpm_command_msg_);
 }
 
 /**
