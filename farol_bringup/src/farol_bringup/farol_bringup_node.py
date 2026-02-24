@@ -68,7 +68,18 @@ class Process:
 
   def start(self):
     if not self.isActive():
-      cmd = self.cmd.split(' ') + self.args + ["vehicle_ns:=" + self.vehicle_ns] + ["vehicle_name:=" + self.vehicle_name]+ ["use_sim_time:=" + str(self.use_sim_time).lower()] + ["config_package_path_share:=" + self.config_package_path_share] + ["config_package_path_real:=" + self.config_package_path_real]
+      cmd = self.cmd.split(' ') + self.args + ["vehicle_ns:=" + self.vehicle_ns] + ["vehicle_name:=" + self.vehicle_name]+ ["config_package_path_share:=" + self.config_package_path_share] + ["config_package_path_real:=" + self.config_package_path_real]
+      
+      # Add use_sim_time argument - special handling for time process
+      if self.name == 'time':
+        # time process MUST always use wall time (use_sim_time=false)
+        cmd.append("use_sim_time:=false")
+      else:
+        # All other processes use the configured value from ros.yaml
+        cmd.append("use_sim_time:=" + str(self.use_sim_time).lower())
+
+      # Debug: print the full command
+      print(f"DEBUG: Launching process '{self.name}' with command: {' '.join(cmd)}")
 
       if self.delay_before_start:
         time.sleep(self.delay_before_start)
@@ -132,7 +143,6 @@ class FarolBringup(Node):
     # declare all parameters
     self.declare_parameter('id', 0)
     self.declare_parameter('name', 'vehicle')
-    self.use_sim_time = self.get_parameter_or('use_sim_time', False).value
     self.use_sim_time = self.get_parameter('use_sim_time').value
     self.declare_parameter('config_package_path_share', 'medusa_bringup')
     self.declare_parameter('farol_bringup_package_path_share', 'farol_bringup')
@@ -260,6 +270,7 @@ class FarolBringup(Node):
   def createProcesses(self):
     self.get_logger().info("Start creating processes from process.yaml")
     self.process_list = []
+    self.get_logger().info(f"use_sim_time from ros.yaml: {self.use_sim_time}")
 
     for p in self.processes:
       self.process_list.append(Process(name=p['name'], cmd=p['cmd'], args=p['args'],

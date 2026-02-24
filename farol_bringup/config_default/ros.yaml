@@ -2,7 +2,7 @@
   ros__parameters:
     use_sim_time: true
     sim_time:
-      node_frequency: 10.0  # Sim time Node frequency in sim time
+      node_frequency: 10.0  # Sim time Node frequency in sim time. Must be the biggest frequency running in the system! 
       speedup_factor: 1.0   # wall_frequency = node_frequency * speedup_factor
     actuation:
       rpm_conversion:

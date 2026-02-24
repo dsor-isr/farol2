@@ -1,6 +1,5 @@
 /**:
   ros__parameters:
-    use_sim_time: true
     sim:
       initial_state:
         position: [38.692017, -9.211419, 0.0]

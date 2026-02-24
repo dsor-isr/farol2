@@ -1,3 +1,4 @@
+from sympy import false
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
@@ -25,7 +26,7 @@ def generate_launch_description():
 
   use_sim_time_arg = DeclareLaunchArgument(
     'use_sim_time',
-    default_value='true',
+    default_value='false',
     description='Use simulation time'
   )
 
@@ -42,15 +43,15 @@ def generate_launch_description():
   )
 
   launch_magic_electric_sim_arg = DeclareLaunchArgument(
-    'auv_sim',
+    'magic_electric_sim',
     default_value='false',
-    description='Boolean to determine if auv_sim node is launched.'
+    description='Boolean to determine if magic_electric_sim node is launched.'
   )
 
   launch_auv_sim_arg = DeclareLaunchArgument(
-    'magic_electric_sim',
-    default_value='true',
-    description='Boolean to determine if magic_electric_sim node is launched.'
+    'auv_sim',
+    default_value='false',
+    description='Boolean to determine if auv_sim node is launched.'
   )
 
   launch_sim_measurements_arg = DeclareLaunchArgument(
@@ -66,7 +67,8 @@ def generate_launch_description():
             # vehicle namespace
             {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
 
-            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+            #{'use_sim_time': LaunchConfiguration('use_sim_time')},
+            {'use_sim_time': False},
 
             # load default ROS configurations (from tmp files)
             PathJoinSubstitution([
