@@ -273,7 +273,6 @@ void MagicElectricSim::timerCallback() {
     angular_acceleration_pub_->publish(ang_acc_msg);
 
     if(rudder_actuation_sim_){
-        RCLCPP_INFO(get_logger(), "Rudder angle: %f", rudder_angle_);
         std_msgs::msg::Float32 rudder_msg;
         rudder_msg.data = rudder_angle_;
         rudder_pub_->publish(rudder_msg);
