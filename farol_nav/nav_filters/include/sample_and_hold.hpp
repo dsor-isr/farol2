@@ -9,6 +9,7 @@
 #include "farol_msgs/msg/navigation_state.hpp"
 #include "farol_msgs/msg/measurement.hpp"
 #include "farol_utils/angles.hpp"
+#include "farol_utils/filters/low_pass_filter.hpp"
 
 /**
  * @brief   Sample and Hold navigation filter
@@ -58,4 +59,7 @@ class SampleAndHold : public rclcpp::Node {
     rclcpp::Clock clock_;
     bool neglect_current_;
     double node_frequency_;
+    farol_utils::LowPassFilter course_lpf_;
+    double last_time_;
+
 };

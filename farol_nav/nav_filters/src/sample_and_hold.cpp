@@ -7,6 +7,7 @@ SampleAndHold::SampleAndHold() : Node("sample_and_hold") {
   initialisePublishers();
   initialiseServices();
   initialiseTimers();
+  course_lpf_.configure(1.0, 0.1, 2, "tustin", "bessel", true); 
 }
 
 /* Destructor */
@@ -123,19 +124,9 @@ void SampleAndHold::measurement_callback(farol_msgs::msg::Measurement::ConstShar
         RCLCPP_ERROR(get_logger(), "Measurement BODY_VELOCITY_INERTIAL has incorrect length or type.");
         break;
       }
-      filter_state_msg_.body_velocity_inertial.x = msg->value[0];
-      filter_state_msg_.body_velocity_inertial.y = msg->value[1];
-      filter_state_msg_.body_velocity_inertial.z = msg->value[2];
 
-      /* If current is neglected, body velocity relative to the fluid will be the same as inertial one */
-      if (neglect_current_) {
-        filter_state_msg_.body_velocity_fluid.x = msg->value[0];
-        filter_state_msg_.body_velocity_fluid.y = msg->value[1];
-        filter_state_msg_.body_velocity_fluid.z = msg->value[2];
-      }
-
-      // Compute course angle 
-      Eigen::Vector3d v_b(msg->value[0], msg->value[1], msg->value[2]);
+      // inertial velocity in the inertial frame
+      Eigen::Vector3d v_i(msg->value[0], msg->value[1], msg->value[2]);
       // Build rotation matrix from body to inertial
       Eigen::Matrix3d R =
         Eigen::Matrix3d(
@@ -144,9 +135,30 @@ void SampleAndHold::measurement_callback(farol_msgs::msg::Measurement::ConstShar
             Eigen::AngleAxisd(filter_state_msg_.orientation.x,  Eigen::Vector3d::UnitX())
         );
       // Rotate velocity from body to inertial
-      Eigen::Vector3d v_i = R * v_b;
+      Eigen::Vector3d v_b = R.transpose() * v_i;
+
+      filter_state_msg_.body_velocity_inertial.x = v_b.x();
+      filter_state_msg_.body_velocity_inertial.y = v_b.y();
+      filter_state_msg_.body_velocity_inertial.z = v_b.z();
+
+      /* If current is neglected, body velocity relative to the fluid will be the same as inertial one */
+      if (neglect_current_) {
+        filter_state_msg_.body_velocity_fluid.x = v_b.x();
+        filter_state_msg_.body_velocity_fluid.y = v_b.y();
+        filter_state_msg_.body_velocity_fluid.z = v_b.z();
+      }
+
       // Compute course angle
-      filter_state_msg_.course_angle = farol_utils::wrapTo2Pi(std::atan2(v_i.y(), v_i.x()));
+      if (last_time_ <= 0.0){
+        last_time_ = clock_.now().seconds();
+        break;
+      }
+      double time_now_ = clock_.now().seconds();
+      double dt = time_now_ - last_time_;
+      last_time_ = time_now_;
+      double course_angle = std::atan2(filter_state_msg_.orientation.y, filter_state_msg_.orientation.x);
+      course_lpf_.step(course_angle, dt);
+      filter_state_msg_.course_angle = course_lpf_.y();// farol_utils::wrapTo2Pi(std::atan2(filter_state_msg_.orientation.y, filter_state_msg_.orientation.x));
       
       break;}
 
