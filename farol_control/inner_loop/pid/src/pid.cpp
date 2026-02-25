@@ -561,20 +561,22 @@ void PID::changeParamsCallback(const std::shared_ptr<pid::srv::ChangeParams::Req
   //   response->success = false;
   //   response->message = "Parameter(s) invalid (negative gains/pole/tau, tau_min > tau_max).";
   // }
-  if(request->w0 >= 0 && request->xi >= 0 && request->mr >= 0){
+  if(request->w0 > 0 && request->xi > 0 && request->mr > 0){
     controller_yaw_.kp_ = request->mr*(request->w0*request->w0 + 20*request->xi*request->xi*request->w0*request->w0);
     controller_yaw_.ki_ = request->mr*(10*request->xi*request->w0*request->w0*request->w0);
     controller_yaw_.kd_ = request->mr*(12*request->xi*request->w0);
     response->success = true;
     response->message = "Changed " + request->controller + " controller's params based on w0 and xi";
+    tau_ = 0.0;
     return;
   }
-  if(request->kp >= 0 && request->ki >= 0 && request->kd >= 0){
+  else{
     controller_yaw_.kp_ = request->kp;
     controller_yaw_.ki_ = request->ki;
     controller_yaw_.kd_ = request->kd;
     response->success = true;
     response->message = "Changed " + request->controller + " controller's params to specified (kp, ki, kd)";
+    tau_ = 0.0;
     return;
   }
 }
@@ -996,14 +998,12 @@ ControllerPID::ControllerPID(double kp, double ki, double kd, double lpf_wc, dou
   lpf_.configure(lpf_wc_, 0.1, lpf_order, lpf_design, lpf_method, wrapToPi_); 
 }
 
-/* Delta implementation for PID */
+// Delta implementation for PID 
 double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
   ref_raw_ = state_ref;
   state_ = state;
 
-  std::cout << "| " << kp_ << " " << ki_ << " " << kd_ << " |"<< std::endl;
-  
-  /* Pass reference signal through LPF to extract reference derivatives for ff terms*/
+  // Pass reference signal through LPF to extract reference derivatives for ff terms
   lpf_.step(state_ref, dt);
   ref_ = lpf_.y();
   dref_ = lpf_.dy();
@@ -1014,7 +1014,7 @@ double ControllerPID::callController(double state, double state_ref, double stat
   if (wrapToPi_) // Wrap to [-pi, pi] if needed */
     error_ = farol_utils::wrapToPi(error_);  
   // Compute error derivative
-  error_rate_ = state_rate;// - dref_;
+  error_rate_ = state_rate - dref_;
   
   // Compute derivative of all terms execpt the integral
   error_dot_ = (error_ - error_prev_) / dt;
@@ -1052,40 +1052,6 @@ double ControllerPID::callController(double state, double state_ref, double stat
 
   return tau_sat_;
 }
-
-// /* Regular implementation for PID */
-// double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
-//   ref_raw_ = state_ref;
-//   state_ = state;
-  
-//   // Compute error 
-//   error_ = state - state_ref;
-//   if (wrapToPi_) // Wrap to [-pi, pi] if needed */
-//     error_ = farol_utils::wrapToPi(error_);  
-
-//     // Compute error derivative
-//   error_rate_ = state_rate;
-  
-
-//   tau_d_ = -ki_*error_;
-
-//   /* Anti-windup */
-//   Ka_ = 1.0/dt;
-//   tau_dot_ = tau_d_ - Ka_*(tau_prev_ - tau_sat_prev_);
-//   tau_ = tau_prev_ + tau_dot_*dt ;
-//   tau_sat_ = std::clamp(tau_, tau_min_, tau_max_);
-
-//   /* Set prev values */
-//   error_prev_ = error_;
-//   state_rate_prev_ = state_rate;
-//   error_rate_prev_= error_rate_;
-//   state_rate_dot_filter_prev_ = state_rate_dot_filter_;
-//   tau_prev_ = tau_;
-//   tau_sat_prev_ = tau_sat_;
-//   ddref_prev_ = ddref_;
-
-//   return tau_sat_-kp_ *error_ + -kd_*error_rate_;
-// }
 
 // /* Regular implementation for PID */
 // double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
