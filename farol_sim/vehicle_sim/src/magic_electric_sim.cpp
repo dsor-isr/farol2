@@ -36,11 +36,6 @@ void MagicElectricSim::loadParams() {
   // INITIAL STATE
   // ==========================
 
-  auto pos_param = this->get_parameter("sim.initial_state.position").as_double_array();
-  position_[0] = pos_param[0];
-  position_[1] = pos_param[1];
-  position_[2] = pos_param[2];
-
   auto vel_param = this->get_parameter("sim.initial_state.body_velocity").as_double_array();
   body_velocity_[0] = vel_param[0];
   body_velocity_[1] = vel_param[1];
@@ -115,6 +110,8 @@ void MagicElectricSim::loadParams() {
   rudder_ang_vel_ = deg_to_rad(this->get_parameter("sim.vehicle.actuation.rudder.ang_vel").as_double());
 
 
+
+
   // ==========================
   // PROPULSION
   // ==========================
@@ -178,7 +175,7 @@ void MagicElectricSim::initialisePublishers() {
       get_parameter("sim.vehicle_sim.magic_electric_sim.topics.publishers.angular_acceleration").as_string(), 1);
 
   if(rudder_actuation_sim_){
-    RCLCPP_INFO(get_logger(), "rudder_pub active");
+    RCLCPP_INFO(get_logger(), "rudder_pub active: %f", rudder_ang_vel_);
     rudder_pub_ = create_publisher<std_msgs::msg::Float32>(
       get_parameter("sim.vehicle_sim.magic_electric_sim.topics.publishers.rudder_angle").as_string(), 1);
   }
@@ -214,16 +211,28 @@ void MagicElectricSim::initialiseTimers() {
  *        Where the algorithms will constantly run.
  */
 
-void MagicElectricSim::rudderAngleCallback(const std_msgs::msg::Float32::SharedPtr msg){
+void MagicElectricSim::rudderAngleCallback(const std_msgs::msg::Float32::SharedPtr msg)
+{
+  if (!rudder_actuation_sim_) {
+    rudder_angle_ = msg->data;  
+    return;
+  }
 
+  const rclcpp::Time now = this->get_clock()->now();
 
-    if(rudder_actuation_sim_){
-        updateRudder(msg->data);
-    }else{
-        rudder_angle_ = msg->data;
-    }
+  double dt = 0.0;
+  if (!have_last_rudder_time_) {
+    have_last_rudder_time_ = true;
+    last_rudder_time_ = now;
+    return; 
+  }
 
+  dt = (now - last_rudder_time_).seconds();
+  last_rudder_time_ = now;
+
+  updateRudder(msg->data, dt);
 }
+
 
 void MagicElectricSim::rpmCallback(const control_allocation::msg::ThrusterRPM::SharedPtr msg){
 
@@ -281,18 +290,16 @@ void MagicElectricSim::timerCallback() {
   return;
 }
 
-void MagicElectricSim::updateRudder(double command){
+void MagicElectricSim::updateRudder(double command, double dt)
+{
+  
+  if (command > 0.5) {
+    rudder_angle_ += rudder_ang_vel_ * dt;
+  } else if (command < -0.5) {
+    rudder_angle_ -= rudder_ang_vel_ * dt;
+  }
 
-    if(command == 1.0){
-        rudder_angle_ += rudder_ang_vel_ * node_period_; 
-    }
-
-    if(command == -1.0){
-        rudder_angle_ -= rudder_ang_vel_ * node_period_; 
-    }
-
-    rudder_angle_ = std::max(std::min(rudder_angle_, max_rudder_angle_), min_rudder_angle_);
-
+  rudder_angle_ = std::clamp(rudder_angle_, min_rudder_angle_, max_rudder_angle_);
 }
 
 void MagicElectricSim::updateState(){

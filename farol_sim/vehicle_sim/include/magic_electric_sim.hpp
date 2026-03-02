@@ -95,8 +95,11 @@ class MagicElectricSim : public rclcpp::Node {
 
     void rudderAngleCallback(const std_msgs::msg::Float32::SharedPtr msg);
     void rpmCallback(const control_allocation::msg::ThrusterRPM::SharedPtr msg);
-    void updateRudder(double command);
+    void updateRudder(double command, double dt);
     void updateState();
+
+    rclcpp::Time last_rudder_time_;
+    bool have_last_rudder_time_{false};
 
     int node_frequency_;
     double node_period_;
