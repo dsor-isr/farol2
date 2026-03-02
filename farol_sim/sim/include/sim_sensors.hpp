@@ -11,9 +11,9 @@
 #include "geometry_msgs/msg/vector3.hpp"
 #include <GeographicLib/UTMUPS.hpp>
 #include <GeographicLib/Geodesic.hpp>
-#include "farol_msgs/msg/utm.hpp"
-#include "farol_msgs/msg/gcs.hpp"
-#include "farol_msgs/msg/measurement.hpp"
+#include "farol_interfaces/msg/utm.hpp"
+#include "farol_interfaces/msg/gcs.hpp"
+#include "farol_interfaces/msg/measurement.hpp"
 
 
 
@@ -56,20 +56,20 @@ class SimSensors : public rclcpp::Node {
     rclcpp::TimerBase::SharedPtr timer_imu_;
 
     /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<farol_msgs::msg::UTM>::SharedPtr utm_pub_;
-    rclcpp::Publisher<farol_msgs::msg::Measurement>::SharedPtr depth_pub_;
-    rclcpp::Publisher<farol_msgs::msg::Measurement>::SharedPtr ori_pub_;
-    rclcpp::Publisher<farol_msgs::msg::Measurement>::SharedPtr lin_acc_pub_;
-    rclcpp::Publisher<farol_msgs::msg::Measurement>::SharedPtr ang_acc_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::UTM>::SharedPtr utm_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::Measurement>::SharedPtr depth_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::Measurement>::SharedPtr ori_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::Measurement>::SharedPtr lin_acc_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::Measurement>::SharedPtr ang_acc_pub_;
 
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr pos_sub;
-    rclcpp::Subscription<farol_msgs::msg::UTM>::SharedPtr utm_sub;
+    rclcpp::Subscription<farol_interfaces::msg::UTM>::SharedPtr utm_sub;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr lin_acc_sub;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr ang_acc_sub;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr ori_sub;
     /* Callbacks */
     void depthCallback(const geometry_msgs::msg::Vector3::SharedPtr msg);
-    void utmCallback(const farol_msgs::msg::UTM::SharedPtr msg);
+    void utmCallback(const farol_interfaces::msg::UTM::SharedPtr msg);
     void linaccCallback(const geometry_msgs::msg::Vector3::SharedPtr msg);
     void angaccCallback(const geometry_msgs::msg::Vector3::SharedPtr msg);
     void oriCallback(const geometry_msgs::msg::Vector3::SharedPtr msg);

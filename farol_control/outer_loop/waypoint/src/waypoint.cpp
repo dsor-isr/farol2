@@ -40,10 +40,10 @@ void Waypoint::initialiseSubscribers() {
     rclcpp::QoS(1),
     [this](std_msgs::msg::Int8::SharedPtr msg){missionStatusCallback(msg);});
   
-  state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
+  state_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
     declare_parameter<std::string>("topics.subscribers.state"),
     rclcpp::QoS(1),
-    [this](farol_msgs::msg::NavigationState::SharedPtr msg){stateCallback(msg);});
+    [this](farol_interfaces::msg::NavigationState::SharedPtr msg){stateCallback(msg);});
 
   turn_radius_flag_sub_ = create_subscription<std_msgs::msg::Bool>(
     declare_parameter<std::string>("topics.subscribers.turn_radius_flag"),
@@ -119,7 +119,7 @@ void Waypoint::timerCallback() {
   wp_controller_->compute(veh_state_, wp_ref_, turn_radius_flag_);
 }
 
-void Waypoint::stateCallback(farol_msgs::msg::NavigationState::SharedPtr msg) {
+void Waypoint::stateCallback(farol_interfaces::msg::NavigationState::SharedPtr msg) {
   // update vehicle state
   veh_state_.eta1[0] = msg->utm_position.northing;
   veh_state_.eta1[1] = msg->utm_position.easting;

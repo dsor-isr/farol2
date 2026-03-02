@@ -11,10 +11,14 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(farol_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(farol_interfaces REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(farol_utils REQUIRED)
+
+find_library(GEOGRAPHIC_LIB GeographicLib)
+
 
 # --------------------
 # Interfaces (msg/srv)
@@ -40,20 +44,21 @@ add_executable(low_pass src/low_pass.cpp)
 ament_target_dependencies(filter_handler
   rclcpp
   std_msgs
-  farol_msgs
+  sensor_msgs
+  farol_interfaces
 )
 
 ament_target_dependencies(sample_and_hold
   rclcpp
   std_msgs
-  farol_msgs
+  farol_interfaces
   farol_utils
 )
 
 ament_target_dependencies(low_pass
   rclcpp
   std_msgs
-  farol_msgs
+  farol_interfaces
   farol_utils
 )
 
@@ -84,7 +89,7 @@ target_compile_features(low_pass PUBLIC c_std_99 cxx_std_17)
 # Link this package's generated typesupport (needed if you use nav_filters msg/srv types)
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
 target_link_libraries(filter_handler "${cpp_typesupport_target}")
-target_link_libraries(sample_and_hold "${cpp_typesupport_target}")
+target_link_libraries(sample_and_hold "${cpp_typesupport_target}" ${GEOGRAPHIC_LIB})
 target_link_libraries(low_pass "${cpp_typesupport_target}")
 
 # Eigen

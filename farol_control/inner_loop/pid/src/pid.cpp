@@ -118,7 +118,7 @@ void PID::loadParams() {
  * @brief Initialise Subscribers
  */
 void PID::initialiseSubscribers() {
-  nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
+  nav_state_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
                     get_parameter("topics.subscribers.nav_state").as_string(), 
                     1, std::bind(&PID::navStateCallback, this, std::placeholders::_1));
 
@@ -205,6 +205,11 @@ void PID::initialiseServices() {
                         get_parameter("topics.services.change_params").as_string(),
                         std::bind(&PID::changeParamsCallback, this, std::placeholders::_1, std::placeholders::_2));
 
+  /* Service to set course control flag */
+  course_control_srv_ = create_service<std_srvs::srv::SetBool>(
+                        get_parameter("topics.services.course_control").as_string(),
+                        std::bind(&PID::courseControlCallback, this, std::placeholders::_1, std::placeholders::_2));
+
   /* service clients */
   /*... */
 
@@ -224,7 +229,7 @@ void PID::initialiseTimers() {
     std::bind(&PID::timerCallback, this));
 }
 
-void PID::navStateCallback(const farol_msgs::msg::NavigationState &msg) {
+void PID::navStateCallback(const farol_interfaces::msg::NavigationState &msg) {
   nav_state_ = msg;
 }
 
@@ -244,32 +249,32 @@ void PID::heaveRefCallback(const std_msgs::msg::Float32 &msg) {
 }
 
 void PID::yawRefCallback(const std_msgs::msg::Float32 &msg) {
-  yaw_ref_ = msg.data;
+  yaw_ref_ = farol_utils::deg2rad(msg.data);
   controller_last_reference_["yaw"] = clock_.now();
 }
 
 void PID::pitchRefCallback(const std_msgs::msg::Float32 &msg) {
-  pitch_ref_ = msg.data;
+  pitch_ref_ = farol_utils::deg2rad(msg.data);
   controller_last_reference_["pitch"] = clock_.now();
 }
 
 void PID::rollRefCallback(const std_msgs::msg::Float32 &msg) {
-  roll_ref_ = msg.data;
+  roll_ref_ = farol_utils::deg2rad(msg.data);
   controller_last_reference_["roll"] = clock_.now();
 }
 
 void PID::yawRateRefCallback(const std_msgs::msg::Float32 &msg) {
-  yaw_rate_ref_ = msg.data;
+  yaw_rate_ref_ = farol_utils::deg2rad(msg.data);
   controller_last_reference_["yaw_rate"] = clock_.now();
 }
 
 void PID::pitchRateRefCallback(const std_msgs::msg::Float32 &msg) {
-  pitch_rate_ref_ = msg.data;
+  pitch_rate_ref_ = farol_utils::deg2rad(msg.data);
   controller_last_reference_["pitch_rate"] = clock_.now();
 }
 
 void PID::rollRateRefCallback(const std_msgs::msg::Float32 &msg) {
-  roll_rate_ref_ = msg.data;
+  roll_rate_ref_ = farol_utils::deg2rad(msg.data);
   controller_last_reference_["roll_rate"] = clock_.now();
 }
 
@@ -581,6 +586,13 @@ void PID::changeParamsCallback(const std::shared_ptr<pid::srv::ChangeParams::Req
   }
 }
 
+void PID::courseControlCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+                                std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
+  course_control_ = request->data;
+  response->success = true;
+  response->message = "Course control flag set to: " + std::string(request->data ? "true" : "false");
+}
+
 bool PID::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const int &node_frequency) {
   /* Here it is assumed that a reference must have been received less than 2 times the node period ago */
   /* E.g. if the node is running at 10Hz, the period is 0.1s, so the last reference must have been     */
@@ -728,9 +740,9 @@ void PID::callControllerHeave() {
 void PID::callControllerYaw() {
   /* Call PID controller */
   if(course_control_)
-    tau_ = controller_yaw_.callController(nav_state_.course_angle, yaw_ref_, nav_state_.orientation_rate.z, 1.0/node_frequency_);
+    tau_ = controller_yaw_.callController(farol_utils::deg2rad(nav_state_.course_angle), yaw_ref_, nav_state_.orientation_rate.z, 1.0/node_frequency_);
   else 
-    tau_ = controller_yaw_.callController(nav_state_.orientation.z, yaw_ref_, nav_state_.orientation_rate.z, 1.0/node_frequency_);
+    tau_ = controller_yaw_.callController(farol_utils::deg2rad(nav_state_.orientation.z), yaw_ref_, nav_state_.orientation_rate.z, 1.0/node_frequency_);
 
 
   pid::msg::PidDebug debug_msg;
@@ -766,7 +778,7 @@ void PID::callControllerYaw() {
 
 void PID::callControllerPitch() {
   /* Call PID controller */
-  tau_ = controller_pitch_.callController(nav_state_.orientation.y, pitch_ref_, nav_state_.orientation_rate.y, 1.0/node_frequency_);
+  tau_ = controller_pitch_.callController(farol_utils::deg2rad(nav_state_.orientation.y), pitch_ref_, nav_state_.orientation_rate.y, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -794,7 +806,7 @@ void PID::callControllerPitch() {
 
 void PID::callControllerRoll() {
   /* Call PID controller */
-  tau_ = controller_roll_.callController(nav_state_.orientation.x, roll_ref_, nav_state_.orientation_rate.x, 1.0/node_frequency_);
+  tau_ = controller_roll_.callController(farol_utils::deg2rad(nav_state_.orientation.x), roll_ref_, nav_state_.orientation_rate.x, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -822,7 +834,7 @@ void PID::callControllerRoll() {
 
 void PID::callControllerYawRate() {
   /* Call PI controller */
-  tau_ = controller_yaw_rate_.callController(nav_state_.orientation_rate.z, yaw_rate_ref_, 1.0/node_frequency_);
+  tau_ = controller_yaw_rate_.callController(farol_utils::deg2rad(nav_state_.orientation_rate.z), yaw_rate_ref_, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -848,7 +860,7 @@ void PID::callControllerYawRate() {
 
 void PID::callControllerPitchRate() {
   /* Call PI controller */
-  tau_ = controller_pitch_rate_.callController(nav_state_.orientation_rate.y, pitch_rate_ref_, 1.0/node_frequency_);
+  tau_ = controller_pitch_rate_.callController(farol_utils::deg2rad(nav_state_.orientation_rate.y), pitch_rate_ref_, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -874,7 +886,7 @@ void PID::callControllerPitchRate() {
 
 void PID::callControllerRollRate() {
   /* Call PI controller */
-  tau_ = controller_roll_rate_.callController(nav_state_.orientation_rate.x, roll_rate_ref_, 1.0/node_frequency_);
+  tau_ = controller_roll_rate_.callController(farol_utils::deg2rad(nav_state_.orientation_rate.x), roll_rate_ref_, 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_.now();
@@ -937,11 +949,6 @@ double ControllerPI::callController(double state, double state_ref, double dt) {
   /*Compute derivative of Kp term if not in first iteration*/ 
   if (!first_it_) {
     state_dot_ = (state - state_prev_) / dt;
-
-
-
-
-
     /*Apply low pass filter due to noise amplification from derivative computation*/ 
   lpf_A_ = std::exp(- lpf_wc_*dt);
   lpf_B_ = 1 - lpf_A_;

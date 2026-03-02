@@ -6,8 +6,8 @@
 #include <math.h>
 
 #include "rclcpp/rclcpp.hpp"
-#include "farol_msgs/msg/navigation_state.hpp"
-#include "farol_msgs/msg/state_console.hpp"
+#include "farol_interfaces/msg/navigation_state.hpp"
+#include "farol_interfaces/msg/state_console.hpp"
 
 /**
  * @brief   Nav State To Console State
@@ -32,14 +32,14 @@ class Nav2ConsoleState : public rclcpp::Node {
     void initialisePublishers();
     
     /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<farol_msgs::msg::StateConsole>::SharedPtr console_state_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::StateConsole>::SharedPtr console_state_pub_;
     
-    rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr nav_state_sub_;
+    rclcpp::Subscription<farol_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
 
     /* Callbacks */
-    void nav_state_callback(const farol_msgs::msg::NavigationState &msg);
+    void nav_state_callback(const farol_interfaces::msg::NavigationState &msg);
 
     /* Other variables */
-    farol_msgs::msg::StateConsole console_state_msg_;
+    farol_interfaces::msg::StateConsole console_state_msg_;
     rclcpp::Clock clock_;
 };

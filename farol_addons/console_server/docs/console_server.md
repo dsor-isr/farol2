@@ -11,7 +11,7 @@ console_server is a ROS node written in Python with the main purpose of handling
 | Subscribers           | msgs type                                                                        | Purpose                      |
 | -----------           | --------------                                                                   | ---------                    |
 | /#vehicle#/sensors/\* | [std_msgs](http://docs.ros.org/en/api/std_msgs/html/index-msg.html)              | information from the sensors |
-| /#vehicle#/State      | [farol_msgs/mState](https://dsor-isr.github.io/farol/farol-ros-messages/mState/) | State of the vehicle         |
+| /#vehicle#/State      | [farol_interfaces/mState](https://dsor-isr.github.io/farol/farol-ros-messages/mState/) | State of the vehicle         |
 
 ## Publishers
 | Publishers            | msgs type                                                                   | Purpose                                  |

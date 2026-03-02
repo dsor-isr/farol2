@@ -32,7 +32,7 @@ void ThrottleConversion::loadParams() {
  * @brief Initialise Publishers
  */
 void ThrottleConversion::initialisePublishers() {
-  throttle_command_pub_ = create_publisher<farol_msgs::msg::Thruster>(
+  throttle_command_pub_ = create_publisher<farol_interfaces::msg::Thruster>(
   declare_parameter<std::string>("topics.publishers.throttle_command"),
   rclcpp::QoS(1));
 }

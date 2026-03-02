@@ -17,6 +17,7 @@
           low_pass: "/#vehicle#/nav/low_pass/state"
         publishers:
           state: "/#vehicle#/nav/filter/state"
+          nav_sat_fix: "/#vehicle#/nav/filter/nav_sat_fix"
         services:
           change_filter: "/#vehicle#/nav/change_filter"
   sample_and_hold:
@@ -109,6 +110,7 @@
             yaw: "/#vehicle#/control/inner_loop/pid/yaw/debug"
         services:
           change_params: "/#vehicle#/control/pid/change_params"
+          course_control: "/#vehicle#/control/pid/course_control"
   open_loop:
     ros__parameters:
       topics:

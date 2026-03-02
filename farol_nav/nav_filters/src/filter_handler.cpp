@@ -53,9 +53,12 @@ void FilterHandler::loadParams()
 
 void FilterHandler::initialisePublishers()
 {
-  state_pub_ = create_publisher<farol_msgs::msg::NavigationState>(
+  state_pub_ = create_publisher<farol_interfaces::msg::NavigationState>(
       declare_parameter<std::string>("topics.publishers.state"),
       rclcpp::QoS(1));
+  nav_sat_fix_pub_ = create_publisher<sensor_msgs::msg::NavSatFix>(
+      declare_parameter<std::string>("topics.publishers.nav_sat_fix"),
+      rclcpp::QoS(1));  
 }
 
 void FilterHandler::initialiseServices()
@@ -103,13 +106,18 @@ bool FilterHandler::switchSubscription(const std::string & filter_name)
   // Drop old subscription and create new one
   active_sub_.reset();
 
-  active_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
+  // Create new subscription with callback that republishes messages to output topic
+  active_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
       topic,
       rclcpp::QoS(1),
-      [this](farol_msgs::msg::NavigationState::ConstSharedPtr msg)
-      {
-        filter_state_msg_ = *msg;
-        state_pub_->publish(filter_state_msg_);
+      [this](farol_interfaces::msg::NavigationState::ConstSharedPtr msg){
+        // relay state 
+        state_pub_->publish(*msg);
+        // publish global coordinates 
+        nav_sat_fix_msg_.header = msg->header;
+        nav_sat_fix_msg_.latitude = msg->global_position.latitude;
+        nav_sat_fix_msg_.longitude = msg->global_position.longitude;
+        nav_sat_fix_pub_->publish(nav_sat_fix_msg_);
       });
 
   // Update internal state only after successful creation

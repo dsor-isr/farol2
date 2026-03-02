@@ -15,7 +15,7 @@
 #include <Eigen/Dense>
 #include <GeographicLib/UTMUPS.hpp>
 #include <GeographicLib/Geodesic.hpp>
-#include "farol_msgs/msg/utm.hpp"
+#include "farol_interfaces/msg/utm.hpp"
 
 #include "sim/msg/placeholder.hpp"
 
@@ -54,7 +54,7 @@ class Simulation : public rclcpp::Node {
     rclcpp::TimerBase::SharedPtr timer_;
 
     /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<farol_msgs::msg::UTM>::SharedPtr utm_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::UTM>::SharedPtr utm_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr position_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr velocity_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr orientation_pub_;

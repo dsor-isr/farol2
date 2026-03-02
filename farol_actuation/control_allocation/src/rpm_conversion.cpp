@@ -20,10 +20,10 @@ void RPMConversion::initialiseSubscribers() {
     rclcpp::QoS(1),
     [this](control_allocation::msg::ThrusterForce::SharedPtr msg){thrusterForceCallback(msg);});
 
-  nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
+  nav_state_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
     declare_parameter<std::string>("topics.subscribers.nav_state"),
     rclcpp::QoS(1),
-    [this](farol_msgs::msg::NavigationState::SharedPtr msg){surge_ = msg->body_velocity_fluid.x;});
+    [this](farol_interfaces::msg::NavigationState::SharedPtr msg){surge_ = msg->body_velocity_fluid.x;});
 }
 
 /**

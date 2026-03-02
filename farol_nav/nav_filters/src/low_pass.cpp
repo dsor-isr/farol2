@@ -59,10 +59,10 @@ void LowPass::loadParams() {
  * @brief Initialise Subscribers
  */
 void LowPass::initialiseSubscribers() {
-  measurement_sub_ = create_subscription<farol_msgs::msg::Measurement>(
+  measurement_sub_ = create_subscription<farol_interfaces::msg::Measurement>(
   declare_parameter<std::string>("topics.subscribers.measurement"),
   rclcpp::QoS(1),
-  [this](farol_msgs::msg::Measurement::SharedPtr msg){measurement_callback(msg);});
+  [this](farol_interfaces::msg::Measurement::SharedPtr msg){measurement_callback(msg);});
   return;
 }
 
@@ -70,7 +70,7 @@ void LowPass::initialiseSubscribers() {
  * @brief Initialise Publishers
  */
 void LowPass::initialisePublishers() {
-  state_pub_ = create_publisher<farol_msgs::msg::NavigationState>(
+  state_pub_ = create_publisher<farol_interfaces::msg::NavigationState>(
   declare_parameter<std::string>("topics.publishers.state"),
   rclcpp::QoS(1));
 }
@@ -84,11 +84,11 @@ void LowPass::initialiseTimers() {
   return;
 }
 
-void LowPass::measurement_callback(farol_msgs::msg::Measurement::SharedPtr msg) { 
+void LowPass::measurement_callback(farol_interfaces::msg::Measurement::SharedPtr msg) { 
   // Update filter state depending on measurement type 
   switch(msg->type){
     // Orientation: roll, pitch, yaw 
-    case farol_msgs::msg::Measurement::MEAS_ORIENTATION:
+    case farol_interfaces::msg::Measurement::MEAS_ATTITUDE:
       if (msg->value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement ORIENTATION has incorrect length or type.");
         break;
@@ -98,7 +98,7 @@ void LowPass::measurement_callback(farol_msgs::msg::Measurement::SharedPtr msg) 
       last_meas_[7] = msg->value[2];
       break;
     // Orientation rate: roll rate, pitch rate, yaw rate 
-    case farol_msgs::msg::Measurement::MEAS_ORIENTATION_RATE:
+    case farol_interfaces::msg::Measurement::MEAS_ANGULAR_VELOCITY:
       if (msg->value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement ORIENTATION_RATE has incorrect length or type.");
         break;
@@ -108,7 +108,7 @@ void LowPass::measurement_callback(farol_msgs::msg::Measurement::SharedPtr msg) 
       last_meas_[16] = msg->value[2];
       break;
     // UTM position (easting, northing) and UTM zone 
-    case farol_msgs::msg::Measurement::MEAS_UTM_POSITION:
+    case farol_interfaces::msg::Measurement::MEAS_UTM_POSITION:
       if (msg->value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement UTM_POSITION has incorrect length or type.");
         break;
@@ -118,7 +118,7 @@ void LowPass::measurement_callback(farol_msgs::msg::Measurement::SharedPtr msg) 
       utm_zone_ = msg->value[2];
       break;
     // Depth 
-    case farol_msgs::msg::Measurement::MEAS_DEPTH:
+    case farol_interfaces::msg::Measurement::MEAS_DEPTH:
       if (msg->value.size() != 1) {
         RCLCPP_ERROR(get_logger(), "Measurement DEPTH has incorrect length or type.");
         break;
@@ -126,7 +126,7 @@ void LowPass::measurement_callback(farol_msgs::msg::Measurement::SharedPtr msg) 
       last_meas_[2] = msg->value[0];
       break;
     // Altimeter
-    case farol_msgs::msg::Measurement::MEAS_ALTIMETER:
+    case farol_interfaces::msg::Measurement::MEAS_ALTIMETER:
       if (msg->value.size() != 1) {
         RCLCPP_ERROR(get_logger(), "Measurement ALTIMETER has incorrect length or type.");
         break;
@@ -134,7 +134,7 @@ void LowPass::measurement_callback(farol_msgs::msg::Measurement::SharedPtr msg) 
       last_meas_[3] = msg->value[0];
       break;
     // Altitude realtive to the ellipsoid, WGS84 
-    case farol_msgs::msg::Measurement::MEAS_ALTITUDE_WGS84:
+    case farol_interfaces::msg::Measurement::MEAS_ALTITUDE_WGS84:
       if (msg->value.size() != 1) {
         RCLCPP_ERROR(get_logger(), "Measurement ALTITUDE_WGS84 has incorrect length or type.");
         break;
@@ -142,7 +142,7 @@ void LowPass::measurement_callback(farol_msgs::msg::Measurement::SharedPtr msg) 
       last_meas_[4] = msg->value[0];
       break;
     // Inertial velocity expressed in the body 
-    case farol_msgs::msg::Measurement::MEAS_BODY_VELOCITY_INERTIAL: {
+    case farol_interfaces::msg::Measurement::MEAS_INERTIAL_VELOCITY: {
       if (msg->value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement BODY_VELOCITY_INERTIAL has incorrect length or type.");
         break;
@@ -160,7 +160,7 @@ void LowPass::measurement_callback(farol_msgs::msg::Measurement::SharedPtr msg) 
       break;}
 
     // Velocity expressed in the body relative to the fluid 
-    case farol_msgs::msg::Measurement::MEAS_BODY_VELOCITY_FLUID:
+    case farol_interfaces::msg::Measurement::MEAS_FLUID_VELOCITY:
       if (msg->value.size() != 3) {
         RCLCPP_ERROR(get_logger(), "Measurement BODY_VELOCITY_FLUID has incorrect length or type.");
         break;

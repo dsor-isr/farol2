@@ -9,7 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(farol_msgs REQUIRED)
+find_package(farol_interfaces REQUIRED)
 find_package(control_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 # uncomment the following section in order to fill in
@@ -35,7 +35,7 @@ ament_target_dependencies(
   open_loop_control
   rclcpp
   std_msgs
-  farol_msgs
+  farol_interfaces
   control_allocation
 )
 

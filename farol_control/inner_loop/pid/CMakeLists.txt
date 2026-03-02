@@ -9,7 +9,8 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(farol_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(farol_interfaces REQUIRED)
 find_package(control_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(farol_utils REQUIRED)
@@ -37,7 +38,8 @@ ament_target_dependencies(
   pid_control
   rclcpp
   std_msgs
-  farol_msgs
+  std_srvs
+  farol_interfaces
   control_allocation
   farol_utils
 )

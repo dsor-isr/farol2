@@ -13,9 +13,10 @@
 #include "geometry_msgs/msg/wrench.hpp"
 
 #include "geometry_msgs/msg/wrench_stamped.hpp"
-#include "farol_msgs/msg/navigation_state.hpp"
+#include "farol_interfaces/msg/navigation_state.hpp"
 #include "pid/srv/change_params.hpp"
 #include "pid/msg/pid_debug.hpp"
+#include "std_srvs/srv/set_bool.hpp"
 
 #include <farol_utils/filters/low_pass_filter.hpp>
 #include <farol_utils/angles.hpp>
@@ -178,7 +179,7 @@ class PID : public rclcpp::Node {
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_y_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_z_pub_;
 
-    rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr nav_state_sub_;
+    rclcpp::Subscription<farol_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr surge_ref_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr sway_ref_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr heave_ref_sub_;
@@ -201,9 +202,10 @@ class PID : public rclcpp::Node {
     rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr attitude_debug_pub_;
 
     rclcpp::Service<pid::srv::ChangeParams>::SharedPtr change_params_srv_;
+    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr course_control_srv_;
 
     /* Callbacks */
-    void navStateCallback(const farol_msgs::msg::NavigationState &msg);
+    void navStateCallback(const farol_interfaces::msg::NavigationState &msg);
     void surgeRefCallback(const std_msgs::msg::Float32 &msg);
     void swayRefCallback(const std_msgs::msg::Float32 &msg);
     void heaveRefCallback(const std_msgs::msg::Float32 &msg);
@@ -215,6 +217,8 @@ class PID : public rclcpp::Node {
     void rollRateRefCallback(const std_msgs::msg::Float32 &msg);
     void changeParamsCallback(const std::shared_ptr<pid::srv::ChangeParams::Request> request,
                               std::shared_ptr<pid::srv::ChangeParams::Response> response);
+    void courseControlCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+                               std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
     /* Map to relate controller names to enum type */
     std::map<std::string, int> controller_map_ = {
@@ -249,7 +253,7 @@ class PID : public rclcpp::Node {
     double node_frequency_;
     geometry_msgs::msg::WrenchStamped body_wrench_request_msg_;
     std_msgs::msg::Float32 float32_msg_;
-    farol_msgs::msg::NavigationState nav_state_;
+    farol_interfaces::msg::NavigationState nav_state_;
     std::set<std::string> controller_names_;
     std::map<std::string, bool> controller_debug_;
     std::map<std::string, std::map<std::string, double>> controller_parameters_;

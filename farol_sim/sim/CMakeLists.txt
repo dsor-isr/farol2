@@ -11,7 +11,7 @@ list(APPEND CMAKE_MODULE_PATH "/usr/share/cmake/geographiclib")
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(farol_msgs REQUIRED)
+find_package(farol_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(control_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
@@ -44,7 +44,7 @@ ament_target_dependencies(
   rclcpp
   std_msgs
   geometry_msgs
-  farol_msgs
+  farol_interfaces
   control_allocation
 )
 
@@ -53,7 +53,7 @@ ament_target_dependencies(
   rclcpp
   std_msgs
   geometry_msgs
-  farol_msgs
+  farol_interfaces
   control_allocation
 )
 
