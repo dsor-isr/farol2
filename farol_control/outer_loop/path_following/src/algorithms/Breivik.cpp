@@ -117,7 +117,7 @@ void Breivik::publish_private(){
   msg.data = this->desired_surge_;
   this->surge_pub_->publish(msg);
   
-  msg.data = this->desired_yaw_ / 180 * M_PI;
+  msg.data = farol_utils::wrapTo2Pi(this->desired_yaw_);
   this->yaw_pub_->publish(msg);
 
   /* Publish the virtual targets value */

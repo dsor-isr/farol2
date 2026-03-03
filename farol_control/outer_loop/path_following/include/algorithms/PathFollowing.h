@@ -14,6 +14,8 @@
 #include "paths/srv/set_mode.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "farol_interfaces/msg/pf_debug.hpp"
+#include <farol_utils/angles.hpp>
+
 
 /**
  * @brief  A Base class to update the path following law.
