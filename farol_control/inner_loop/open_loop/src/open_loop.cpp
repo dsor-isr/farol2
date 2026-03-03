@@ -27,6 +27,11 @@ void OpenLoop::initialiseSubscribers() {
     declare_parameter<std::string>("topics.subscribers.surge_ref"),
     rclcpp::QoS(1),
     [this](std_msgs::msg::Float32::SharedPtr msg){surgeRefCallback(msg);});
+    
+  mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
+    declare_parameter<std::string>("topics.subscribers.mission_status"),
+    rclcpp::QoS(1),
+    [this](std_msgs::msg::Int8::SharedPtr msg){mission_status_ = msg->data;});
 }
 
 /**
@@ -46,7 +51,7 @@ void OpenLoop::initialiseServices() {}
 void OpenLoop::surgeRefCallback(std_msgs::msg::Float32::SharedPtr msg) {
   /* If open loop for surge is not enabled */
   if (!surge_enabled_) return;
-
+  if(mission_status_ == 0) return;
   // this is just for magicelectric
   rpm_command_msg_.rpm = {};
   rpm_command_msg_.rpm.push_back(msg->data*surge_gain_);

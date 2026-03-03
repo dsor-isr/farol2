@@ -116,6 +116,7 @@
       topics:
         subscribers:
           surge_ref: "/#vehicle#/control/ref/surge"
+          mission_status: "/#vehicle#/mission_status"
         publishers:
           rpm_command: "/#vehicle#/actuation/rpm_command"
           # thrust_y: "/#vehicle#/actuation/thrust_y"

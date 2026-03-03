@@ -6,6 +6,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include "std_msgs/msg/int8.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "control_allocation/msg/thruster_rpm.hpp"
 
@@ -39,6 +40,7 @@ class OpenLoop : public rclcpp::Node {
 
     
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr surge_ref_sub_;
+    rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr mission_status_sub_;
 
     /* Callbacks */
     void surgeRefCallback(std_msgs::msg::Float32::SharedPtr msg);
@@ -48,4 +50,5 @@ class OpenLoop : public rclcpp::Node {
     rclcpp::Clock clock_;
     bool surge_enabled_;
     double surge_gain_;
+    int mission_status_ = 0;
 };
