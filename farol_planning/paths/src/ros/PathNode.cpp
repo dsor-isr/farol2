@@ -40,10 +40,10 @@ void PathNode::initializeSubscribers() {
 		rclcpp::QoS(1),
 		[this](std_msgs::msg::Float32::SharedPtr msg){this->gamma_ = msg->data;});
 	
-	this->vehicle_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
+	this->vehicle_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
 		declare_parameter<std::string>("topics.subscribers.vehicle_state"),
 		rclcpp::QoS(1),
-		[this](farol_interfaces::msg::NavigationState::SharedPtr msg){
+		[this](farol_msgs::msg::NavigationState::SharedPtr msg){
 			this->vehicle_pos_ <<  msg->utm_position.northing, msg->utm_position.easting, msg->altimeter;});
 }
 
@@ -56,7 +56,7 @@ void PathNode::initializePublishers() {
                       declare_parameter<std::string>("topics.publishers.path_data"),
 											rclcpp::QoS(1));
 
-  this->virtual_target_pub_ = create_publisher<farol_interfaces::msg::StateConsole>(
+  this->virtual_target_pub_ = create_publisher<farol_msgs::msg::StateConsole>(
 											declare_parameter<std::string>("topics.publishers.virtual_target_state"),
 											rclcpp::QoS(1));
 }
@@ -92,7 +92,7 @@ void PathNode::timerCallback() {
 
   /* Construct the message to send with the path information and with the virtual target current state */
   paths::msg::PathData msg; 
-  farol_interfaces::msg::StateConsole vt_state_msg;
+  farol_msgs::msg::StateConsole vt_state_msg;
 
   if(!this->path_->isEmpty() && this->gamma_.has_value()) {
 

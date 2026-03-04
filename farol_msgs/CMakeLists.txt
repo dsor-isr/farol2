@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(farol_interfaces)
+project(farol_msgs)
 
 # find dependencies
 find_package(ament_cmake REQUIRED)

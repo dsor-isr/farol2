@@ -2,7 +2,7 @@
 
 ## Description
 
-The *farol_interfaces* package houses all custom ROS messages and services created for the FAROL stack.
+The *farol_msgs* package houses all custom ROS messages and services created for the FAROL stack.
 
 | Message    | Description |
 | -------- | ------- |

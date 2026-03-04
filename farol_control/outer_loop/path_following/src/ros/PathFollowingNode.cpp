@@ -16,7 +16,7 @@ PathFollowingNode::PathFollowingNode() : Node("path_following",
 
   /* Set PF Debug publisher */
   pf_algorithm_->setPFollowingDebugPublisher(
-    create_publisher<farol_interfaces::msg::PFDebug>(
+    create_publisher<farol_msgs::msg::PFDebug>(
       get_parameter("topics.publishers.pfollowing_debug").as_string(), 1)
   );
 }
@@ -135,7 +135,7 @@ void PathFollowingNode::deleteCurrentController() {
  */
 void PathFollowingNode::initialiseSubscribers() {
 
-  this->state_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
+  this->state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
                       get_parameter("topics.subscribers.state").as_string(), 
                       1, std::bind(&PathFollowingNode::vehicleStateCallback, this, std::placeholders::_1));
 
@@ -215,10 +215,10 @@ void PathFollowingNode::pathStateCallback(const paths::msg::PathData &msg) {
 /**
  * @brief  Vehicle state callback to update the state of the vehicle
  *
- * @param msg  A pointer to a farol_interfaces::msg::NavigationState that contains
+ * @param msg  A pointer to a farol_msgs::msg::NavigationState that contains
  * information regarding the vehicle
  */
-void PathFollowingNode::vehicleStateCallback(const farol_interfaces::msg::NavigationState &msg) {
+void PathFollowingNode::vehicleStateCallback(const farol_msgs::msg::NavigationState &msg) {
 
   /* If the algorithm is running, signal that we have received data from the
    * vehicle state */

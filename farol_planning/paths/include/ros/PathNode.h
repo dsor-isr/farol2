@@ -15,8 +15,8 @@
 
 /* Include the message for publishing the path information */
 #include "paths/msg/path_data.hpp"
-#include "farol_interfaces/msg/navigation_state.hpp"
-#include "farol_interfaces/msg/state_console.hpp"
+#include "farol_msgs/msg/navigation_state.hpp"
+#include "farol_msgs/msg/state_console.hpp"
 
 /* Farol gimicks library for reading configuration paramters */
 // #include <farol_gimmicks_library/FarolGimmicks.h>
@@ -93,13 +93,13 @@ class PathNode : public rclcpp::Node {
      * @brief ROS Subscribers
      */ 
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr gamma_sub_;
-    rclcpp::Subscription<farol_interfaces::msg::NavigationState>::SharedPtr vehicle_sub_;
+    rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr vehicle_sub_;
 
     /** 
      * @brief ROS Publishers
      */
     rclcpp::Publisher<paths::msg::PathData>::SharedPtr path_pub_;
-    rclcpp::Publisher<farol_interfaces::msg::StateConsole>::SharedPtr virtual_target_pub_;
+    rclcpp::Publisher<farol_msgs::msg::StateConsole>::SharedPtr virtual_target_pub_;
 
     /** 
      * @brief ROS Services 
@@ -135,7 +135,7 @@ class PathNode : public rclcpp::Node {
      * @brief Callbacks 
      */
     void gammaCallback(const std_msgs::msg::Float32 &msg);
-    void vehicleStateCallback(const farol_interfaces::msg::NavigationState &msg);
+    void vehicleStateCallback(const farol_msgs::msg::NavigationState &msg);
 
     /** 
      * @brief Services Callbacks 

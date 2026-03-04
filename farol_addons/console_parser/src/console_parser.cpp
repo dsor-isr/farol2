@@ -31,7 +31,7 @@ void ConsoleParser::initializeSubscribers() {
                         get_parameter("topics.subscribers.Mission_String").as_string(), 
                         1, std::bind(&ConsoleParser::missionStringCallback, this, std::placeholders::_1));
   
-  state_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
+  state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
                 get_parameter("topics.subscribers.state").as_string(), 
                 1, std::bind(&ConsoleParser::stateCallback, this, std::placeholders::_1));
 
@@ -45,13 +45,13 @@ void ConsoleParser::initializeSubscribers() {
  * @brief  Method to initialize all the publishers 
  */
 void ConsoleParser::initializePublishers() {
-  section_pub_ = create_publisher<farol_interfaces::msg::Section>(
+  section_pub_ = create_publisher<farol_msgs::msg::Section>(
                   get_parameter("topics.publishers.Path_Section").as_string(), 1);
 
-  formation_pub_ = create_publisher<farol_interfaces::msg::Formation>(
+  formation_pub_ = create_publisher<farol_msgs::msg::Formation>(
                     get_parameter("topics.publishers.Formation").as_string(), 1);
 
-  biased_formation_pub_ = create_publisher<farol_interfaces::msg::Formation>(
+  biased_formation_pub_ = create_publisher<farol_msgs::msg::Formation>(
                             get_parameter("topics.publishers.biased_formation").as_string(), 1);
 
   wpref_pub_ = create_publisher<geometry_msgs::msg::PointStamped>(
@@ -63,7 +63,7 @@ void ConsoleParser::initializePublishers() {
   depth_pub_ = create_publisher<std_msgs::msg::Float32>(
                 get_parameter("topics.publishers.AltRef").as_string(), 1);
 
-  fullpath_pub_ = create_publisher<farol_interfaces::msg::MultiSection>(
+  fullpath_pub_ = create_publisher<farol_msgs::msg::MultiSection>(
                     get_parameter("topics.publishers.FullMission").as_string(), 1);
 }
 
@@ -277,7 +277,7 @@ void ConsoleParser::parseMission(std::istream &is) {
   biased_formation_mode = false;
   std::string line;
 
-  farol_interfaces::msg::MultiSection FullSection;
+  farol_msgs::msg::MultiSection FullSection;
 
   // +.+ Delete the previous mission
   mission.clear();   
@@ -497,7 +497,7 @@ void ConsoleParser::parseMission(std::istream &is) {
   FullSection.header.stamp = clock_.now();
   fullpath_pub_->publish(FullSection);
 
-  farol_interfaces::msg::Formation Form_Topic; 
+  farol_msgs::msg::Formation Form_Topic; 
   
   // +.+ Send the formation to the Cooperative_PF
 
@@ -715,7 +715,7 @@ void ConsoleParser::startNewSection() {
   } else if ((*act_section).type == 2 || (*act_section).type == 3) { 
 
     RCLCPP_INFO(get_logger(), "Starting a Path Following Mission");
-    farol_interfaces::msg::Section aux;
+    farol_msgs::msg::Section aux;
     aux.xrefpoint = xrefpoint;
     aux.yrefpoint = yrefpoint;
     aux.direction = (*act_section).adirection;
@@ -819,7 +819,7 @@ void ConsoleParser::missionStatusCallback(const std_msgs::msg::Int8 &msg) {
 }
 
 // @.@ Callback for updating 2D position (X,Y) values in the State topic
-void ConsoleParser::stateCallback(const farol_interfaces::msg::NavigationState &msg) {
+void ConsoleParser::stateCallback(const farol_msgs::msg::NavigationState &msg) {
 
 	// waypoint works in ENU but state from filter is in NED
   x_act = msg.utm_position.easting;

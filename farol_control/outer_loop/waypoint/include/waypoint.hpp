@@ -15,7 +15,7 @@
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 
 #include "waypoint/srv/send_wp_type1.hpp"
-#include "farol_interfaces/msg/navigation_state.hpp"
+#include "farol_msgs/msg/navigation_state.hpp"
 #include "geometry_msgs/msg/point_stamped.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/int8.hpp"
@@ -43,7 +43,7 @@ private:
 
   /* Subscribers */
   rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr mission_status_sub_;  ///< flag subscriber
-  rclcpp::Subscription<farol_interfaces::msg::NavigationState>::SharedPtr state_sub_; ///< state subscriber
+  rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr state_sub_; ///< state subscriber
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr turn_radius_flag_sub_; ///< turn radius limiter flag subscriber
 
   /* Publishers */
@@ -123,7 +123,7 @@ private:
    *
    * @param msg contains the state info
    */
-  void stateCallback(farol_interfaces::msg::NavigationState::SharedPtr msg);
+  void stateCallback(farol_msgs::msg::NavigationState::SharedPtr msg);
 
   /**
    * @brief  Callback function of the flag topic.

@@ -126,7 +126,7 @@ void Simulation::initialiseSubscribers() {
  */
 void Simulation::initialisePublishers() {
 
-  utm_pub_ = create_publisher<farol_interfaces::msg::UTM>(
+  utm_pub_ = create_publisher<farol_msgs::msg::UTM>(
       get_parameter("sim.simulation.topics.publishers.utm").as_string(), 1);
   position_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
       get_parameter("sim.simulation.topics.publishers.position").as_string(), 1);
@@ -190,7 +190,7 @@ void Simulation::timerCallback() {
 
 
   geometry_msgs::msg::Vector3 pos_msg, vel_msg, ori_msg, ang_vel_msg, lin_acc_msg, ang_acc_msg;
-  farol_interfaces::msg::UTM utm_msg;
+  farol_msgs::msg::UTM utm_msg;
 
   utm_msg.northing = originNorthing + auv_->getX();
   utm_msg.easting = originEasting + auv_->getY();

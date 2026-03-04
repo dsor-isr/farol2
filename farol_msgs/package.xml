@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>farol_interfaces</name>
+  <name>farol_msgs</name>
   <version>0.0.0</version>
-  <description>farol_interfaces: Custom messages and services for FAROL</description>
+  <description>farol_msgs: Custom messages and services for FAROL</description>
   <maintainer email="eduardo.m.a.cunha@tecnico.ulisboa.pt">Eduardo Cunha</maintainer>
   <license>MIT</license>
 

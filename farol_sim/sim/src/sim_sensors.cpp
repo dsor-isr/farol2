@@ -76,7 +76,7 @@ void SimSensors::initialiseSubscribers() {
   ori_sub  = create_subscription<geometry_msgs::msg::Vector3>(
                           get_parameter("sim.sim_sensors.topics.subscribers.orientation").as_string(), 
                           1, std::bind(&SimSensors::oriCallback, this, std::placeholders::_1));                    
-  utm_sub = create_subscription<farol_interfaces::msg::UTM>(
+  utm_sub = create_subscription<farol_msgs::msg::UTM>(
                           get_parameter("sim.sim_sensors.topics.subscribers.utm").as_string(), 
                           1, std::bind(&SimSensors::utmCallback, this, std::placeholders::_1));
   
@@ -89,15 +89,15 @@ void SimSensors::initialiseSubscribers() {
  */
 void SimSensors::initialisePublishers() {
 
-  utm_pub_ = create_publisher<farol_interfaces::msg::UTM>(
+  utm_pub_ = create_publisher<farol_msgs::msg::UTM>(
       get_parameter("sim.sim_sensors.topics.publishers.gnss").as_string(), 1);
-  depth_pub_ = create_publisher<farol_interfaces::msg::Measurement>(
+  depth_pub_ = create_publisher<farol_msgs::msg::Measurement>(
       get_parameter("sim.sim_sensors.topics.publishers.depth_sensor").as_string(), 1);
-  ori_pub_ = create_publisher<farol_interfaces::msg::Measurement>( 
+  ori_pub_ = create_publisher<farol_msgs::msg::Measurement>( 
       get_parameter("sim.sim_sensors.topics.publishers.imu.orientation").as_string(), 1);
-  lin_acc_pub_ = create_publisher<farol_interfaces::msg::Measurement>(
+  lin_acc_pub_ = create_publisher<farol_msgs::msg::Measurement>(
       get_parameter("sim.sim_sensors.topics.publishers.imu.linear_acceleration").as_string(), 1);
-  ang_acc_pub_ = create_publisher<farol_interfaces::msg ::Measurement>(
+  ang_acc_pub_ = create_publisher<farol_msgs::msg ::Measurement>(
       get_parameter("sim.sim_sensors.topics.publishers.imu.angular_acceleration").as_string(), 1);  
   
       
@@ -178,7 +178,7 @@ void SimSensors::oriCallback(const geometry_msgs::msg::Vector3::SharedPtr msg) {
   
 }
 
-void SimSensors::utmCallback(const farol_interfaces::msg::UTM::SharedPtr msg) {
+void SimSensors::utmCallback(const farol_msgs::msg::UTM::SharedPtr msg) {
 
   rcv_northing = msg->northing;
   rcv_easting = msg->easting;
@@ -190,7 +190,7 @@ void SimSensors::utmCallback(const farol_interfaces::msg::UTM::SharedPtr msg) {
 
 void SimSensors::gnssTimerCallback() {
 
-    farol_interfaces::msg::UTM utm_msg;
+    farol_msgs::msg::UTM utm_msg;
 
     if(gnss_noise_) {
       send_northing = rcv_northing + randn(gnss_bias[0], gnss_variance[0]);
@@ -217,7 +217,7 @@ void SimSensors::gnssTimerCallback() {
 
 void SimSensors::depthTimerCallback() {
 
-    farol_interfaces::msg::Measurement depth_msg;
+    farol_msgs::msg::Measurement depth_msg;
 
     if(depth_sensor_noise_){
       depth_send = depth_rcv + randn(depth_sensor_bias, depth_sensor_variance);
@@ -239,7 +239,7 @@ void SimSensors::imuTimerCallback() {
 
 
   if(imu_ori_activate_){
-      farol_interfaces::msg::Measurement ori_msg;
+      farol_msgs::msg::Measurement ori_msg;
       if(imu_ori_noise_ && imu_noise_){
         ori_send[0] = rcv_ori[0] + randn(imu_ori_bias[0], imu_ori_variance[0]);
         ori_send[1] = rcv_ori[1] + randn(imu_ori_bias[1], imu_ori_variance[1]);
@@ -260,7 +260,7 @@ void SimSensors::imuTimerCallback() {
     }
 
     if(imu_acc_activate_){
-      farol_interfaces::msg::Measurement lin_acc_msg;
+      farol_msgs::msg::Measurement lin_acc_msg;
       if(imu_acc_noise_ && imu_noise_){
         lin_acc_send[0] = rcv_lin_acc[0] + randn(imu_acc_bias[0], imu_acc_variance[0]);
         lin_acc_send[1] = rcv_lin_acc[1] + randn(imu_acc_bias[1], imu_acc_variance[1]);
@@ -281,7 +281,7 @@ void SimSensors::imuTimerCallback() {
     }
 
     if(imu_gyro_activate_){
-      farol_interfaces::msg::Measurement ang_acc_msg;
+      farol_msgs::msg::Measurement ang_acc_msg;
       if(imu_gyro_noise_ && imu_noise_){
         ang_acc_send[0] = rcv_ang_acc[0] + randn(imu_gyro_bias[0], imu_gyro_variance[0]);
         ang_acc_send[1] = rcv_ang_acc[1] + randn(imu_gyro_bias[1], imu_gyro_variance[1]);

@@ -13,9 +13,9 @@
 #include "std_msgs/msg/int8.hpp"
 
 /* Messages used to receive data from the vehicle and from the path */
-#include "farol_interfaces/msg/navigation_state.hpp"
+#include "farol_msgs/msg/navigation_state.hpp"
 #include "paths/msg/path_data.hpp"
-#include "farol_interfaces/msg/pf_debug.hpp"
+#include "farol_msgs/msg/pf_debug.hpp"
 
 /* Include the Control libraries */
 #include "RelativeHeading.h"
@@ -139,7 +139,7 @@ class PathFollowingNode : public rclcpp::Node {
     /**
      * @brief ROS subscribers attributes
      */
-    rclcpp::Subscription<farol_interfaces::msg::NavigationState>::SharedPtr state_sub_;
+    rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr state_sub_;
     rclcpp::Subscription<paths::msg::PathData>::SharedPtr path_data_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr vc_sub_;
     rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr mission_status_sub_;
@@ -187,7 +187,7 @@ class PathFollowingNode : public rclcpp::Node {
      */
     void vcCallback(const std_msgs::msg::Float32 &msg);
     void pathStateCallback(const paths::msg::PathData &msg);
-    void vehicleStateCallback(const farol_interfaces::msg::NavigationState &msg);
+    void vehicleStateCallback(const farol_msgs::msg::NavigationState &msg);
     void missionStatusCallback(const std_msgs::msg::Int8 &msg);
 
     /**

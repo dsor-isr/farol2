@@ -2,7 +2,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <farol_interfaces/msg/navigation_state.hpp>
+#include <farol_msgs/msg/navigation_state.hpp>
 #include <nav_filters/srv/change_filter.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 
@@ -37,8 +37,8 @@ private:
   std::unordered_map<std::string, std::string> topic_by_filter_;  // filter -> topic
 
   // ROS interfaces
-  rclcpp::Subscription<farol_interfaces::msg::NavigationState>::SharedPtr active_sub_;
-  rclcpp::Publisher<farol_interfaces::msg::NavigationState>::SharedPtr state_pub_;
+  rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr active_sub_;
+  rclcpp::Publisher<farol_msgs::msg::NavigationState>::SharedPtr state_pub_;
   rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr nav_sat_fix_pub_;
   rclcpp::Service<nav_filters::srv::ChangeFilter>::SharedPtr change_filter_srv_;
 

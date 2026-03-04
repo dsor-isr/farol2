@@ -13,7 +13,7 @@
   <!-- dependencies libraries -->
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
-  <depend>farol_interfaces</depend>
+  <depend>farol_msgs</depend>
   <depend>farol_utils</depend>
   <depend>sensor_msgs</depend>
 
