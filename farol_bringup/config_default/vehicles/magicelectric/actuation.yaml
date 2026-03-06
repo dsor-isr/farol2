@@ -51,12 +51,15 @@
   wrench_manager:
     ros__parameters:
       node_frequency: 10.0
+
   static_thruster_allocation:
     ros__parameters:
       node_frequency: 10.0
+  
   thruster_rudder_allocation:
     ros__parameters:
       node_frequency: 10.0
+  
   rpm_conversion:
     ros__parameters:
       max_rpm: 2000.0

@@ -6,6 +6,7 @@ ThrusterRudderAllocation::ThrusterRudderAllocation() : Node("thruster_rudder_all
   initialiseSubscribers();
   initialisePublishers();
   initialiseServices();
+  clock_ = this->get_clock();
 }
 
 /* Destructor */
@@ -128,12 +129,12 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(geometry_msgs::msg::Wre
 
   /* Create message to publish thruster force */
   if(!open_loop_){
-    thruster_force_msg_.header.stamp = clock_.now();
+    thruster_force_msg_.header.stamp = clock_->now();
     std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
     thruster_force_msg_.force = forces_vec;
     thruster_force_pub_->publish(thruster_force_msg_);
   }
-  
+
   /* Create message to publish rudder angle reference */
   rudder_angle_ref_msg_.data = rudder_angle_;
   rudder_angle_ref_pub_->publish(rudder_angle_ref_msg_);

@@ -1,10 +1,8 @@
-#include <simulation.hpp>
+#include <auv_sim.hpp>
 
 /* Constructor */
-Simulation::Simulation() : Node("simulation", 
-                  rclcpp::NodeOptions()
-                    .allow_undeclared_parameters(true)
-                    .automatically_declare_parameters_from_overrides(true)) {
+AuvSim::AuvSim() : Node("auv_sim"){
+  clock_ = this->get_clock();
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
@@ -13,7 +11,7 @@ Simulation::Simulation() : Node("simulation",
 }
 
 /* Destructor */
-Simulation::~Simulation() {
+AuvSim::~AuvSim() {
   /* Stop the timer */
   timer_->cancel();
 }
@@ -21,43 +19,37 @@ Simulation::~Simulation() {
 /**
  * @brief Load parameters
  */
-void Simulation::loadParams() {
+void AuvSim::loadParams() {
+
   
-  freq_ = get_parameter("sim.simulation.node_frequency").as_int(); 
-  fluid_density = get_parameter("sim.simulation.fluid_density").as_double();
+  freq_ = get_parameter("node_frequency").as_int(); 
+  fluid_density = get_parameter("environment.fluid_density").as_double();
 
-  originLat = get_parameter("sim.simulation.originLat").as_double();
-  originLon = get_parameter("sim.simulation.originLon").as_double();
-
-  mass = get_parameter("sim.simulation.vehicle.mass").as_double();
-  zg = get_parameter("sim.simulation.vehicle.zg").as_double();
-  vehicle_density = get_parameter("sim.simulation.vehicle.vehicle_density").as_double();
+  mass = get_parameter("vehicle.mass").as_double();
+  zg = get_parameter("vehicle.zg").as_double();
+  vehicle_density = get_parameter("vehicle.vehicle_density").as_double();
   
-  inertia = get_parameter("sim.simulation.vehicle.inertia_tensor").as_double_array();
-  Dl = get_parameter("sim.simulation.vehicle.linear_damping_tensor").as_double_array();
-  Dq = get_parameter("sim.simulation.vehicle.quadratic_damping_tensor").as_double_array();
-  added_mass = get_parameter("sim.simulation.vehicle.added_mass_tensor").as_double_array();
+  inertia = get_parameter("vehicle.inertia_tensor").as_double_array();
+  Dl = get_parameter("vehicle.linear_damping_tensor").as_double_array();
+  Dq = get_parameter("vehicle.quadratic_damping_tensor").as_double_array();
+  added_mass = get_parameter("vehicle.added_mass_tensor").as_double_array();
 
-  allocation_flat = get_parameter("sim.simulation.vehicle.actuators.allocation_matrix").as_double_array();
-  lump_pos = get_parameter("sim.simulation.vehicle.actuators.lump_param_positive").as_double_array();
-  lump_neg = get_parameter("sim.simulation.vehicle.actuators.lump_param_negative").as_double_array();
-  minmax_input = get_parameter("sim.simulation.vehicle.actuators.min_max_thruster_input").as_double_array();
+  allocation_flat = get_parameter("vehicle.actuators.allocation_matrix").as_double_array();
+  lump_pos = get_parameter("vehicle.actuators.lump_param_positive").as_double_array();
+  lump_neg = get_parameter("vehicle.actuators.lump_param_negative").as_double_array();
+  minmax_input = get_parameter("vehicle.actuators.min_max_thruster_input").as_double_array();
 
-  thruster_gain = get_parameter("sim.simulation.vehicle.actuators.gain").as_double();
-  thruster_pole = get_parameter("sim.simulation.vehicle.actuators.pole").as_double();
-  thruster_delay = get_parameter("sim.simulation.vehicle.actuators.delay").as_double();
-  sampling_period = get_parameter("sim.simulation.vehicle.actuators.period").as_double();
+  thruster_gain = get_parameter("vehicle.actuators.gain").as_double();
+  thruster_pole = get_parameter("vehicle.actuators.pole").as_double();
+  thruster_delay = get_parameter("vehicle.actuators.delay").as_double();
+  sampling_period = get_parameter("vehicle.actuators.period").as_double();
 
-  disturbance_mean = get_parameter("sim.simulation.current.mean").as_double_array();
-  disturbance_sigma = get_parameter("sim.simulation.current.sigma").as_double_array();
-  disturbance_min = get_parameter("sim.simulation.current.minimum").as_double_array();
-  disturbance_max = get_parameter("sim.simulation.current.maximum").as_double_array();
+  disturbance_mean = get_parameter("environment.current.mean").as_double_array();
+  disturbance_sigma = get_parameter("environment.current.sigma").as_double_array();
+  disturbance_min = get_parameter("environment.current.minimum").as_double_array();
+  disturbance_max = get_parameter("environment.current.maximum").as_double_array();
 
   node_period_ = 1.0/freq_;
-
-  /* Convert origin lat/lon to UTM */
-  GeographicLib::UTMUPS::Forward(originLat, originLon, UTMZone, northp, originEasting, originNorthing);
-
 
   Eigen::Vector3d inertia_tensor(inertia[0], inertia[1], inertia[2]);
 
@@ -69,7 +61,7 @@ void Simulation::loadParams() {
   }
 
   size_t n_thrusters = allocation_flat.size() / 6;
-  thrust = Eigen::VectorXd::Zero(n_thrusters);
+  rpm_ = Eigen::VectorXd::Zero(n_thrusters);
   Eigen::MatrixXd allocation_matrix(n_thrusters, 6);
   for (size_t i = 0; i < n_thrusters; ++i)
     for (size_t j = 0; j < 6; ++j)
@@ -112,11 +104,12 @@ void Simulation::loadParams() {
 /**
  * @brief Initialise Subscribers
  */
-void Simulation::initialiseSubscribers() {
+void AuvSim::initialiseSubscribers() {
 
-  thrust_sub_  = create_subscription<control_allocation::msg::ThrusterRPM>(
-                          get_parameter("sim.simulation.topics.subscribers.thruster_force").as_string(), 
-                          1, std::bind(&Simulation::thrustCallback, this, std::placeholders::_1));
+
+  rpm_sub_  = create_subscription<control_allocation::msg::ThrusterRPM>(
+                          get_parameter("topics.subscribers.rpm_command").as_string(), 
+                          1, std::bind(&AuvSim::rpmCallback, this, std::placeholders::_1));
   return;
 }
 
@@ -124,22 +117,21 @@ void Simulation::initialiseSubscribers() {
 /**
  * @brief Initialise Publishers
  */
-void Simulation::initialisePublishers() {
+void AuvSim::initialisePublishers() {
 
-  utm_pub_ = create_publisher<farol_msgs::msg::UTM>(
-      get_parameter("sim.simulation.topics.publishers.utm").as_string(), 1);
+
   position_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("sim.simulation.topics.publishers.position").as_string(), 1);
-  velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("sim.simulation.topics.publishers.velocity").as_string(), 1);
+      get_parameter("topics.publishers.position").as_string(), 1);
+  body_velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
+      get_parameter("topics.publishers.body_velocity").as_string(), 1);
   orientation_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("sim.simulation.topics.publishers.orientation").as_string(), 1);
-  angular_velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("sim.simulation.topics.publishers.angular_velocity").as_string(), 1);
-  linear_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("sim.simulation.topics.publishers.linear_acceleration").as_string(), 1);
+      get_parameter("topics.publishers.orientation").as_string(), 1);
+  orientation_rate_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
+      get_parameter("topics.publishers.orientation_rate").as_string(), 1);
+  body_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
+      get_parameter("topics.publishers.body_acceleration").as_string(), 1);
   angular_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("sim.simulation.topics.publishers.angular_acceleration").as_string(), 1);
+      get_parameter("topics.publishers.angular_acceleration").as_string(), 1);
       
   return;
 }
@@ -147,7 +139,7 @@ void Simulation::initialisePublishers() {
 /**
  * @brief Initialise Services
  */
-void Simulation::initialiseServices() {
+void AuvSim::initialiseServices() {
   /* Service servers */
   /* ... */
 
@@ -160,69 +152,59 @@ void Simulation::initialiseServices() {
 /**
  * @brief Initialise Timers
  */
-void Simulation::initialiseTimers() {
-  /* Get node frequency from parameters */
-  node_period_ = 1.0/freq_;
+void AuvSim::initialiseTimers() {
 
-  /* Create timer */
-  timer_ = create_wall_timer(std::chrono::duration<double>(node_period_),
-                             std::bind(&Simulation::timerCallback, this));
+  timer_ = create_timer(
+    std::chrono::milliseconds(int(node_period_*1000)),
+    std::bind(&AuvSim::timerCallback, this));
 }
+
 
 /**
  * @brief Timer callback for this node.
  *        Where the algorithms will constantly run.
  */
 
-void Simulation::thrustCallback(const control_allocation::msg::ThrusterRPM::SharedPtr msg){
+void AuvSim::rpmCallback(const control_allocation::msg::ThrusterRPM::SharedPtr msg){
 
-  for(int i=0; i < thrust.size(); i++) {
-    thrust[i] = msg->rpm[i];
-    RCLCPP_INFO(this->get_logger(), "Thrust[%d]: %f", i, thrust[i]);
+  for(int i=0; i < rpm_.size(); i++) {
+    rpm_[i] = msg->rpm[i]/thruster_gain;
   }
+
 
 }
 
-void Simulation::timerCallback() {
+void AuvSim::timerCallback() {
 
-  
-  auv_->update(node_period_, thrust);
+  RCLCPP_DEBUG(get_logger(), "Timer callback triggered");
+  auv_->update(node_period_, rpm_);
 
-
-  geometry_msgs::msg::Vector3 pos_msg, vel_msg, ori_msg, ang_vel_msg, lin_acc_msg, ang_acc_msg;
-  farol_msgs::msg::UTM utm_msg;
-
-  utm_msg.northing = originNorthing + auv_->getX();
-  utm_msg.easting = originEasting + auv_->getY();
-  utm_msg.utm_zone = UTMZone;
-  utm_msg.northp = northp;
-  utm_pub_->publish(utm_msg);
-  
+  geometry_msgs::msg::Vector3 pos_msg, body_vel_msg, ori_msg, ori_rate_msg, body_acc_msg, ang_acc_msg;
 
   pos_msg.x = auv_->getX();
   pos_msg.y = auv_->getY();
   pos_msg.z = auv_->getZ();
   position_pub_->publish(pos_msg);
 
-  vel_msg.x = auv_->getSurge();
-  vel_msg.y = auv_->getSway();
-  vel_msg.z = auv_->getHeave();
-  velocity_pub_->publish(vel_msg);
+  body_vel_msg.x = auv_->getSurge();
+  body_vel_msg.y = auv_->getSway();
+  body_vel_msg.z = auv_->getHeave();
+  body_velocity_pub_->publish(body_vel_msg);
 
   ori_msg.x = auv_->getRoll();
   ori_msg.y = auv_->getPitch();
   ori_msg.z = auv_->getYaw();
   orientation_pub_->publish(ori_msg);
 
-  ang_vel_msg.x = auv_->getRollRate();
-  ang_vel_msg.y = auv_->getPitchRate();
-  ang_vel_msg.z = auv_->getYawRate();
-  angular_velocity_pub_->publish(ang_vel_msg);
+  ori_rate_msg.x = auv_->getRollRate();
+  ori_rate_msg.y = auv_->getPitchRate();
+  ori_rate_msg.z = auv_->getYawRate();
+  orientation_rate_pub_->publish(ori_rate_msg);
 
-  lin_acc_msg.x = auv_->getSurgeDot();
-  lin_acc_msg.y = auv_->getSwayDot();
-  lin_acc_msg.z = auv_->getHeaveDot();
-  linear_acceleration_pub_->publish(lin_acc_msg);
+  body_acc_msg.x = auv_->getSurgeDot();
+  body_acc_msg.y = auv_->getSwayDot();
+  body_acc_msg.z = auv_->getHeaveDot();
+  body_acceleration_pub_->publish(body_acc_msg);
 
   ang_acc_msg.x = auv_->getRollRateDot();
   ang_acc_msg.y = auv_->getPitchRateDot();
@@ -336,12 +318,12 @@ void AUV::update(double dt, const Eigen::VectorXd &thrust) {
     Eigen::Vector3d ocean_disturbances;
     ocean_disturbances = this->computeOceanDisturbances();
 
-  /* Compute the dynamics of the rigid body - linear and angular acceleration in body frame */
-  Eigen::Vector3d v1_dot, v2_dot;
-  std::tie(v1_dot, v2_dot) = this->updateDynamics(applied_forces_and_torques);
-  // Store the latest accelerations
-  this->last_v1_dot_ = v1_dot;
-  this->last_v2_dot_ = v2_dot;
+    /* Compute the dynamics of the rigid body - linear and angular acceleration in body frame */
+    Eigen::Vector3d v1_dot, v2_dot;
+    std::tie(v1_dot, v2_dot) = this->updateDynamics(applied_forces_and_torques);
+    // Store the latest accelerations
+    this->last_v1_dot_ = v1_dot;
+    this->last_v2_dot_ = v2_dot;
 
     /* Integrate the dynamics */
     Eigen::Vector3d v1(this->state_.v1), v2(this->state_.v2);
@@ -358,7 +340,7 @@ void AUV::update(double dt, const Eigen::VectorXd &thrust) {
     eta2 = eulerIntegration(dt, eta2, eta2_dot);
 
     /* Wrap angles */
-    for(int i=0; i<3; i++) eta2(i) = wrapAngle(eta2(i));
+    for(int i=0; i<3; i++) eta2(i) = wrapTo2Pi(eta2(i));
 
     /* Update the state of the vehicle */
     this->state_.eta1 = eta1;
@@ -622,7 +604,7 @@ double AUV::getYawRateDot() const { return last_v2_dot_.z(); }
 int main(int argc, char ** argv) {
   /* initialise ROS2 and start the node */
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<Simulation>());
+  rclcpp::spin(std::make_shared<AuvSim>());
   rclcpp::shutdown();
   return 0;
 }

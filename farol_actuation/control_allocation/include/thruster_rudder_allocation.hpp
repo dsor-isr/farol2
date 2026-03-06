@@ -72,7 +72,7 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     double solve_delta_from_tau(double tau_r, double gamma, double V);
     
     /* Other variables */
-    rclcpp::Clock clock_;
+    rclcpp::Clock::SharedPtr clock_;
     control_allocation::msg::ThrusterForce thruster_force_msg_;
 
     std_msgs::msg::Float32 rudder_angle_ref_msg_, debug1_msg_;

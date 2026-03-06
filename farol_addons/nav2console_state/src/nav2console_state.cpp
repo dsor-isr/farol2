@@ -42,7 +42,7 @@ void Nav2ConsoleState::initialisePublishers() {
 
 void Nav2ConsoleState::nav_state_callback(const farol_msgs::msg::NavigationState &msg) {
   /* Update console_state_msg_ */
-  console_state_msg_.header.stamp = clock_.now();
+  console_state_msg_.header.stamp = this->now();
 
   /* PLACEHOLDER: these values should be actually included in the nav state  */
   /*              (via a measurement from drivers) and updated here then     */

@@ -23,6 +23,12 @@ def generate_launch_description():
     description='Vehicle name'
   )
 
+  use_sim_time_arg = DeclareLaunchArgument(
+    'use_sim_time',
+    default_value='false',
+    description='Use simulation time'
+  )
+
   config_package_path_share_arg = DeclareLaunchArgument(
     'config_package_path_share',
     default_value='',
@@ -54,6 +60,8 @@ def generate_launch_description():
   params = [
             # vehicle namespace
             {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
+
+            {'use_sim_time': True},
 
             # load default ROS configurations (from tmp files)
             PathJoinSubstitution([
@@ -123,6 +131,7 @@ def generate_launch_description():
     parameters=params
   )
 
+
   ######################################################
   # Return launch description with arguments and nodes #
   ######################################################
@@ -130,6 +139,7 @@ def generate_launch_description():
     # launch arguments
     vehicle_ns_arg,
     vehicle_name_arg,
+    use_sim_time_arg,
     config_package_path_share_arg,
     config_package_path_real_arg,
     launch_sample_and_hold_arg,

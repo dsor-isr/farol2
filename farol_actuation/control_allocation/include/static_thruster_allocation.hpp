@@ -59,7 +59,7 @@ class StaticThrusterAllocation : public rclcpp::Node {
     
     
     /* Other variables */
-    rclcpp::Clock clock_;
+    rclcpp::Clock::SharedPtr clock_;
     control_allocation::msg::ThrusterForce msg_;
     std::vector<std::map<std::string, std::variant<std::string, std::vector<double>>>> thruster_configuration_;
     Eigen::Matrix<double, 6, Eigen::Dynamic> thrust_allocation_matrix_;

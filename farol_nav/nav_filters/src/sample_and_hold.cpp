@@ -2,6 +2,9 @@
 
 /* Constructor */
 SampleAndHold::SampleAndHold() : Node("sample_and_hold") {
+
+
+  clock_ = this->get_clock();
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
@@ -184,7 +187,7 @@ void SampleAndHold::measurement_callback(farol_msgs::msg::Measurement::ConstShar
  */
 void SampleAndHold::timerCallback() {
   // Fill header 
-  filter_state_msg_.header.stamp = clock_.now();
+  filter_state_msg_.header.stamp = clock_->now();
 
   // Complementary filter to estimate course angle
   // Measurement: course angle from UTM position derivative
@@ -196,23 +199,23 @@ void SampleAndHold::timerCallback() {
   double vel_easting = (filter_state_msg_.utm_position.easting - prev_easting) / dt;
   double vel_northing = (filter_state_msg_.utm_position.northing - prev_northing) / dt;
   geometry_msgs::msg::Vector3 debug_msg;
-  debug_msg.x = vel_easting;
-  debug_msg.y = vel_northing;
+  debug_msg.x = vel_northing;
+  debug_msg.y = vel_easting;
   debug_msg.z = 0.0;
   debug_pub_->publish(debug_msg);
   prev_easting = filter_state_msg_.utm_position.easting;
   prev_northing = filter_state_msg_.utm_position.northing;
   
   // Measurement: course angle from velocity
-  double course_angle_meas = farol_utils::wrapTo2Pi(std::atan2(vel_northing, vel_easting));
-  debug_pub2_->publish(std_msgs::msg::Float64().set__data(course_angle_meas));
+  double course_angle_meas = farol_utils::wrapTo2Pi(std::atan2(filter_state_msg_.ned_velocity_inertial.y, filter_state_msg_.ned_velocity_inertial.x));
+  debug_pub2_->publish(std_msgs::msg::Float64().set__data(farol_utils::rad2deg(course_angle_meas)));
   
   // Complementary filter: combine gyro integration with measurement
   // course_angle_est = alpha * (gyro_integration) + (1 - alpha) * (measurement)
   double alpha = 0.95; // Gyro weight (adjust as needed)
   
   // Integrate gyro yaw rate
-  course_angle_est_ += filter_state_msg_.orientation_rate.z * dt;
+  course_angle_est_ += farol_utils::deg2rad(filter_state_msg_.orientation_rate.z) * dt;
   course_angle_est_ = farol_utils::wrapTo2Pi(course_angle_est_);
   
   // Apply complementary filter

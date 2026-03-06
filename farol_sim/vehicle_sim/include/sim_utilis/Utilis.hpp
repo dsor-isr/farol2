@@ -25,11 +25,27 @@ inline Eigen::VectorXd eulerIntegration(double dt, const Eigen::VectorXd &state,
  * @param angle An angle expressed in radians
  * @return A wrapped angle between 0 and 2PI (in radians)
  */
-inline double wrapAngle(double angle) {
+inline double wrapTo2Pi(double angle) {
 
     double wrapped_angle = std::fmod(angle, 2 * M_PI);
     if(wrapped_angle < 0) wrapped_angle += 2 * M_PI;
     return wrapped_angle;
+}
+
+inline double wrapToPi(double angle) {
+    angle = std::fmod(angle + M_PI, 2.0 * M_PI);
+    if (angle < 0)
+        angle += 2.0 * M_PI;
+    return angle - M_PI;
+}
+
+
+inline double deg_to_rad(double deg) {
+    return deg * M_PI / 180.0;
+}
+
+inline double rad_to_deg(double rad) {
+    return rad * 180.0 / M_PI;
 }
 
 /**

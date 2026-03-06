@@ -67,7 +67,7 @@ void PathNode::initializePublishers() {
  */
 void PathNode::initializeTimer() {
 	auto period = std::chrono::nanoseconds( static_cast<int64_t>(1e9 / node_frequency_));
-  timer_ = create_wall_timer(period, [this]() {timerCallback();});
+  timer_ = create_timer(period, [this]() {timerCallback();});
 }
 
 void PathNode::timerCallback() {
@@ -118,7 +118,7 @@ void PathNode::timerCallback() {
     if(pd && d_pd && dd_pd && tangent && curvature && derivative_norm) {
 
       /* Header for the message */
-      msg.header.stamp = this->clock_.now();
+      msg.header.stamp = this->now();
       msg.header.frame_id = this->frame_id_;
 
       /* The value of gamma used to make the computations */

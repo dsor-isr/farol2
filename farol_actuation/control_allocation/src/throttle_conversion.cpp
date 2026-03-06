@@ -2,6 +2,7 @@
 
 /* Constructor */
 ThrottleConversion::ThrottleConversion() : Node("throttle_conversion") {
+  clock_ = this->get_clock();
   loadParams();
   initialisePublishers();
   initialiseSubscribers();
@@ -46,7 +47,7 @@ void ThrottleConversion::initialiseServices() {}
  * @brief Compute throttle for each thruster based on rpm for that thruster.
  */
 void ThrottleConversion::rpmCommandCallback(control_allocation::msg::ThrusterRPM::SharedPtr msg) {
-  throttle_command_msg_.header.stamp = clock_.now();
+  throttle_command_msg_.header.stamp = clock_->now();
   throttle_command_msg_.value = {};
   
   for (int i = 0; i < (int)msg->rpm.size(); i++) {

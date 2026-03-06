@@ -120,6 +120,7 @@ void RPMConversion::thrusterForceCallback(control_allocation::msg::ThrusterForce
 
   }
   /* Publish */
+  //RCLCPP_INFO(this->get_logger(), "Publishing RPM command");
   rpm_command_pub_->publish(rpm_command_msg_);
 }
 

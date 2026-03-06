@@ -235,23 +235,25 @@ class PID : public rclcpp::Node {
     };
 
     /* Map with last received reference timestamps for each controller */
-    std::map<std::string, rclcpp::Time> controller_last_reference_ = {
-      {"surge", rclcpp::Time(0,1)}, /* 1 nanosecond */
-      {"sway", rclcpp::Time(0,1)},
-      {"heave", rclcpp::Time(0,1)},
-      {"yaw", rclcpp::Time(0,1)},
-      {"pitch", rclcpp::Time(0,1)},
-      {"roll", rclcpp::Time(0,1)},
-      {"yaw_rate", rclcpp::Time(0,1)},
-      {"pitch_rate", rclcpp::Time(0,1)},
-      {"roll_rate", rclcpp::Time(0,1)},
-      {"attitude", rclcpp::Time(0,1)}
-    };
+    std::map<std::string, rclcpp::Time> controller_last_reference_;
+    // std::map<std::string, rclcpp::Time> controller_last_reference_ = {
+    //   {"surge", rclcpp::Time(0,1)}, /* 1 nanosecond */
+    //   {"sway", rclcpp::Time(0,1)},
+    //   {"heave", rclcpp::Time(0,1)},
+    //   {"yaw", rclcpp::Time(0,1)},
+    //   {"pitch", rclcpp::Time(0,1)},
+    //   {"roll", rclcpp::Time(0,1)},
+    //   {"yaw_rate", rclcpp::Time(0,1)},
+    //   {"pitch_rate", rclcpp::Time(0,1)},
+    //   {"roll_rate", rclcpp::Time(0,1)},
+    //   {"attitude", rclcpp::Time(0,1)}
+    // };
 
     /* Other variables */
-    rclcpp::Clock clock_;
     double node_frequency_;
     geometry_msgs::msg::WrenchStamped body_wrench_request_msg_;
+    rclcpp::Clock::SharedPtr clock_;
+    rclcpp::Time last_update_time_;
     std_msgs::msg::Float32 float32_msg_;
     farol_msgs::msg::NavigationState nav_state_;
     std::set<std::string> controller_names_;

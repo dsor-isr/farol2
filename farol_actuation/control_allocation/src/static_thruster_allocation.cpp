@@ -2,6 +2,7 @@
 
 /* Constructor */
 StaticThrusterAllocation::StaticThrusterAllocation() : Node("static_thruster_allocation"){
+  clock_ = this->get_clock();
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
@@ -84,7 +85,7 @@ void StaticThrusterAllocation::bodyWrenchRequestCallback(geometry_msgs::msg::Wre
   forces_ = thrust_allocation_matrix_pseudo_inv_*tau_;
 
   /* Create message to publish */
-  msg_.header.stamp = clock_.now();
+  msg_.header.stamp = clock_->now();
   
   std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
   msg_.force = forces_vec;

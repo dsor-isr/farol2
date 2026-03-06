@@ -33,7 +33,7 @@
         subscribers:
           measurement: "/#vehicle#/measurement"
         publishers:
-          state: "/#vehicle#/nav/low_pass/state"
+          state: "/#vehicle#/nav/low_pass/state"  
 #######################
 # ---  Actuation  --- #
 #######################  
@@ -264,14 +264,47 @@
 ########################
 # ---  Simulation  --- #
 ########################
-  simulation:
+  auv_sim:
     ros__parameters:
       topics:
         subscribers:
-          thruster_force: "/#vehicle#/actuation/thruster_force"
+          rpm_command: "/#vehicle#/actuation/rpm_command"
         publishers:
           position: "/#vehicle#/sim/position"
           orientation: "/#vehicle#/sim/orientation"
-          velocity: "/#vehicle#/sim/velocity"
-          angular_velocity: "/#vehicle#/sim/angular_velocity"
+          body_velocity: "/#vehicle#/sim/body_velocity"
+          orientation_rate: "/#vehicle#/sim/orientation_rate"
+          body_acceleration: "/#vehicle#/sim/body_acceleration"
+          angular_acceleration: "/#vehicle#/sim/angular_acceleration"
+        services:
+          test2: "/#vehicle#/sim/change_something"
 
+  magic_electric_sim:
+    ros__parameters:
+      topics:
+        subscribers:
+          rpm_command: "/#vehicle#/actuation/rpm_command"
+          rudder_cmd: "/#vehicle#/rudder_command"
+          rudder_ref: "/#vehicle#/control/ref/rudder_angle"
+        publishers:
+          position: "/#vehicle#/sim/position"
+          orientation: "/#vehicle#/sim/orientation"
+          body_velocity: "/#vehicle#/sim/body_velocity"
+          orientation_rate: "/#vehicle#/sim/orientation_rate"
+          body_acceleration: "/#vehicle#/sim/body_acceleration"
+          angular_acceleration: "/#vehicle#/sim/angular_acceleration"
+          rudder_angle: "/#vehicle#/drivers/can_instrumentation/rudder_angle"
+        services:
+          test2: "/#vehicle#/sim/change_something"
+
+  sim_measurements:
+    ros__parameters:
+      topics:
+        subscribers:
+          position: "/#vehicle#/sim/position"
+          orientation: "/#vehicle#/sim/orientation"
+          body_velocity: "/#vehicle#/sim/body_velocity"
+          orientation_rate: "/#vehicle#/sim/orientation_rate"
+        publishers:
+          measurement: "/#vehicle#/measurement"
+   

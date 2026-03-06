@@ -159,4 +159,3 @@ double Arc2D::getClosestPointGamma(Eigen::Vector3d &coordinate) {
  
     return aux;
 }
-
