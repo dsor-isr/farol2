@@ -15,6 +15,12 @@
     ros__parameters:
       node_frequency: 10.0
       neglect_current: false
+      yaw_rate_lpf:
+        use_yaw_rate_lpf: true
+        omega_cutoff: 0.628 # 0.1 Hz cutoff frequency
+        order: 2
+        design: "bessel" # design options ("butterworth", "bessel")
+        method: "tustin" # descretization method ("tustin", "zoh", "euler")
 
   low_pass:
     ros__parameters:

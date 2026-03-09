@@ -65,8 +65,10 @@ class SampleAndHold : public rclcpp::Node {
     rclcpp::Clock::SharedPtr clock_;
     bool neglect_current_;
     double node_frequency_;
-    farol_utils::LowPassFilter course_lpf_;
+    farol_utils::LowPassFilter yaw_rate_lpf_;
     double last_time_;
     double course_angle_est_{0.0};
+    bool use_yaw_rate_lpf_;
+    double last_yaw_rate_meas_;
 
 };

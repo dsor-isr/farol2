@@ -2,8 +2,6 @@
 
 /* Constructor */
 SampleAndHold::SampleAndHold() : Node("sample_and_hold") {
-
-
   clock_ = this->get_clock();
   loadParams();
   initialiseSubscribers();
@@ -20,6 +18,13 @@ SampleAndHold::~SampleAndHold() {}
 void SampleAndHold::loadParams() {
   neglect_current_ = declare_parameter<bool>("neglect_current");
   node_frequency_ = declare_parameter<double>("node_frequency");  
+  use_yaw_rate_lpf_ = declare_parameter<bool>("yaw_rate_lpf.use_yaw_rate_lpf");
+  yaw_rate_lpf_.configure(declare_parameter<double>("yaw_rate_lpf.omega_cutoff"),
+                          1/node_frequency_, 
+                          declare_parameter<int>("yaw_rate_lpf.order"), 
+                          declare_parameter<std::string>("yaw_rate_lpf.design"), 
+                          declare_parameter<std::string>("yaw_rate_lpf.method"));
+
 }
 
 /**
@@ -40,7 +45,6 @@ void SampleAndHold::initialisePublishers() {
   state_pub_ = create_publisher<farol_msgs::msg::NavigationState>(
     declare_parameter<std::string>("topics.publishers.state"),
     rclcpp::QoS(1));
-  
   debug_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
     declare_parameter<std::string>("topics.publishers.course_velings_debug", "dummy"),
     rclcpp::QoS(1));
@@ -85,6 +89,7 @@ void SampleAndHold::measurement_callback(farol_msgs::msg::Measurement::ConstShar
       filter_state_msg_.orientation_rate.x = farol_utils::rad2deg(msg->value[0]);
       filter_state_msg_.orientation_rate.y = farol_utils::rad2deg(msg->value[1]);
       filter_state_msg_.orientation_rate.z = farol_utils::rad2deg(msg->value[2]);
+      last_yaw_rate_meas_ = farol_utils::rad2deg(msg->value[2]);
       break;
     /* UTM position (easting, northing) and UTM zone */
     case farol_msgs::msg::Measurement::MEAS_UTM_POSITION:
@@ -189,6 +194,16 @@ void SampleAndHold::timerCallback() {
   // Fill header 
   filter_state_msg_.header.stamp = clock_->now();
 
+  // aply low pass filter to yaw rate
+  yaw_rate_lpf_.step(filter_state_msg_.orientation_rate.z, 1/node_frequency_);
+  if(use_yaw_rate_lpf_){
+    debug_pub2_->publish(std_msgs::msg::Float64().set__data(last_yaw_rate_meas_));
+    filter_state_msg_.orientation_rate.z = yaw_rate_lpf_.y();
+  }else{
+    debug_pub2_->publish(std_msgs::msg::Float64().set__data(yaw_rate_lpf_.y()));
+  }
+  // filter_state_msg_.orientation_rate.z = yaw_rate_lpf_.y();
+
   // Complementary filter to estimate course angle
   // Measurement: course angle from UTM position derivative
   double dt = 1.0 / node_frequency_;
@@ -208,7 +223,7 @@ void SampleAndHold::timerCallback() {
   
   // Measurement: course angle from velocity
   double course_angle_meas = farol_utils::wrapTo2Pi(std::atan2(filter_state_msg_.ned_velocity_inertial.y, filter_state_msg_.ned_velocity_inertial.x));
-  debug_pub2_->publish(std_msgs::msg::Float64().set__data(farol_utils::rad2deg(course_angle_meas)));
+  // debug_pub2_->publish(std_msgs::msg::Float64().set__data(farol_utils::rad2deg(course_angle_meas)));
   
   // Complementary filter: combine gyro integration with measurement
   // course_angle_est = alpha * (gyro_integration) + (1 - alpha) * (measurement)
