@@ -62,10 +62,11 @@ void Pramod::callPFController(double dt) {
   */
   
   cross_track = pos_error[1];
-  static double zeta = cross_track*dt;
+  static double zeta = 0.0;//cross_track*dt;
 
   /*Anti windup gain*/
-  double Ka = 1/dt; /* = 1/Ts */
+  // double Ka = 1/dt; /* = 1/Ts */
+  double Ka = veh_surge/this->gains_[0]; // = U/K_1 
   
   /* zeta dynamics with anti-windup */
   double zeta_dot = cross_track + Ka *( 
@@ -82,7 +83,7 @@ void Pramod::callPFController(double dt) {
   /* psi_d = path_psi + asin(sat(u)) */
   double desired_yaw_rad = path_psi + asin(sigma_e(yaw_correction));
   
-  this->desired_yaw_ = desired_yaw_rad * 180 / M_PI;
+  this->desired_yaw_ = desired_yaw_rad;
   this->desired_surge_ = (path_vd + path_state_.vc) * path_hg;
 
   /* Path following values for debug */
@@ -102,7 +103,8 @@ void Pramod::publish_private() {
   msg.data = this->desired_surge_;
   this->surge_pub_->publish(msg);
 
-  msg.data = this->desired_yaw_ / 180 * M_PI;
+  // desired yaw in degrees
+  msg.data = farol_utils::rad2deg(farol_utils::wrapTo2Pi(this->desired_yaw_));
   this->yaw_pub_->publish(msg);
 
   // Publish path gamma
