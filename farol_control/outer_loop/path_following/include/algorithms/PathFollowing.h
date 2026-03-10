@@ -121,6 +121,7 @@ class PathFollowing {
     void setPFollowingDebugPublisher(const rclcpp::Publisher<farol_msgs::msg::PFDebug>::SharedPtr pfollowing_debug_pub) {pfollowing_debug_pub_ = pfollowing_debug_pub;};
     
   protected:
+    // use ROS time by default to stay consistent with node callbacks
     rclcpp::Clock clock_;
    
     /**

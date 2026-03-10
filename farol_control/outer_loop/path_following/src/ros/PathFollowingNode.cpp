@@ -5,6 +5,7 @@
 PathFollowingNode::PathFollowingNode() : Node("path_following", 
                                               rclcpp::NodeOptions()
                                                 .automatically_declare_parameters_from_overrides(true)) {
+  clock_ = this->get_clock();
   this->initialiseSubscribers();
   this->initialisePublishers();
   /* NOTE: initialiseServices is implemented inside PathFollowingServices.cpp */
@@ -232,9 +233,9 @@ void PathFollowingNode::vehicleStateCallback(const farol_msgs::msg::NavigationSt
                                msg.altimeter;
 
   /* Update the vehicle orientation */
-  double roll = farol_utils::wrapToPi(msg.orientation.x);
-  double pitch = farol_utils::wrapToPi(msg.orientation.y);
-  double yaw = farol_utils::wrapToPi(msg.orientation.z);
+  double roll = farol_utils::wrapToPi(farol_utils::deg2rad(msg.orientation.x));
+  double pitch = farol_utils::wrapToPi(farol_utils::deg2rad(msg.orientation.y));
+  double yaw = farol_utils::wrapToPi(farol_utils::deg2rad(msg.orientation.z));
   this->vehicle_state_.eta2 << roll, pitch, yaw;
 
   /* Update the vehicle linear velocity */
@@ -243,9 +244,9 @@ void PathFollowingNode::vehicleStateCallback(const farol_msgs::msg::NavigationSt
                              msg.body_velocity_inertial.z;
 
   /* Update the vehicle angular velocity */
-  this->vehicle_state_.v2 << msg.orientation_rate.x,
-                             msg.orientation_rate.y, 
-                             msg.orientation_rate.z;
+  this->vehicle_state_.v2 << farol_utils::deg2rad(msg.orientation_rate.x),
+                             farol_utils::deg2rad(msg.orientation_rate.y), 
+                             farol_utils::deg2rad(msg.orientation_rate.z);
 }
 
 /**
@@ -257,7 +258,7 @@ void PathFollowingNode::initialiseTimer() {
   
   /* Create timer */
   auto period = std::chrono::nanoseconds( static_cast<int64_t>(1e9 / node_frequency_));
-  this->timer_ = create_wall_timer(period, [this]() {timerIterCallback();});
+  this->timer_ = create_timer(period, [this]() {timerIterCallback();});
 
   /* Wait for the start service to start the Path Following */
   this->timer_->cancel();
@@ -277,10 +278,9 @@ void PathFollowingNode::timerIterCallback() {
   this->pf_algorithm_->UpdatePathState(this->path_state_);
 
   /* Get the difference between previous update time and current update time */
-  rclcpp::Time curr_time = clock_.now();
+  rclcpp::Time curr_time = clock_->now();  // use node's clock to match prev_time_
   rclcpp::Duration dt = curr_time - this->prev_time_;
   this->prev_time_ = curr_time;
-
   /* Compute the control law */
   this->pf_algorithm_->callPFController(double(dt.seconds()));
 
@@ -293,7 +293,6 @@ void PathFollowingNode::timerIterCallback() {
     this->sendWaypoint(WP_FINISH);
     /* Reset the DR postion to the 2d state filter position */
     this->sendResetDeadReckoning();
-
   }
 }
 

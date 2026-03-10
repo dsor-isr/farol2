@@ -19,7 +19,7 @@ void PathFollowing::publish() {
 
   farol_msgs::msg::PFDebug pf_debug;
 
-  pf_debug.header.stamp = clock_.now();
+  // pf_debug.header.stamp = clock_.now();
   pf_debug.algorithm = pfollowing_debug_.algorithm;
   pf_debug.cross_track_error = pfollowing_debug_.cross_track_error;
   pf_debug.along_track_error = pfollowing_debug_.along_track_error;
