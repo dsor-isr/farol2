@@ -90,7 +90,7 @@ void WpLoose::calculateRef(Vehicle_t state, WPref_t wp_ref, bool turn_radius_fla
     msg.data = getSurgeOut();
     surge_pub_->publish(msg);
 
-    msg.data = getYawOut() / 180 * M_PI;
+    msg.data = getYawOut();
     yaw_pub_->publish(msg);
   }
 

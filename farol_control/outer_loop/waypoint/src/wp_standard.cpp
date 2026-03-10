@@ -67,7 +67,7 @@ WpStandard::WpStandard(rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surg
     msg.data = getSurgeOut();
     surge_pub_->publish(msg);
 
-    msg.data = getYawOut() / 180 * M_PI;
+    msg.data = getYawOut();
     yaw_pub_->publish(msg);
   }
 

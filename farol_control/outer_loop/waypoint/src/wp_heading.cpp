@@ -72,6 +72,6 @@ void WpHeading::publish() {
   msg.data = getSwayOut();
   sway_pub_->publish(msg);
 
-  msg.data = getYawrateOut() / 180 * M_PI;
+  msg.data = getYawrateOut();
   yaw_rate_pub_->publish(msg);
 }

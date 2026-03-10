@@ -136,7 +136,7 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(geometry_msgs::msg::Wre
   }
 
   /* Create message to publish rudder angle reference */
-  rudder_angle_ref_msg_.data = rudder_angle_;
+  rudder_angle_ref_msg_.data = farol_utils::rad2deg(farol_utils::wrapTo2Pi(rudder_angle_));
   rudder_angle_ref_pub_->publish(rudder_angle_ref_msg_);
 }
 

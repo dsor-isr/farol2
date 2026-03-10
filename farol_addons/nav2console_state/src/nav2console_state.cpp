@@ -67,14 +67,14 @@ void Nav2ConsoleState::nav_state_callback(const farol_msgs::msg::NavigationState
   console_state_msg_.surge = msg.body_velocity_fluid.x;
 
   /* Orientation */
-  console_state_msg_.yaw = msg.orientation.z / M_PI * 180;
-  console_state_msg_.pitch = msg.orientation.y / M_PI * 180;
-  console_state_msg_.roll = msg.orientation.x / M_PI * 180;
+  console_state_msg_.yaw = msg.orientation.z;
+  console_state_msg_.pitch = msg.orientation.y;
+  console_state_msg_.roll = msg.orientation.x;
 
   /* Orientation Rate */
-  console_state_msg_.yaw_rate = msg.orientation_rate.z / M_PI * 180;
-  console_state_msg_.pitch_rate = msg.orientation_rate.y / M_PI * 180;
-  console_state_msg_.roll_rate = msg.orientation_rate.x / M_PI * 180;
+  console_state_msg_.yaw_rate = msg.orientation_rate.z;
+  console_state_msg_.pitch_rate = msg.orientation_rate.y;
+  console_state_msg_.roll_rate = msg.orientation_rate.x;
 
   /* Inside Pressure, Battery Level, Altitude */
   /* PLACEHOLDER: should be should be actually included in the nav state  */
