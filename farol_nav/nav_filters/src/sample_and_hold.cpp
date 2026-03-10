@@ -18,6 +18,7 @@ SampleAndHold::~SampleAndHold() {}
 void SampleAndHold::loadParams() {
   neglect_current_ = declare_parameter<bool>("neglect_current");
   node_frequency_ = declare_parameter<double>("node_frequency");  
+  course_angle_cutoff_frequency_ = 2.0 * M_PI * declare_parameter<double>("course_cf.cutoff_frequency");
   use_yaw_rate_lpf_ = declare_parameter<bool>("yaw_rate_lpf.use_yaw_rate_lpf");
   yaw_rate_lpf_.configure(declare_parameter<double>("yaw_rate_lpf.omega_cutoff"),
                           1/node_frequency_, 
@@ -44,9 +45,6 @@ void SampleAndHold::initialiseSubscribers() {
 void SampleAndHold::initialisePublishers() {
   state_pub_ = create_publisher<farol_msgs::msg::NavigationState>(
     declare_parameter<std::string>("topics.publishers.state"),
-    rclcpp::QoS(1));
-  debug_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-    declare_parameter<std::string>("topics.publishers.course_velings_debug", "dummy"),
     rclcpp::QoS(1));
   debug_pub2_ = create_publisher<std_msgs::msg::Float64>(
     declare_parameter<std::string>("topics.publishers.course_meas_debug", "dummy2"),
@@ -191,6 +189,7 @@ void SampleAndHold::measurement_callback(farol_msgs::msg::Measurement::ConstShar
  *        Where the algorithms will constantly run.
  */
 void SampleAndHold::timerCallback() {
+  double dt = 1.0 / node_frequency_;
   // Fill header 
   filter_state_msg_.header.stamp = clock_->now();
 
@@ -202,42 +201,21 @@ void SampleAndHold::timerCallback() {
   }else{
     debug_pub2_->publish(std_msgs::msg::Float64().set__data(yaw_rate_lpf_.y()));
   }
-  // filter_state_msg_.orientation_rate.z = yaw_rate_lpf_.y();
 
-  // Complementary filter to estimate course angle
-  // Measurement: course angle from UTM position derivative
-  double dt = 1.0 / node_frequency_;
-  
-  // Compute position derivatives
-  static double prev_easting = filter_state_msg_.utm_position.easting;
-  static double prev_northing = filter_state_msg_.utm_position.northing;
-  double vel_easting = (filter_state_msg_.utm_position.easting - prev_easting) / dt;
-  double vel_northing = (filter_state_msg_.utm_position.northing - prev_northing) / dt;
-  geometry_msgs::msg::Vector3 debug_msg;
-  debug_msg.x = vel_northing;
-  debug_msg.y = vel_easting;
-  debug_msg.z = 0.0;
-  debug_pub_->publish(debug_msg);
-  prev_easting = filter_state_msg_.utm_position.easting;
-  prev_northing = filter_state_msg_.utm_position.northing;
-  
-  // Measurement: course angle from velocity
+  // Estimate course angle using a simple complementary filter
+  // Measurement: course angle from inertial velocity
   double course_angle_meas = farol_utils::wrapTo2Pi(std::atan2(filter_state_msg_.ned_velocity_inertial.y, filter_state_msg_.ned_velocity_inertial.x));
   // debug_pub2_->publish(std_msgs::msg::Float64().set__data(farol_utils::rad2deg(course_angle_meas)));
-  
-  // Complementary filter: combine gyro integration with measurement
-  // course_angle_est = alpha * (gyro_integration) + (1 - alpha) * (measurement)
-  double alpha = 0.95; // Gyro weight (adjust as needed)
-  
-  // Integrate gyro yaw rate
+    
+  // Predict with gyro integration
   course_angle_est_ += farol_utils::deg2rad(filter_state_msg_.orientation_rate.z) * dt;
   course_angle_est_ = farol_utils::wrapTo2Pi(course_angle_est_);
   
-  // Apply complementary filter
-  course_angle_est_ = alpha * course_angle_est_ + (1.0 - alpha) * course_angle_meas;
+  // Correct estimate
+  course_angle_est_ += (1.0 - std::exp(-course_angle_cutoff_frequency_ * dt)) * farol_utils::wrapToPi(course_angle_meas - course_angle_est_);
   course_angle_est_ = farol_utils::wrapTo2Pi(course_angle_est_);
-  
-  // Compute course angle
+
+  // Output in degrees
   filter_state_msg_.course_angle = farol_utils::rad2deg(course_angle_est_);
 
   // Publish filter state message 

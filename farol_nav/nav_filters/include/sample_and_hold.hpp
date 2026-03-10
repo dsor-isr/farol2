@@ -70,5 +70,6 @@ class SampleAndHold : public rclcpp::Node {
     double course_angle_est_{0.0};
     bool use_yaw_rate_lpf_;
     double last_yaw_rate_meas_;
+    double course_angle_cutoff_frequency_;
 
 };

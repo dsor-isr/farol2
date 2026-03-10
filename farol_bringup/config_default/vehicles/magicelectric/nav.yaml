@@ -15,6 +15,8 @@
     ros__parameters:
       node_frequency: 10.0
       neglect_current: false
+      course_cf:
+        cutoff_frequency: 0.1 # Hz
       yaw_rate_lpf:
         use_yaw_rate_lpf: false
         omega_cutoff: 0.628 
