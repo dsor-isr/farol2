@@ -9,14 +9,14 @@
 #include "rclcpp/parameter.hpp"
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "std_msgs/msg/string.hpp"
-#include "control_allocation/msg/body_wrench_request.hpp"
+#include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "control_allocation/msg/thruster_force.hpp"
 
 #include <actuation_utils.hpp>
 
 /**
  * @brief   Static Thruster Allocation
- * @author  Eduardo Cunha
+ * @author  DSOR Team
  */
 class StaticThrusterAllocation : public rclcpp::Node {
   public:
@@ -50,21 +50,22 @@ class StaticThrusterAllocation : public rclcpp::Node {
 
     /* Declare publishers, subscribers, services, etc. */
     rclcpp::Publisher<control_allocation::msg::ThrusterForce>::SharedPtr thruster_force_pub_;
-    rclcpp::Subscription<control_allocation::msg::BodyWrenchRequest>::SharedPtr body_wrench_request_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr body_wrench_request_sub_;
     
     /* Callbacks */
-    void bodyWrenchRequestCallback(const control_allocation::msg::BodyWrenchRequest &msg);
+    void bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped::SharedPtr msg);
 
     /* Other functions */
     
     
     /* Other variables */
-    rclcpp::Clock clock_;
+    rclcpp::Clock::SharedPtr clock_;
     control_allocation::msg::ThrusterForce msg_;
     std::vector<std::map<std::string, std::variant<std::string, std::vector<double>>>> thruster_configuration_;
     Eigen::Matrix<double, 6, Eigen::Dynamic> thrust_allocation_matrix_;
     Eigen::Matrix<double, Eigen::Dynamic, 6> thrust_allocation_matrix_pseudo_inv_;
     Eigen::Vector<double, 6> tau_;
     Eigen::Vector<double, Eigen::Dynamic> forces_;
-    int nr_thrusters_;
+    size_t nr_thrusters_;
+    double node_frequency_;
 };

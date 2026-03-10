@@ -5,6 +5,7 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.conditions import IfCondition
 
+
 def generate_launch_description():
   
   ####################
@@ -22,6 +23,13 @@ def generate_launch_description():
     description='Vehicle name'
   )
 
+  use_sim_time_arg = DeclareLaunchArgument(
+    'use_sim_time',
+    default_value='false',
+    description='Use simulation time'
+  )
+
+
   config_package_path_share_arg = DeclareLaunchArgument(
     'config_package_path_share',
     default_value='',
@@ -37,13 +45,13 @@ def generate_launch_description():
   launch_static_thruster_allocation_arg = DeclareLaunchArgument(
     'static_thruster_allocation',
     default_value='true',
-    description='Boolean to determine if static thruster allocation node is launched.'
+    description='Boolean to determine if "static_thruster_allocation" node is launched.'
   )
 
   launch_thruster_rudder_allocation_arg = DeclareLaunchArgument(
     'thruster_rudder_allocation',
-    default_value='true',
-    description='Boolean to determine if thruster rudder allocation node is launched.'
+    default_value='false',
+    description='Boolean to determine if "thruster_rudder_allocation" node is launched.'
   )
 
   ###################################
@@ -52,6 +60,8 @@ def generate_launch_description():
   params = [
             # vehicle namespace
             {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
+
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
 
             # load default ROS configurations (from tmp files)
             PathJoinSubstitution([
@@ -94,7 +104,7 @@ def generate_launch_description():
   ###################
   static_thruster_allocation_node = Node(
     package='control_allocation',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/actuation'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'actuation']),
     executable='static_thruster_allocation',
     name='static_thruster_allocation',
     output='screen',
@@ -104,7 +114,7 @@ def generate_launch_description():
 
   thruster_rudder_allocation_node = Node(
     package='control_allocation',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/actuation'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'actuation']),
     executable='thruster_rudder_allocation',
     name='thruster_rudder_allocation',
     output='screen',
@@ -114,7 +124,7 @@ def generate_launch_description():
 
   rpm_conversion_node = Node(
     package='control_allocation',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/actuation'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'actuation']),
     executable='rpm_conversion',
     name='rpm_conversion',
     output='screen',
@@ -123,7 +133,7 @@ def generate_launch_description():
 
   throttle_conversion_node = Node(
     package='control_allocation',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/actuation'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'actuation']),
     executable='throttle_conversion',
     name='throttle_conversion',
     output='screen',
@@ -132,7 +142,7 @@ def generate_launch_description():
 
   wrench_manager_node = Node(
     package='wrench_manager',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/actuation'],
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'actuation']),
     executable='wrench_manager_node',
     name='wrench_manager',
     output='screen',
@@ -146,6 +156,7 @@ def generate_launch_description():
     # launch arguments
     vehicle_ns_arg,
     vehicle_name_arg,
+    use_sim_time_arg,
     config_package_path_share_arg,
     config_package_path_real_arg,
     launch_static_thruster_allocation_arg,

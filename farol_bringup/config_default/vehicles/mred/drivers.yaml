@@ -62,7 +62,7 @@
       #########################
       # Airmar200WX Interface #
       #########################
-      airmar200wx:
+      airmar_200wx:
         # port: /dev/magic/wind
         port: /dev/ttyS1
         baudrate: 4800 # not being used
@@ -70,6 +70,6 @@
       ##########################
       # AirmarDX900+ Interface #
       ##########################
-      airmardx900:
+      airmar_dx900:
         port: /dev/ttyS2
         baudrate: 4800 # not being used

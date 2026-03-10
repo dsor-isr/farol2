@@ -1,4 +1,8 @@
-/**:
+################################
+#   Default Parameters
+################################
+
+/**/actuation/**:
   ros__parameters:
     actuation:
       model:
@@ -12,22 +16,8 @@
           min: -36.0 # [deg]
         cm_distance: 4.0 # [m]
       thrusters:
-        rpm_conversion:
-          max_rpm: 2000.0
-          min_rpm: -2000.0
-          mode: 0
-          mode0:
-            # Force [N] = rho*(rpm/60)^2*D^4*K_T_BP*(1 - u/(rps*prop_pitch))
-            rho: 1025.0 # % Density of salt water kg/m^3
-            K_T_BP: 0.061461915
-            prop_pitch: 0.381 # 15 in
-            D: 0.4318 # m
-          mode1:
-            # Forces (N) = ct[0]*RPM^2 + c[1]*RPM + c[2]
-            coef_fwd: [0.00000177778, 0.0, 0.0]     # parameters for farol seabotix, eqn -> Thrust = f(rpm)
-            coef_bwd: [-0.00000177778, 0.0, 0.0]    # parameters for farol seabotix, eqn -> Thrust = f(rpm)
-        throttle_conversion:
-          k: 20.0 # throttle[%] * k = [RPM] -> throttle[%] = [RPM] / k
+        open_loop: true
+        n_thrusters: 2
         configuration:
           0:
             name: "Portside"
@@ -54,3 +44,38 @@
           #   name: "Starboard-Stern"
           #   moment_arms: [-1.0, 1.0, 0.0]
           #   angles: [0.0, 0.0, 45.0] # roll, pitch, yaw
+
+
+# Parameters by NODE
+/**:
+  wrench_manager:
+    ros__parameters:
+      node_frequency: 10.0
+
+  static_thruster_allocation:
+    ros__parameters:
+      node_frequency: 10.0
+  
+  thruster_rudder_allocation:
+    ros__parameters:
+      node_frequency: 10.0
+  
+  rpm_conversion:
+    ros__parameters:
+      max_rpm: 2000.0
+      min_rpm: -2000.0
+      mode: 0
+      mode0:
+        # Force [N] = rho*(rpm/60)^2*D^4*K_T_BP*(1 - u/(rps*prop_pitch))
+        rho: 1025.0 # % Density of salt water kg/m^3
+        K_T_BP: 0.061461915
+        prop_pitch: 0.381 # 15 in
+        D: 0.4318 # m
+      mode1:
+        # Forces (N) = ct[0]*RPM^2 + c[1]*RPM + c[2]
+        coef_fwd: [0.00000177778, 0.0, 0.0]     # parameters for farol seabotix, eqn -> Thrust = f(rpm)
+        coef_bwd: [-0.00000177778, 0.0, 0.0]    # parameters for farol seabotix, eqn -> Thrust = f(rpm)
+    
+  throttle_conversion:
+    ros__parameters:
+      k: 20.0 # throttle[%] * k = [RPM] -> throttle[%] = [RPM] / k

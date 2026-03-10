@@ -3,7 +3,7 @@
 <package format="3">
   <name>farol_msgs</name>
   <version>0.0.0</version>
-  <description>FAROL_MSGS: Custom messages and services for FAROL</description>
+  <description>farol_msgs: Custom messages and services for FAROL</description>
   <maintainer email="eduardo.m.a.cunha@tecnico.ulisboa.pt">Eduardo Cunha</maintainer>
   <license>MIT</license>
 

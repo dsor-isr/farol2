@@ -135,7 +135,7 @@ void RelativeHeading::publish_private(){
     msg.data = this->desired_sway_;
     this->sway_pub_->publish(msg);
 
-    msg.data = this->desired_yaw_ / 180 * M_PI;
+    msg.data = this->desired_yaw_;
     this->yaw_pub_->publish(msg);
 
     /* Publish the virtual targets value */

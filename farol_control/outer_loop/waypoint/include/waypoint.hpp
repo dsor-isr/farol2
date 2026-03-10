@@ -123,7 +123,7 @@ private:
    *
    * @param msg contains the state info
    */
-  void stateCallback(const farol_msgs::msg::NavigationState &msg);
+  void stateCallback(farol_msgs::msg::NavigationState::SharedPtr msg);
 
   /**
    * @brief  Callback function of the flag topic.
@@ -131,14 +131,14 @@ private:
    *
    * @param msg contains the flag info
    */
-  void missionStatusCallback(const std_msgs::msg::Int8 &msg);
+  void missionStatusCallback(std_msgs::msg::Int8::SharedPtr msg);
 
   /**
    * @brief  Callback function of the turn radius flag topic.
    *
    * @param msg contains the flag info
    */
-  void turnRadiusFlagCallback(const std_msgs::msg::Bool &msg);
+  void turnRadiusFlagCallback(std_msgs::msg::Bool::SharedPtr msg);
 
   /* Timer callback */
   void timerCallback();

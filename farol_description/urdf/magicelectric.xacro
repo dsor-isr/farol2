@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="magicelectric">
+
+  <!-- Constants -->
+  <xacro:property name="M_PI"     value="3.1415926535897931" />
+
+  <!-- Base -->
+  <link name="base_link"/>
+
+  <!-- INS -->
+  <link name="ins_link"/>
+  <joint name="base_to_ins" type="fixed">
+    <parent link="base_link"/>
+    <child link="ins_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Thrusters -->
+  <!-- ! Right now Z location of thruters is the same as center of mass because its simulated that way in holoocean -->
+  <link name="thruster_left_link"/>
+  <joint name="base_to_thruster_left" type="fixed">
+    <parent link="base_link"/>
+    <child link="thruster_left_link"/>
+    <origin xyz="-0.5 0.34 0.0" rpy="0 0 0"/>
+  </joint>
+  <link name="thruster_right_link"/>
+  <joint name="base_to_thruster_right" type="fixed">
+    <parent link="base_link"/>
+    <child link="thruster_right_link"/>
+    <origin xyz="-0.5 -0.34 0.0" rpy="0 0 0"/>
+  </joint>
+
+
+</robot>
+

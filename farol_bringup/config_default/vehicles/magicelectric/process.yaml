@@ -3,9 +3,10 @@
 # the personal bringup under the newly created colcon  #
 # workspace.                                           #
 ########################################################
+
 processes:
   - name: 'bag_record'
-    launch_on_startup: true
+    launch_on_startup: false
     delay_before_start: 0.0
     cmd: 'ros2 launch farol_bringup bag_record.launch.py'
     args:
@@ -13,37 +14,92 @@ processes:
       # - prefix:=something_you_want # default prefix is the vehicle's namespace
     dependencies:
       []
-  - name: 'navigation'
-    launch_on_startup: true
-    delay_before_start: 0.0
-    cmd: 'ros2 launch farol_bringup nav.launch.py'
-    args:
-      []
-    dependencies:
-      []
-  - name: 'actuation'
+
+  - name: 'time'
     launch_on_startup: true
     delay_before_start: 0.1
-    cmd: 'ros2 launch farol_bringup actuation.launch.py'
+    cmd: 'ros2 launch farol_bringup time.launch.py'
     args:
-      - static_thruster_allocation:=true
-      - thruster_rudder_allocation:=false
+      []
     dependencies:
-      - navigation
-  - name: "control"
+      []
+
+  - name: 'sim'
+    launch_on_startup: true
+    delay_before_start: 0.2
+    cmd: 'ros2 launch farol_bringup sim.launch.py'
+    args:
+      - magic_electric_sim:=true
+      - auv_sim:=false
+      - sim_measurements:=true
+    dependencies:
+      []
+  
+
+  - name: 'navigation'
     launch_on_startup: true
     delay_before_start: 0.3
-    cmd: 'ros2 launch farol_bringup control.launch.py'
+    cmd: 'ros2 launch farol_bringup nav.launch.py'
+    args:
+      - sample_and_hold:=true
+      - low_pass:=false
+    dependencies:
+      []
+
+  - name: 'actuation'
+    launch_on_startup: true
+    delay_before_start: 0.4
+    cmd: 'ros2 launch farol_bringup actuation.launch.py'
+    args:
+      - static_thruster_allocation:=false
+      - thruster_rudder_allocation:=true
+    dependencies:
+      - navigation
+
+  - name: "inner_loop"
+    launch_on_startup: true
+    delay_before_start: 0.5
+    cmd: 'ros2 launch farol_bringup inner_loop.launch.py'
+    args:
+      - pid:=true
+      - open_loop:=false
+    dependencies:
+      - navigation
+      - actuation
+
+  - name: "outer_loop"
+    launch_on_startup: true
+    delay_before_start: 0.6
+    cmd: 'ros2 launch farol_bringup outer_loop.launch.py'
+    args:
+      - waypoint:=true
+      - path_following:=true
+    dependencies:
+      - navigation
+      - actuation
+      - inner_loop
+
+  - name: "planning"
+    launch_on_startup: true
+    delay_before_start: 0.7
+    cmd: 'ros2 launch farol_bringup planning.launch.py'
     args:
       []
     dependencies:
       - navigation
       - actuation
-  - name: 'sim'
-    launch_on_startup: false
-    delay_before_start: 0.4
-    cmd: 'ros2 launch farol_bringup sim.launch.py'
+      - inner_loop
+      - outer_loop
+
+  - name: 'addons'
+    launch_on_startup: true
+    delay_before_start: 0.8
+    cmd: 'ros2 launch farol_bringup addons.launch.py'
     args:
-      - simulation:=true
-    dependencies:
       []
+    dependencies:
+      - navigation
+      - actuation
+      - inner_loop
+      - outer_loop
+      - planning

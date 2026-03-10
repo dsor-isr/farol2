@@ -3,7 +3,6 @@
 /* Constructor */
 Nav2ConsoleState::Nav2ConsoleState() : Node("nav2console_state", 
                                             rclcpp::NodeOptions()
-                                              .allow_undeclared_parameters(true)
                                               .automatically_declare_parameters_from_overrides(true)) {
   loadParams();
   initialiseSubscribers();
@@ -27,7 +26,7 @@ void Nav2ConsoleState::loadParams() {
  */
 void Nav2ConsoleState::initialiseSubscribers() {
   nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
-                get_parameter("addons.nav2console_state.topics.subscribers.nav_state").as_string(), 
+                get_parameter("topics.subscribers.nav_state").as_string(), 
                 1, std::bind(&Nav2ConsoleState::nav_state_callback, this, std::placeholders::_1));
 
   return;
@@ -38,12 +37,12 @@ void Nav2ConsoleState::initialiseSubscribers() {
  */
 void Nav2ConsoleState::initialisePublishers() {
   console_state_pub_ = create_publisher<farol_msgs::msg::StateConsole>(
-                        get_parameter("addons.nav2console_state.topics.publishers.console_state").as_string(), 1);
+                        get_parameter("topics.publishers.console_state").as_string(), 1);
 }
 
 void Nav2ConsoleState::nav_state_callback(const farol_msgs::msg::NavigationState &msg) {
   /* Update console_state_msg_ */
-  console_state_msg_.header.stamp = clock_.now();
+  console_state_msg_.header.stamp = this->now();
 
   /* PLACEHOLDER: these values should be actually included in the nav state  */
   /*              (via a measurement from drivers) and updated here then     */
@@ -68,14 +67,14 @@ void Nav2ConsoleState::nav_state_callback(const farol_msgs::msg::NavigationState
   console_state_msg_.surge = msg.body_velocity_fluid.x;
 
   /* Orientation */
-  console_state_msg_.yaw = msg.orientation.z / M_PI * 180;
-  console_state_msg_.pitch = msg.orientation.y / M_PI * 180;
-  console_state_msg_.roll = msg.orientation.x / M_PI * 180;
+  console_state_msg_.yaw = msg.orientation.z;
+  console_state_msg_.pitch = msg.orientation.y;
+  console_state_msg_.roll = msg.orientation.x;
 
   /* Orientation Rate */
-  console_state_msg_.yaw_rate = msg.orientation_rate.z / M_PI * 180;
-  console_state_msg_.pitch_rate = msg.orientation_rate.y / M_PI * 180;
-  console_state_msg_.roll_rate = msg.orientation_rate.x / M_PI * 180;
+  console_state_msg_.yaw_rate = msg.orientation_rate.z;
+  console_state_msg_.pitch_rate = msg.orientation_rate.y;
+  console_state_msg_.roll_rate = msg.orientation_rate.x;
 
   /* Inside Pressure, Battery Level, Altitude */
   /* PLACEHOLDER: should be should be actually included in the nav state  */

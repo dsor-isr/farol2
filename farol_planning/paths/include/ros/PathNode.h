@@ -117,8 +117,8 @@ class PathNode : public rclcpp::Node {
      * @brief ROS Timer
      */
     rclcpp::TimerBase::SharedPtr timer_;
-
     rclcpp::Clock clock_;
+    double node_frequency_;
 
     void initializeSubscribers();
     void initializePublishers();

@@ -14,6 +14,8 @@
 #include "paths/srv/set_mode.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "farol_msgs/msg/pf_debug.hpp"
+#include <farol_utils/angles.hpp>
+
 
 /**
  * @brief  A Base class to update the path following law.
@@ -119,6 +121,7 @@ class PathFollowing {
     void setPFollowingDebugPublisher(const rclcpp::Publisher<farol_msgs::msg::PFDebug>::SharedPtr pfollowing_debug_pub) {pfollowing_debug_pub_ = pfollowing_debug_pub;};
     
   protected:
+    // use ROS time by default to stay consistent with node callbacks
     rclcpp::Clock clock_;
    
     /**

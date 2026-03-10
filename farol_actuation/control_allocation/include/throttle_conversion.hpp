@@ -43,12 +43,12 @@ class ThrottleConversion : public rclcpp::Node {
     rclcpp::Publisher<farol_msgs::msg::Thruster>::SharedPtr throttle_command_pub_;
     
     /* Callbacks */
-    void rpmCommandCallback(const control_allocation::msg::ThrusterRPM &msg);
+    void rpmCommandCallback(control_allocation::msg::ThrusterRPM::SharedPtr msg);
 
     /* Other functions */
     
     /* Other variables */
-    rclcpp::Clock clock_;
+    rclcpp::Clock::SharedPtr clock_;
     farol_msgs::msg::Thruster throttle_command_msg_;
     double k_;
     // double rpm_value_, max_rpm_, min_rpm_;

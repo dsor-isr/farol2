@@ -57,7 +57,7 @@ void Breivik::callPFController(double dt) {
   this->desired_yaw_ = this->path_state_.psi + atan(-y1 / this->delta_h_);
 
   /* Convert the yaw from rad to deg (used by the inner-loop controller) */
-  this->desired_yaw_ = this->desired_yaw_ * 180.0 / M_PI;
+  // this->desired_yaw_ = this->desired_yaw_ * 180.0 / M_PI;
 
   /* Compute the evolution of the virtual target */
   double k3 = 1.0;
@@ -117,7 +117,7 @@ void Breivik::publish_private(){
   msg.data = this->desired_surge_;
   this->surge_pub_->publish(msg);
   
-  msg.data = this->desired_yaw_ / 180 * M_PI;
+  msg.data = farol_utils::rad2deg(farol_utils::wrapTo2Pi(this->desired_yaw_));
   this->yaw_pub_->publish(msg);
 
   /* Publish the virtual targets value */

@@ -22,7 +22,7 @@ void Rudder::loadParams() {
   declare_parameter<double>("control.inner_loop.rudder.deadzone", 4.0);
 
   /* Actually get the parameters */
-  deadzone_ = get_parameter("control.inner_loop.rudder.deadzone").as_double() / 180 * M_PI;
+  deadzone_ = get_parameter("control.inner_loop.rudder.deadzone").as_double() * M_PI/ 180 ;
 }
 
 /**
@@ -79,7 +79,7 @@ void Rudder::initialiseTimers() {
   int freq = get_parameter("control.inner_loop.rudder.node_frequency").as_int();
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&Rudder::timerCallback, this));
+  timer_ = create_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&Rudder::timerCallback, this));
 }
 
 /**
@@ -93,8 +93,9 @@ void Rudder::timerCallback() {
 void Rudder::rudderAngleRefCallback(const std_msgs::msg::Float32 &msg) {
   rudder_angle_ref_ = msg.data;
 
-  double rudder_direction = 0;
 
+  double rudder_direction = 0;
+  //RCLCPP_INFO(get_logger(), "Rudder angle ref: %f | Rudder angle: %f | Deadzone: %f", rudder_angle_ref_, rudder_angle_, deadzone_);
   // if rudder angle error out of deadzone
   if (abs(rudder_angle_ - rudder_angle_ref_) > deadzone_) { // ~4.0 deg
     if (rudder_angle_ref_ > rudder_angle_) {

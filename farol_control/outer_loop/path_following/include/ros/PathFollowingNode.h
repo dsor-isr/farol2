@@ -146,8 +146,10 @@ class PathFollowingNode : public rclcpp::Node {
 
     /* Timer for node's callbacks */
     rclcpp::TimerBase::SharedPtr timer_;
-    
-    rclcpp::Clock clock_;
+    rclcpp::Clock::SharedPtr clock_;
+
+
+    double node_frequency_;
 
     /**
      * @brief Method to allocate memory for a default PF controller class 

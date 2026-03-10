@@ -9,20 +9,23 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(farol_msgs REQUIRED)
 find_package(control_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(farol_utils REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 # Collect all .msg and .srv files
-# file(GLOB MSG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
+file(GLOB MSG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
 file(GLOB SRV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "srv/*.srv")
+
 
 # Generate messages and services
 rosidl_generate_interfaces(${PROJECT_NAME}
-  # ${MSG_FILES}
+  ${MSG_FILES}
   ${SRV_FILES}
   DEPENDENCIES std_msgs
 )
@@ -35,16 +38,19 @@ ament_target_dependencies(
   pid_control
   rclcpp
   std_msgs
+  std_srvs
   farol_msgs
   control_allocation
+  farol_utils
 )
 
 # Link generated service types
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
-target_link_libraries(pid_control "${cpp_typesupport_target}")
+target_link_libraries(pid_control "${cpp_typesupport_target}" farol_utils::farol_utils)
 
 target_include_directories(pid_control PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
   
 target_compile_features(pid_control PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17 

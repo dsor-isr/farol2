@@ -14,6 +14,8 @@ find_package(geometry_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(farol_utils REQUIRED)
+
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -52,6 +54,7 @@ ament_target_dependencies(
   farol_msgs
   Eigen3
   eigen3_cmake_module
+  farol_utils
 )
 
 ament_target_dependencies(
