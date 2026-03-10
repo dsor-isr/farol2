@@ -182,7 +182,7 @@
           relative_heading_pf: "/#vehicle#/control/outer_loop/path_following/SetRelativeHeading"
           marcelo_pf: "/#vehicle#/control/outer_loop/path_following/SetMarcelo"
           aguiar_pf: "/#vehicle#/control/outer_loop/path_following/SetAguiar"
-          breivik_pf: "/#vehicle#/control/outer_loop/path_following/SetBrevik"
+          breivik_pf: "/#vehicle#/control/outer_loop/path_following/SetBreivik"
           fossen_pf: "/#vehicle#/control/outer_loop/path_following/SetFossen"
           romulo_pf: "/#vehicle#/control/outer_loop/path_following/SetRomulo"
           lapierre_pf: "/#vehicle#/control/outer_loop/path_following/SetLapierre"
