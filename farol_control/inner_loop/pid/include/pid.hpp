@@ -82,9 +82,9 @@ class ControllerPID {
     void setParams(double kp, double ki, double kd, double lpf_wc, double tau_min, double tau_max, double kffv_lin, double kffv_sq, double kffa);
 
     double getError() { return error_; }
-    double getIntegralTerm() { return ki_*error_; }
-    double getProportionalTerm() { return kp_*error_rate_; }
-    double getDerivativeTerm() { return kd_*error_rate_dot_filter_; }
+    double getIntegralTerm() { return i_term_; }
+    double getProportionalTerm() { return p_term_; }
+    double getDerivativeTerm() { return d_term_; }
     double getTau_d() { return tau_d_; }
     double getTau_sat() { return tau_sat_; }
     double getAntiWindupTerm() { return Ka_*(tau_prev_ - tau_sat_prev_); }
@@ -100,6 +100,9 @@ class ControllerPID {
     double kffv_lin_;
     double kffv_sq_;
     double kffa_;
+    double p_term_;
+    double i_term_;
+    double d_term_;
     
     /* Controllers' parameters */
     double kp_;

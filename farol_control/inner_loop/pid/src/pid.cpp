@@ -782,9 +782,9 @@ void PID::callControllerHeave() {
 void PID::callControllerYaw() {
   /* Call PID controller */
   if(course_control_)
-    tau_ = controller_yaw_.callController(farol_utils::deg2rad(nav_state_.course_angle), yaw_ref_, nav_state_.orientation_rate.z, 1.0/node_frequency_);
+    tau_ = controller_yaw_.callController(farol_utils::deg2rad(nav_state_.course_angle), yaw_ref_, farol_utils::deg2rad(nav_state_.orientation_rate.z), 1.0/node_frequency_);
   else 
-    tau_ = controller_yaw_.callController(farol_utils::deg2rad(nav_state_.orientation.z), yaw_ref_, nav_state_.orientation_rate.z, 1.0/node_frequency_);
+    tau_ = controller_yaw_.callController(farol_utils::deg2rad(nav_state_.orientation.z), yaw_ref_, farol_utils::deg2rad(nav_state_.orientation_rate.z), 1.0/node_frequency_);
 
 
   pid::msg::PidDebug debug_msg;
@@ -820,7 +820,7 @@ void PID::callControllerYaw() {
 
 void PID::callControllerPitch() {
   /* Call PID controller */
-  tau_ = controller_pitch_.callController(farol_utils::deg2rad(nav_state_.orientation.y), pitch_ref_, nav_state_.orientation_rate.y, 1.0/node_frequency_);
+  tau_ = controller_pitch_.callController(farol_utils::deg2rad(nav_state_.orientation.y), pitch_ref_, farol_utils::deg2rad(nav_state_.orientation_rate.y), 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_->now();
@@ -848,7 +848,7 @@ void PID::callControllerPitch() {
 
 void PID::callControllerRoll() {
   /* Call PID controller */
-  tau_ = controller_roll_.callController(farol_utils::deg2rad(nav_state_.orientation.x), roll_ref_, nav_state_.orientation_rate.x, 1.0/node_frequency_);
+  tau_ = controller_roll_.callController(farol_utils::deg2rad(nav_state_.orientation.x), roll_ref_, farol_utils::deg2rad(nav_state_.orientation_rate.x), 1.0/node_frequency_);
 
   pid::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_->now();
@@ -984,7 +984,6 @@ ControllerPI::ControllerPI(double kp, double ki, double lpf_wc, double tau_min, 
 double ControllerPI::callController(double state, double state_ref, double dt) {
   /* Compute error */
 
-  //check for nan
   
   error_ = state_ref - state;
 
@@ -1063,10 +1062,12 @@ double ControllerPID::callController(double state, double state_ref, double stat
   if (wrapToPi_) // Wrap to [-pi, pi] if needed */
     error_ = farol_utils::wrapToPi(error_);  
   // Compute error derivative
-  error_rate_ = state_rate - dref_;
+  error_rate_ = state_rate  - dref_;
   
+  
+  // this is outside so we dont miss the initial step so that delta behaves more like tradition pid
+  error_dot_ = (error_ - error_prev_) / dt; 
   // Compute derivative of all terms execpt the integral
-  error_dot_ = (error_ - error_prev_) / dt;
   if (!first_it_) {
     state_rate_dot_ = (state_rate - state_rate_prev_) / dt;
     state_dot_ = farol_utils::wrapToPi(state_ - state_prev_) / dt;
@@ -1081,7 +1082,12 @@ double ControllerPID::callController(double state, double state_ref, double stat
   /* Add all PID terms */
   // tau_d_ = -ki_*error_ - kp_*error_rate_ - kd_*error_rate_dot_ + kffa_*dddref_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
   // tau_d_ = -ki_*error_ - kp_*error_dot_ - kd_*error_rate_dot_ + kffa_*ddref_dot_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
-  tau_d_ = -ki_*error_ - kp_*error_dot_ - kd_*error_rate_dot_;// + kffa_*ddref_dot_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
+  tau_d_ = -ki_*error_ - kp_*error_dot_  - kd_*error_rate_dot_;// + kffa_*ddref_dot_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
+  
+  // for debug only
+  p_term_ = -kp_*error_*dt;
+  i_term_ = -ki_*error_*dt;
+  d_term_ = -kd_*error_rate_*dt;
 
   /* Anti-windup */
   Ka_ = 1.0/dt;

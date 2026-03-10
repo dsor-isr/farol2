@@ -6,7 +6,7 @@
 /**:
   filter_handler:
     ros__parameters:
-      default_filter: "low_pass"
+      default_filter: "sample_and_hold"
       filters:
         - "sample_and_hold"
         - "low_pass"
@@ -16,8 +16,8 @@
       node_frequency: 10.0
       neglect_current: false
       yaw_rate_lpf:
-        use_yaw_rate_lpf: true
-        omega_cutoff: 0.628 # 0.1 Hz cutoff frequency
+        use_yaw_rate_lpf: false
+        omega_cutoff: 0.628 
         order: 2
         design: "bessel" # design options ("butterworth", "bessel")
         method: "tustin" # descretization method ("tustin", "zoh", "euler")
