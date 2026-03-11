@@ -13,7 +13,7 @@
   <!-- dependencies libraries -->
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
-  <depend>farol_msgs</depend>
+  <depend>farol_interfaces</depend>
   <depend>geometry_msgs</depend>
   <depend>Eigen3</depend>
 

@@ -12,19 +12,19 @@ Note: The important action in this node is to call the services of [paths](...) 
 | Subscribers           | msgs type                                                                        | Purpose                      |
 | -----------           | --------------                                                                   | ---------                    |
 | "/#vehicle#/addons/Mission_String" | [std_msgs/msg/String](https://docs.ros.org/en/ros2_packages/jazzy/api/std_msgs/msg/String.html) | Mission String |
-| "/#vehicle#/nav/filter/state" | [farol_msgs/msg/NavigationState](...) | Navigation Filter State |
+| "/#vehicle#/nav/filter/state" | [farol_interfaces/msg/NavigationState](...) | Navigation Filter State |
 | "/#vehicle#/mission_status" | [std_msgs/msg/Int8](https://docs.ros.org/en/ros2_packages/jazzy/api/std_msgs/msg/Int8.html) | Mission Status |
 
 ## Publishers
 | Publishers | msgs type | Purpose |
 | ---------- | --------- | ------- |
-| "/#vehicle#/addons/path_section" | [farol_msgs::msg::Section](...) | Path Section |
-| "/#vehicle#/addons/formation" | [farol_msgs::msg::Formation](...) | Formation |
-| "/#vehicle#/addons/biased_formation" | [farol_msgs::msg::Formation](...) | Biased Formation |
+| "/#vehicle#/addons/path_section" | [farol_interfaces::msg::Section](...) | Path Section |
+| "/#vehicle#/addons/formation" | [farol_interfaces::msg::Formation](...) | Formation |
+| "/#vehicle#/addons/biased_formation" | [farol_interfaces::msg::Formation](...) | Biased Formation |
 | "/#vehicle#/addons/WPRef" | [geometry_msgs::msg::PointStamped](...) | Waypoint Reference |
 | "/#vehicle#/ref/depth" | [std_msgs::msg::Float32](https://docs.ros.org/en/ros2_packages/jazzy/api/std_msgs/msg/Float32.html) | Depth reference |
 | "/#vehicle#/ref/altitude" | [std_msgs::msg::Float32](https://docs.ros.org/en/ros2_packages/jazzy/api/std_msgs/msg/Float32.html) | Altitude Reference |
-| "/#vehicle#/addons/full_mission" | [farol_msgs::msg::MultiSection](...) | Full Mission |
+| "/#vehicle#/addons/full_mission" | [farol_interfaces::msg::MultiSection](...) | Full Mission |
 
 ## Services
 

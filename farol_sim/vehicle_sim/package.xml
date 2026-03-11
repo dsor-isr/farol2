@@ -15,7 +15,7 @@
   <!-- Dependencies -->
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
-  <depend>farol_msgs</depend>
+  <depend>farol_interfaces</depend>
   <depend>geometry_msgs</depend>
   <depend>rosgraph_msgs</depend>
   <depend>control_allocation</depend>

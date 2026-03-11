@@ -142,7 +142,7 @@ void PID::loadParams() {
  * @brief Initialise Subscribers
  */
 void PID::initialiseSubscribers() {
-  nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
+  nav_state_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
                     get_parameter("topics.subscribers.nav_state").as_string(), 
                     1, std::bind(&PID::navStateCallback, this, std::placeholders::_1));
 
@@ -255,7 +255,7 @@ void PID::initialiseTimers() {
     std::bind(&PID::timerCallback, this));
 }
 
-void PID::navStateCallback(const farol_msgs::msg::NavigationState &msg) {
+void PID::navStateCallback(const farol_interfaces::msg::NavigationState &msg) {
   nav_state_ = msg;
 }
 

@@ -121,7 +121,7 @@ void SimMeasurements::initialiseSubscribers() {
 void SimMeasurements::initialisePublishers() {
   
 
-  meas_pub_ = create_publisher<farol_msgs::msg::Measurement>(
+  meas_pub_ = create_publisher<farol_interfaces::msg::Measurement>(
       declare_parameter<std::string>("topics.publishers.measurement") , 1);
 
       
@@ -182,16 +182,16 @@ void SimMeasurements::timerCallback() {
 
     if(gnss_activate_){
 
-      farol_msgs::msg::Measurement pos_msg, vel_msg;
+      farol_interfaces::msg::Measurement pos_msg, vel_msg;
 
-      pos_msg.type = farol_msgs::msg::Measurement::MEAS_UTM_POSITION;
+      pos_msg.type = farol_interfaces::msg::Measurement::MEAS_UTM_POSITION;
       pos_msg.value = {pos[0] + (noise_activate_ ? randn(pos_bias[0], pos_variance[0]) : 0.0),
                       pos[1] + (noise_activate_ ? randn(pos_bias[1], pos_variance[1]) : 0.0),
                       (double)utm_zone};
       meas_pub_->publish(pos_msg);
 
 
-      vel_msg.type = farol_msgs::msg::Measurement::MEAS_INERTIAL_VELOCITY;
+      vel_msg.type = farol_interfaces::msg::Measurement::MEAS_INERTIAL_VELOCITY;
       vel_msg.value = {vel[0] + (noise_activate_ ? randn(ori_rate_bias[0], ori_rate_variance[0]) : 0.0),
                       vel[1] + (noise_activate_ ? randn(ori_rate_bias[1], ori_rate_variance[1]) : 0.0),
                       vel[2] + (noise_activate_ ? randn(ori_rate_bias[2], ori_rate_variance[2 ]) : 0.0)};
@@ -200,18 +200,18 @@ void SimMeasurements::timerCallback() {
 
     if(depth_sensor_activate_){
 
-      farol_msgs::msg::Measurement depth_msg;
+      farol_interfaces::msg::Measurement depth_msg;
 
-      depth_msg.type = farol_msgs::msg::Measurement::MEAS_DEPTH;
+      depth_msg.type = farol_interfaces::msg::Measurement::MEAS_DEPTH;
       depth_msg.value = {pos[2] + (noise_activate_ ? randn(pos_bias[2], pos_variance[2]) : 0.0)};
       meas_pub_->publish(depth_msg);
     }
 
     if(imu_activate_){
 
-      farol_msgs::msg::Measurement  ori_msg, ori_rate_msg;
+      farol_interfaces::msg::Measurement  ori_msg, ori_rate_msg;
 
-      ori_msg.type = farol_msgs::msg::Measurement::MEAS_ATTITUDE;
+      ori_msg.type = farol_interfaces::msg::Measurement::MEAS_ATTITUDE;
       ori_msg.value = {ori[0] + (noise_activate_ ? randn(ori_bias[0], ori_variance[0]) : 0.0),
                       ori[1] + (noise_activate_ ? randn(ori_bias[1], ori_variance[1]) : 0.0),
                       ori[2] + (noise_activate_ ? randn(ori_bias[2], ori_variance[2]) : 0.0)};
@@ -219,7 +219,7 @@ void SimMeasurements::timerCallback() {
 
 
 
-      ori_rate_msg.type = farol_msgs::msg::Measurement::MEAS_ANGULAR_VELOCITY;
+      ori_rate_msg.type = farol_interfaces::msg::Measurement::MEAS_ANGULAR_VELOCITY;
       ori_rate_msg.value = {ori_rate[0] + (noise_activate_ ? randn(ori_rate_bias[0], ori_rate_variance[0]) : 0.0),
                           ori_rate[1] + (noise_activate_ ? randn(ori_rate_bias[1], ori_rate_variance[1]) : 0.0),
                           ori_rate[2] + (noise_activate_ ? randn(ori_rate_bias[2], ori_rate_variance[2]) : 0.0)};

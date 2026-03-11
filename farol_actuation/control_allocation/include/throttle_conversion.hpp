@@ -9,7 +9,7 @@
 #include "std_msgs/msg/float32.hpp"
 
 #include "control_allocation/msg/thruster_rpm.hpp"
-#include "farol_msgs/msg/thruster.hpp"
+#include "farol_interfaces/msg/thruster.hpp"
 
 /**
  * @brief   RPM Conversion
@@ -40,7 +40,7 @@ class ThrottleConversion : public rclcpp::Node {
     /* Declare publishers, subscribers, services, etc. */
     rclcpp::Subscription<control_allocation::msg::ThrusterRPM>::SharedPtr rpm_command_sub_;
 
-    rclcpp::Publisher<farol_msgs::msg::Thruster>::SharedPtr throttle_command_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::Thruster>::SharedPtr throttle_command_pub_;
     
     /* Callbacks */
     void rpmCommandCallback(control_allocation::msg::ThrusterRPM::SharedPtr msg);
@@ -49,7 +49,7 @@ class ThrottleConversion : public rclcpp::Node {
     
     /* Other variables */
     rclcpp::Clock::SharedPtr clock_;
-    farol_msgs::msg::Thruster throttle_command_msg_;
+    farol_interfaces::msg::Thruster throttle_command_msg_;
     double k_;
     // double rpm_value_, max_rpm_, min_rpm_;
 };

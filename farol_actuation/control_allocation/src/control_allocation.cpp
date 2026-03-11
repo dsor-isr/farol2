@@ -21,10 +21,10 @@ void ThrusterRudderAllocation::initialiseSubscribers() {
     rclcpp::QoS(1),
     [this](geometry_msgs::msg::WrenchStamped::SharedPtr msg){bodyWrenchRequestCallback(msg);});
 
-  nav_state_sub_ = create_subscription<farol_msgs::msg::NavigationState>(
+  nav_state_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
     declare_parameter<std::string>("topics.subscribers.nav_state"),
     rclcpp::QoS(1),
-    [this](farol_msgs::msg::NavigationState::SharedPtr msg){nav_state_ = *msg;});
+    [this](farol_interfaces::msg::NavigationState::SharedPtr msg){nav_state_ = *msg;});
   
   mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
     declare_parameter<std::string>("topics.subscribers.mission_status"),

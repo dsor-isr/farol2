@@ -9,7 +9,7 @@
 #include "std_msgs/msg/float32.hpp"
 #include "control_allocation/msg/thruster_force.hpp"
 #include "control_allocation/msg/thruster_rpm.hpp"
-#include "farol_msgs/msg/navigation_state.hpp"
+#include "farol_interfaces/msg/navigation_state.hpp"
 
 /**
  * @brief   RPM Conversion
@@ -39,13 +39,13 @@ class RPMConversion : public rclcpp::Node {
 
     /* Declare publishers, subscribers, services, etc. */
     rclcpp::Subscription<control_allocation::msg::ThrusterForce>::SharedPtr thruster_force_sub_;
-    rclcpp::Subscription<farol_msgs::msg::NavigationState>::SharedPtr nav_state_sub_;
+    rclcpp::Subscription<farol_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
 
     rclcpp::Publisher<control_allocation::msg::ThrusterRPM>::SharedPtr rpm_command_pub_;
     
     /* Callbacks */
     void thrusterForceCallback(control_allocation::msg::ThrusterForce::SharedPtr msg);
-    void navStateCallback(farol_msgs::msg::NavigationState::SharedPtr msg);
+    void navStateCallback(farol_interfaces::msg::NavigationState::SharedPtr msg);
 
     /* Other functions */
     

@@ -9,7 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(farol_msgs REQUIRED)
+find_package(farol_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GEOGRAPHICLIB REQUIRED geographiclib)
@@ -42,7 +42,7 @@ ament_target_dependencies(
   sim_measurements
   rclcpp
   std_msgs
-  farol_msgs
+  farol_interfaces
 )
 
 target_include_directories(sim_measurements PRIVATE

@@ -13,7 +13,7 @@
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "paths/srv/set_mode.hpp"
 #include "std_msgs/msg/float32.hpp"
-#include "farol_msgs/msg/pf_debug.hpp"
+#include "farol_interfaces/msg/pf_debug.hpp"
 #include <farol_utils/angles.hpp>
 
 
@@ -118,7 +118,7 @@ class PathFollowing {
      *
      *
     */
-    void setPFollowingDebugPublisher(const rclcpp::Publisher<farol_msgs::msg::PFDebug>::SharedPtr pfollowing_debug_pub) {pfollowing_debug_pub_ = pfollowing_debug_pub;};
+    void setPFollowingDebugPublisher(const rclcpp::Publisher<farol_interfaces::msg::PFDebug>::SharedPtr pfollowing_debug_pub) {pfollowing_debug_pub_ = pfollowing_debug_pub;};
     
   protected:
     // use ROS time by default to stay consistent with node callbacks
@@ -139,7 +139,7 @@ class PathFollowing {
      */
     PFollowingDebug pfollowing_debug_;  
     
-    rclcpp::Publisher<farol_msgs::msg::PFDebug>::SharedPtr pfollowing_debug_pub_; 
+    rclcpp::Publisher<farol_interfaces::msg::PFDebug>::SharedPtr pfollowing_debug_pub_; 
     
     /**
      * @brief Auxiliar method to smooth out the angle to be used by path 

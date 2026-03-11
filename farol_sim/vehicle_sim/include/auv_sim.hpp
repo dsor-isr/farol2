@@ -14,7 +14,7 @@
 #include "sim_utilis/AUV.hpp"
 #include "sim_utilis/Utilis.hpp"
 #include <Eigen/Dense>
-#include "farol_msgs/msg/utm.hpp"
+#include "farol_interfaces/msg/utm.hpp"
 #include "std_msgs/msg/float32.hpp"
 
 
@@ -59,7 +59,7 @@ class AuvSim : public rclcpp::Node {
     /* Timer for node's callbacks */
 
     /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<farol_msgs::msg::UTM>::SharedPtr utm_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::UTM>::SharedPtr utm_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr position_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr body_velocity_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr orientation_pub_;

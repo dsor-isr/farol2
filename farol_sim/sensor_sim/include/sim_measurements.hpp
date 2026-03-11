@@ -13,7 +13,7 @@
 #include "geometry_msgs/msg/vector3.hpp"
 #include <GeographicLib/UTMUPS.hpp>
 #include <GeographicLib/Geodesic.hpp>
-#include "farol_msgs/msg/measurement.hpp"
+#include "farol_interfaces/msg/measurement.hpp"
 
 /**
  * @brief   Sim Measurements
@@ -49,7 +49,7 @@ class SimMeasurements : public rclcpp::Node {
     rclcpp::TimerBase::SharedPtr timer_;
 
     /* Publishers */
-    rclcpp::Publisher<farol_msgs::msg::Measurement>::SharedPtr meas_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::Measurement>::SharedPtr meas_pub_;
 
     /* Subscribers */
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr pos_sub_;

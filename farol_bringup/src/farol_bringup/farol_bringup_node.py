@@ -32,8 +32,8 @@ import yaml
 
 from std_msgs.msg import String, Int8, Bool
 
-from farol_msgs.msg import ProcessState
-from farol_msgs.srv import ManageProcess
+from farol_interfaces.msg import ProcessState
+from farol_interfaces.srv import ManageProcess
 
 PROCESS_TIMEOUT_RESTART = 5.0  # sec
 
