@@ -7,6 +7,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float64.hpp"
+#include "std_msgs/msg/float32.hpp"
 #include "farol_interfaces/msg/navigation_state.hpp"
 #include "farol_interfaces/msg/measurement.hpp"
 #include "farol_utils/angles.hpp"
@@ -51,10 +52,11 @@ class SampleAndHold : public rclcpp::Node {
 
     /* Declare publishers, subscribers, services, etc. */
     rclcpp::Publisher<farol_interfaces::msg::NavigationState>::SharedPtr state_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr debug_pub_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr debug_pub2_;
+    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr debug_pub1_;
     
     rclcpp::Subscription<farol_interfaces::msg::Measurement>::SharedPtr measurement_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rudder_sub_;
 
     /* Callbacks */
     void measurement_callback(farol_interfaces::msg::Measurement::ConstSharedPtr msg);
@@ -66,10 +68,29 @@ class SampleAndHold : public rclcpp::Node {
     bool neglect_current_;
     double node_frequency_;
     farol_utils::LowPassFilter yaw_rate_lpf_;
-    double last_time_;
+    double last_time_{-1.0};
     double course_angle_est_{0.0};
     bool use_yaw_rate_lpf_;
     double last_yaw_rate_meas_;
     double course_angle_cutoff_frequency_;
+
+    // Kalman filter states
+    Eigen::Vector2d x_;  // State vector: [yaw_rate (rad/s), yaw (rad)]
+    Eigen::Matrix2d P_;  // State covariance
+    Eigen::Matrix2d A_;  // State transition matrix
+    Eigen::Vector2d B_;  // Input matrix (for torque)
+    Eigen::RowVector2d C_;  // Measurement matrix (for yaw)
+    Eigen::Matrix2d Q_;  // Process noise covariance
+    Eigen::Matrix<double, 1, 1> R_;  // Measurement noise covariance
+
+    // Parameters for Kalman filter
+    double time_constant_;  // Time constant T for first-order system
+    double rudder_gain_;    // Gain to convert rudder angle to torque
+    double process_noise_q_;  // Process noise variance
+    double measurement_noise_r_;  // Measurement noise variance
+    
+
+    double rudder_angle_;  // Latest rudder angle measurement
+
 
 };
