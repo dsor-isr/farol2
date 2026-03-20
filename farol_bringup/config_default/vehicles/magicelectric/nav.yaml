@@ -19,9 +19,9 @@
         cutoff_frequency: 0.1 # Hz
       yaw_rate_lpf:
         use_yaw_rate_lpf: false
-        omega_cutoff: 0.628 
-        order: 2
-        design: "bessel" # design options ("butterworth", "bessel")
+        omega_cutoff: 0.4  # rad/s
+        order: 1
+        design: "butterworth" # design options ("butterworth", "bessel")
         method: "tustin" # descretization method ("tustin", "zoh", "euler")
 
   low_pass:

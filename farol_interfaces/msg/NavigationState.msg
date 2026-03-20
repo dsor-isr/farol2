@@ -25,6 +25,6 @@ geometry_msgs/Vector3 orientation # [roll pitch yaw] (rad)
 geometry_msgs/Vector3 orientation_rate # [p q r] (rad/s)
 
 float32 course_angle
-
+float32 heading_rate
 
 # If needed: add variances to position, orientation and other estimated variables
