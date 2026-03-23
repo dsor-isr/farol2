@@ -50,6 +50,32 @@ void AuvSim::loadParams() {
   disturbance_max = get_parameter("environment.current.maximum").as_double_array();
 
   node_period_ = 1.0/freq_;
+  dt_ns_ = static_cast<uint64_t>(std::llround(node_period_ * 1e9));
+
+  // Sensor params
+  gnss_activate_         = get_parameter("sensor.gnss").as_bool();
+  depth_sensor_activate_ = get_parameter("sensor.depth_sensor").as_bool();
+  imu_activate_          = get_parameter("sensor.imu").as_bool();
+  noise_activate_        = get_parameter("sensor.noise.activate").as_bool();
+
+  auto p_bias = get_parameter("sensor.noise.position.bias").as_double_array();
+  auto p_var  = get_parameter("sensor.noise.position.variance").as_double_array();
+  auto o_bias = get_parameter("sensor.noise.orientation.bias").as_double_array();
+  auto o_var  = get_parameter("sensor.noise.orientation.variance").as_double_array();
+  auto v_bias = get_parameter("sensor.noise.body_velocity.bias").as_double_array();
+  auto v_var  = get_parameter("sensor.noise.body_velocity.variance").as_double_array();
+  auto r_bias = get_parameter("sensor.noise.orientation_rate.bias").as_double_array();
+  auto r_var  = get_parameter("sensor.noise.orientation_rate.variance").as_double_array();
+  for (int i = 0; i < 3; ++i) {
+    pos_bias[i] = p_bias[i]; pos_variance[i] = p_var[i];
+    ori_bias[i] = o_bias[i]; ori_variance[i] = o_var[i];
+    vel_bias[i] = v_bias[i]; vel_variance[i] = v_var[i];
+    ori_rate_bias[i] = r_bias[i]; ori_rate_variance[i] = r_var[i];
+  }
+
+  double originLat_ = get_parameter("initial_state.position").as_double_array()[0];
+  double originLon_ = get_parameter("initial_state.position").as_double_array()[1];
+  GeographicLib::UTMUPS::Forward(originLat_, originLon_, utm_zone_, northp_, easting_, northing_);
 
   Eigen::Vector3d inertia_tensor(inertia[0], inertia[1], inertia[2]);
 
@@ -118,6 +144,8 @@ void AuvSim::initialiseSubscribers() {
  * @brief Initialise Publishers
  */
 void AuvSim::initialisePublishers() {
+  auto clock_qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local();
+  clock_pub_ = create_publisher<rosgraph_msgs::msg::Clock>("/clock", clock_qos);
 
 
   position_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
@@ -132,7 +160,10 @@ void AuvSim::initialisePublishers() {
       get_parameter("topics.publishers.body_acceleration").as_string(), 1);
   angular_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
       get_parameter("topics.publishers.angular_acceleration").as_string(), 1);
-      
+
+  meas_pub_ = create_publisher<farol_interfaces::msg::Measurement>(
+      get_parameter("topics.publishers.measurement").as_string(), 1);
+
   return;
 }
 
@@ -175,6 +206,7 @@ void AuvSim::rpmCallback(const control_allocation::msg::ThrusterRPM::SharedPtr m
 }
 
 void AuvSim::timerCallback() {
+  tickClock();
 
   RCLCPP_DEBUG(get_logger(), "Timer callback triggered");
   auv_->update(node_period_, rpm_);
@@ -211,8 +243,86 @@ void AuvSim::timerCallback() {
   ang_acc_msg.z = auv_->getYawRateDot();
   angular_acceleration_pub_->publish(ang_acc_msg);
 
-  
+  publishMeasurements();
+
   return;
+}
+
+void AuvSim::publishMeasurements()
+{
+  double north = auv_->getX() + northing_;
+  double east  = auv_->getY() + easting_;
+  double depth = auv_->getZ();
+
+  if (gnss_activate_) {
+    farol_interfaces::msg::Measurement pos_msg, vel_msg;
+    pos_msg.type = farol_interfaces::msg::Measurement::MEAS_UTM_POSITION;
+    pos_msg.value = {
+      north + (noise_activate_ ? randn(pos_bias[0], pos_variance[0]) : 0.0),
+      east  + (noise_activate_ ? randn(pos_bias[1], pos_variance[1]) : 0.0),
+      static_cast<double>(utm_zone_)
+    };
+    meas_pub_->publish(pos_msg);
+
+    vel_msg.type = farol_interfaces::msg::Measurement::MEAS_INERTIAL_VELOCITY;
+    vel_msg.value = {
+      auv_->getSurge() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0),
+      auv_->getSway()  + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0),
+      auv_->getHeave() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0)
+    };
+    meas_pub_->publish(vel_msg);
+  }
+
+  if (depth_sensor_activate_) {
+    farol_interfaces::msg::Measurement depth_msg;
+    depth_msg.type = farol_interfaces::msg::Measurement::MEAS_DEPTH;
+    depth_msg.value = {depth + (noise_activate_ ? randn(pos_bias[2], pos_variance[2]) : 0.0)};
+    meas_pub_->publish(depth_msg);
+  }
+
+  if (imu_activate_) {
+    farol_interfaces::msg::Measurement ori_msg, ori_rate_msg;
+    ori_msg.type = farol_interfaces::msg::Measurement::MEAS_ATTITUDE;
+    ori_msg.value = {
+      auv_->getRoll()  + (noise_activate_ ? randn(ori_bias[0], ori_variance[0]) : 0.0),
+      auv_->getPitch() + (noise_activate_ ? randn(ori_bias[1], ori_variance[1]) : 0.0),
+      auv_->getYaw()   + (noise_activate_ ? randn(ori_bias[2], ori_variance[2]) : 0.0)
+    };
+    meas_pub_->publish(ori_msg);
+
+    ori_rate_msg.type = farol_interfaces::msg::Measurement::MEAS_ANGULAR_VELOCITY;
+    ori_rate_msg.value = {
+      auv_->getRollRate()  + (noise_activate_ ? randn(ori_rate_bias[0], ori_rate_variance[0]) : 0.0),
+      auv_->getPitchRate() + (noise_activate_ ? randn(ori_rate_bias[1], ori_rate_variance[1]) : 0.0),
+      auv_->getYawRate()   + (noise_activate_ ? randn(ori_rate_bias[2], ori_rate_variance[2]) : 0.0)
+    };
+    meas_pub_->publish(ori_rate_msg);
+  }
+}
+
+double AuvSim::randn(double mu, double sigma)
+{
+  double U1, U2, W, mult;
+  static double X1, X2;
+  static int call = 0;
+  if (call) { call = !call; return mu + sigma * X2; }
+  do {
+    U1 = -1.0 + ((double)rand() / RAND_MAX) * 2.0;
+    U2 = -1.0 + ((double)rand() / RAND_MAX) * 2.0;
+    W  = U1*U1 + U2*U2;
+  } while (W >= 1.0 || W == 0.0);
+  mult = sqrt(-2.0 * log(W) / W);
+  X1 = U1 * mult; X2 = U2 * mult;
+  call = !call;
+  return mu + sigma * X1;
+}
+
+void AuvSim::tickClock()
+{
+  sim_time_ns_ += dt_ns_;
+  rosgraph_msgs::msg::Clock clock_msg;
+  clock_msg.clock = rclcpp::Time(sim_time_ns_);
+  clock_pub_->publish(clock_msg);
 }
 
 /**

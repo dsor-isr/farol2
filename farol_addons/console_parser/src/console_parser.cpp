@@ -109,7 +109,7 @@ void ConsoleParser::initializeTimer() {
   double freq = get_parameter("node_frequency").as_double();
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&ConsoleParser::depthCallback, this));
+  timer_ = create_timer(std::chrono::milliseconds(int(1.0/freq*1000)), std::bind(&ConsoleParser::depthCallback, this));
 }
 
 /* 

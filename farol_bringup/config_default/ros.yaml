@@ -68,7 +68,8 @@
           mission_status: "/#vehicle#/mission_status"
         publishers:
           thruster_force: "/#vehicle#/actuation/thruster_force"
-          rudder_angle_ref: "/#vehicle#/actuation/rudder_angle_ref"
+          rudder_angle_ref: "/#vehicle#/control/ref/rudder_angle"
+
   wrench_manager:
     ros__parameters:
       topics:
@@ -124,6 +125,16 @@
           # torque_x: "/#vehicle#/actuation/torque_x"
           # torque_y: "/#vehicle#/actuation/torque_y"
           # torque_z: "/#vehicle#/actuation/torque_z"
+
+  rudder:
+    ros__parameters:
+        topics:
+          subscribers:
+            rudder_angle_ref: "/#vehicle#/control/ref/rudder_angle"
+            rudder_angle: "/#vehicle#/drivers/can_instrumentation/rudder_angle"
+          publishers:
+            rudder_command: "/#vehicle#/rudder_command"
+
 
 ########################
 # ---  Outer-Loop  --- #
@@ -297,14 +308,4 @@
         services:
           test2: "/#vehicle#/sim/change_something"
 
-  sim_measurements:
-    ros__parameters:
-      topics:
-        subscribers:
-          position: "/#vehicle#/sim/position"
-          orientation: "/#vehicle#/sim/orientation"
-          body_velocity: "/#vehicle#/sim/body_velocity"
-          orientation_rate: "/#vehicle#/sim/orientation_rate"
-        publishers:
-          measurement: "/#vehicle#/measurement"
-   
+

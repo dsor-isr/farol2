@@ -15,7 +15,9 @@
 #include "sim_utilis/Utilis.hpp"
 #include <Eigen/Dense>
 #include "farol_interfaces/msg/utm.hpp"
+#include "farol_interfaces/msg/measurement.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include <GeographicLib/UTMUPS.hpp>
 
 
 
@@ -49,6 +51,8 @@ class AuvSim : public rclcpp::Node {
     /* Timer callback */
     void timerCallback();
 
+    void tickClock();
+
     // wall-time callback: advance sim time & publish /clock
     void onClockTick();     
 
@@ -68,11 +72,14 @@ class AuvSim : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_acceleration_pub_;
 
     rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::Measurement>::SharedPtr meas_pub_;
 
     rclcpp::Subscription<control_allocation::msg::ThrusterRPM>::SharedPtr rpm_sub_;
     
     rclcpp::TimerBase::SharedPtr timer_;   
     rclcpp::Clock::SharedPtr clock_;
+    uint64_t sim_time_ns_{0};
+    uint64_t dt_ns_{0};
   
 
     /* Callbacks */
@@ -116,5 +123,25 @@ class AuvSim : public rclcpp::Node {
     std::vector<double> disturbance_min;
     std::vector<double> disturbance_max;
 
+    // Sensor / measurement publishing
+    void publishMeasurements();
+    double randn(double mu, double sigma);
 
+    bool gnss_activate_;
+    bool depth_sensor_activate_;
+    bool imu_activate_;
+    bool noise_activate_;
+
+    int    utm_zone_;
+    bool   northp_;
+    double northing_, easting_;
+
+    std::array<double,3> pos_bias{};
+    std::array<double,3> pos_variance{};
+    std::array<double,3> ori_bias{};
+    std::array<double,3> ori_variance{};
+    std::array<double,3> vel_bias{};
+    std::array<double,3> vel_variance{};
+    std::array<double,3> ori_rate_bias{};
+    std::array<double,3> ori_rate_variance{};
 };

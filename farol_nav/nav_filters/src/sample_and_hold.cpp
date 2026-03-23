@@ -61,7 +61,7 @@ void SampleAndHold::initialiseServices() {}
  */
 void SampleAndHold::initialiseTimers() {
   auto period = std::chrono::nanoseconds( static_cast<int64_t>(1e9 / node_frequency_));
-  timer_ = create_wall_timer(period, [this]() {timerCallback();});
+  timer_ = create_timer(period, [this]() {timerCallback();});
   return;
 }
 

@@ -48,13 +48,12 @@ class ProcessActionType(object):
   STOP_ALL = 6
 
 class Process:
-  def __init__(self, name, cmd, vehicle_name, vehicle_id, vehicle_ns, 
-               config_package_path_share, config_package_path_real ,args=None, launch_on_startup=False,
+  def __init__(self, name, cmd, vehicle_name, vehicle_id, vehicle_ns,
+               config_package_path_share, config_package_path_real, args=None, launch_on_startup=False,
                delay_before_start=0.0, dependencies=None, use_sim_time=False):
     self.name = name
     self.config_package_path_share = config_package_path_share
     self.config_package_path_real = config_package_path_real
-    self.use_sim_time = use_sim_time
     self.cmd = cmd
     self.args = args if args is not None else []
     self.dependencies = dependencies if dependencies is not None else []
@@ -64,22 +63,15 @@ class Process:
     self.vehicle_name = vehicle_name
     self.vehicle_id = vehicle_id
     self.vehicle_ns = vehicle_ns
+    self.use_sim_time = use_sim_time
 
 
   def start(self):
     if not self.isActive():
-      cmd = self.cmd.split(' ') + self.args + ["vehicle_ns:=" + self.vehicle_ns] + ["vehicle_name:=" + self.vehicle_name]+ ["config_package_path_share:=" + self.config_package_path_share] + ["config_package_path_real:=" + self.config_package_path_real]
-      
-      # Add use_sim_time argument - special handling for time process
-      if self.name == 'time':
-        # time process MUST always use wall time (use_sim_time=false)
-        cmd.append("use_sim_time:=false")
-      else:
-        # All other processes use the configured value from ros.yaml
-        cmd.append("use_sim_time:=" + str(self.use_sim_time).lower())
+      cmd = self.cmd.split(' ') + self.args + ["vehicle_ns:=" + self.vehicle_ns] + ["vehicle_name:=" + self.vehicle_name] + ["config_package_path_share:=" + self.config_package_path_share] + ["config_package_path_real:=" + self.config_package_path_real]
 
-      # Debug: print the full command
-      print(f"DEBUG: Launching process '{self.name}' with command: {' '.join(cmd)}")
+      if 'ros2 launch farol_bringup ' in self.cmd and not any(arg.startswith('use_sim_time:=') for arg in cmd):
+        cmd.append("use_sim_time:=" + str(self.use_sim_time).lower())
 
       if self.delay_before_start:
         time.sleep(self.delay_before_start)
@@ -163,6 +155,8 @@ class FarolBringup(Node):
     # get process.yaml dict from path
     with open(self.processes_path, 'r') as f:
       self.processes = yaml.safe_load(f)['processes']
+
+
   
   ## Initialise subscribers
   def initialiseSubscribers(self):
@@ -215,6 +209,31 @@ class FarolBringup(Node):
     # replace #vehicle# with appropriate vehicle namespace
     self.find_replace(ros_tmp_folder, 'personal_ros_' + self.vehicle_ns + '.yaml', '#vehicle#' , self.vehicle_ns)
     self.find_replace(ros_tmp_folder, 'default_ros_' + self.vehicle_ns + '.yaml', '#vehicle#' , self.vehicle_ns)
+
+    # inject the effective use_sim_time into the generated temp configs so
+    # every process launched from farol_bringup reads a consistent value.
+    self.injectUseSimTime(self.tmp_personal_config)
+    self.injectUseSimTime(self.tmp_default_config)
+
+  def injectUseSimTime(self, yaml_path):
+    with open(yaml_path, 'r') as stream:
+      config = yaml.safe_load(stream) or {}
+
+    wildcard = config.get('/**')
+    if isinstance(wildcard, dict):
+      wildcard_ros_params = wildcard.setdefault('ros__parameters', {})
+      wildcard_ros_params['use_sim_time'] = self.use_sim_time
+
+      for node_name, node_config in wildcard.items():
+        if node_name == 'ros__parameters':
+          continue
+        if isinstance(node_config, dict):
+          node_ros_params = node_config.setdefault('ros__parameters', {})
+          if isinstance(node_ros_params, dict):
+            node_ros_params['use_sim_time'] = self.use_sim_time
+
+    with open(yaml_path, 'w') as stream:
+      yaml.safe_dump(config, stream, sort_keys=False)
 
   @staticmethod
   def createResponse(status, message):
@@ -269,19 +288,18 @@ class FarolBringup(Node):
   def createProcesses(self):
     self.get_logger().info("Start creating processes from process.yaml")
     self.process_list = []
-    self.get_logger().info(f"use_sim_time from ros.yaml: {self.use_sim_time}")
 
     for p in self.processes:
       self.process_list.append(Process(name=p['name'], cmd=p['cmd'], args=p['args'],
                                        launch_on_startup=p['launch_on_startup'],
                                        delay_before_start=p['delay_before_start'],
-                                       dependencies=p['dependencies'], 
+                                       dependencies=p['dependencies'],
                                        vehicle_name=self.vehicle_name,
                                        vehicle_id=self.vehicle_id,
                                        vehicle_ns=self.vehicle_ns,
-                                       use_sim_time=self.use_sim_time,
                                        config_package_path_share=self.config_package_path_share,
-                                       config_package_path_real=self.config_package_path_real))
+                                       config_package_path_real=self.config_package_path_real,
+                                       use_sim_time=self.use_sim_time))
 
   def startInitProcesses(self):
     for process in self.process_list:
