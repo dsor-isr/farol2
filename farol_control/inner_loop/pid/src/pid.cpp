@@ -782,9 +782,9 @@ void PID::callControllerHeave() {
 void PID::callControllerYaw() {
   /* Call PID controller */
   if(course_control_)
-    tau_ = controller_yaw_.callController(farol_utils::deg2rad(nav_state_.course_angle), yaw_ref_, farol_utils::deg2rad(nav_state_.orientation_rate.z), 1.0/node_frequency_);
+    tau_ = controller_yaw_.callController(farol_utils::deg2rad(nav_state_.course_angle), yaw_ref_, farol_utils::deg2rad(nav_state_.heading_rate), 1.0/node_frequency_);
   else 
-    tau_ = controller_yaw_.callController(farol_utils::deg2rad(nav_state_.orientation.z), yaw_ref_, farol_utils::deg2rad(nav_state_.orientation_rate.z), 1.0/node_frequency_);
+    tau_ = controller_yaw_.callController(farol_utils::deg2rad(nav_state_.orientation.z), yaw_ref_, farol_utils::deg2rad(nav_state_.heading_rate), 1.0/node_frequency_);
 
 
   pid::msg::PidDebug debug_msg;
@@ -1082,7 +1082,7 @@ double ControllerPID::callController(double state, double state_ref, double stat
   /* Add all PID terms */
   // tau_d_ = -ki_*error_ - kp_*error_rate_ - kd_*error_rate_dot_ + kffa_*dddref_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
   // tau_d_ = -ki_*error_ - kp_*error_dot_ - kd_*error_rate_dot_ + kffa_*ddref_dot_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
-  tau_d_ = -ki_*error_ - kp_*error_dot_  - kd_*error_rate_dot_;// + kffa_*ddref_dot_ - kffv_lin_*state_rate_dot_- kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
+  tau_d_ = -ki_*error_ - kp_*error_dot_  - kd_*error_rate_dot_ + kffa_*ddref_dot_ + kffv_lin_*state_rate_dot_+ kffv_sq_*state_rate_dot_*abs(state_rate_dot_);
   
   // for debug only
   p_term_ = -kp_*error_*dt;

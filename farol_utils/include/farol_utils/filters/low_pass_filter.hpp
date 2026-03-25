@@ -45,6 +45,8 @@ private:
   double wc_{0.0};
   double Ts_{0.0};
   double last_u_{0.0};
+  double last_dy_{0.0};  // For computing ddy in order 1 and when order < 3
+  double last_dt_{0.0};  // Track actual dt for ddy calculation
   double u_unwrapped_{0.0};
   bool have_u_unwrapped_{false};
 

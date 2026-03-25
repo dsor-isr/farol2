@@ -7,6 +7,13 @@ SampleAndHold::SampleAndHold() : Node("sample_and_hold") {
   initialiseSubscribers();
   initialisePublishers();
   initialiseTimers();
+
+  x_ = Eigen::Vector2d::Zero();
+  P_ = 1e-3 * Eigen::Matrix2d::Identity();
+  C_ << 1, 0;
+  Q_ = Eigen::Matrix2d::Identity();
+  R_ << 10000.0;
+  rudder_angle_ = 0.0;
 }
 
 /* Destructor */
@@ -25,7 +32,14 @@ void SampleAndHold::loadParams() {
                           declare_parameter<int>("yaw_rate_lpf.order"), 
                           declare_parameter<std::string>("yaw_rate_lpf.design"), 
                           declare_parameter<std::string>("yaw_rate_lpf.method"));
-
+  
+  // Kalman filter parameters
+  time_constant_ = declare_parameter<double>("kalman.time_constant", 1.0);
+  rudder_gain_ = declare_parameter<double>("kalman.rudder_gain", 1.0);
+  process_noise_q_ = declare_parameter<double>("kalman.process_noise", 0.01);
+  measurement_noise_r_ = declare_parameter<double>("kalman.measurement_noise", 0.1);
+  Q_ = process_noise_q_ * Eigen::Matrix2d::Identity();
+  R_ << measurement_noise_r_;
 }
 
 /**
@@ -36,6 +50,12 @@ void SampleAndHold::initialiseSubscribers() {
     declare_parameter<std::string>("topics.subscribers.measurement"),
     rclcpp::QoS(10),
     [this](farol_interfaces::msg::Measurement::SharedPtr msg){measurement_callback(msg);});
+
+  rudder_sub_ = create_subscription<std_msgs::msg::Float32>(
+    "/magicelectric0/drivers/can_instrumentation/rudder_angle",
+    rclcpp::QoS(1),
+    [this](std_msgs::msg::Float32::SharedPtr msg) { rudder_angle_ = farol_utils::deg2rad(msg->data); });
+ 
   return;
 }
 
@@ -47,7 +67,10 @@ void SampleAndHold::initialisePublishers() {
     declare_parameter<std::string>("topics.publishers.state"),
     rclcpp::QoS(1));
   debug_pub2_ = create_publisher<std_msgs::msg::Float64>(
-    declare_parameter<std::string>("topics.publishers.course_meas_debug", "dummy2"),
+    declare_parameter<std::string>("topics.publishers.course_meas_debug2", "dummy2"),
+    rclcpp::QoS(1));
+  debug_pub1_ = create_publisher<std_msgs::msg::Float64>(
+    declare_parameter<std::string>("topics.publishers.course_meas_debug1", "dummy1"),
     rclcpp::QoS(1));
 }
 
@@ -193,22 +216,64 @@ void SampleAndHold::timerCallback() {
   // Fill header 
   filter_state_msg_.header.stamp = clock_->now();
 
-  // aply low pass filter to yaw rate
-  yaw_rate_lpf_.step(filter_state_msg_.orientation_rate.z, 1/node_frequency_);
-  if(use_yaw_rate_lpf_){
-    debug_pub2_->publish(std_msgs::msg::Float64().set__data(last_yaw_rate_meas_));
-    filter_state_msg_.orientation_rate.z = yaw_rate_lpf_.y();
-  }else{
-    debug_pub2_->publish(std_msgs::msg::Float64().set__data(yaw_rate_lpf_.y()));
-  }
+  ///////////////////////////////////////////////////////
+  //  Kalman filter to estimate yaw rate without waves //
+  ///////////////////////////////////////////////////////
 
-  // Estimate course angle using a simple complementary filter
+  // Update F and B matrices based on dt
+  double m_r = 88.478840;  // Added mass in yaw
+  double N_r= 14.334052;  // Damping in yaw
+  double N_rr= 260.675031;  // Damping in yaw
+  double m_uv = -2.967651;
+  A_ << 1, dt,
+        0, 1 - (N_r / m_r) * dt;
+  B_ << 0,
+        (1.0 / m_r) * dt;
+  // Compute torque from rudder angle
+  double K_s_ = 1.0;
+  double rudder_cm_distance_ = 4.0; 
+  double fluid_velocity = sqrt(pow(filter_state_msg_.body_velocity_inertial.x, 2) + pow(filter_state_msg_.body_velocity_inertial.y, 2));
+  double tau_r = rudder_angle_ * (K_s_ * rudder_cm_distance_ * fluid_velocity); 
+  double u = filter_state_msg_.body_velocity_inertial.x;
+  double v = filter_state_msg_.body_velocity_inertial.y;
+  debug_pub2_->publish(std_msgs::msg::Float64().set__data(tau_r));
+
+
+  // Kalman filter predict
+  // x_ = A_ * x_ + B_ * tau_r;
+  x_(0) += dt*x_(1);  
+  x_(1) += dt*( - (N_r / m_r)*x_(1) - (N_rr / m_r)*x_(1)*abs(x_(1)) + (1.0 / m_r)*tau_r);
+  P_ = A_ * P_ * A_.transpose() + Q_;
+
+  // Kalman filter update (using yaw measurement)
+  double yaw_meas_rad = farol_utils::deg2rad(filter_state_msg_.orientation.z);
+  Eigen::VectorXd z(1);
+  z << yaw_meas_rad;
+  Eigen::VectorXd y = (z - C_ * x_);
+  y(0) = farol_utils::wrapToPi(y(0));
+  Eigen::MatrixXd S = C_ * P_ * C_.transpose() + R_;
+  Eigen::MatrixXd K = P_ * C_.transpose() * S.inverse();
+  x_ = x_ + K * y;
+  P_ = (Eigen::Matrix2d::Identity() - K * C_) * P_;
+
+  // Wrap yaw to [0, 2*pi)
+  x_(0) = farol_utils::wrapToPi(x_(0));
+  debug_pub1_->publish(std_msgs::msg::Float64().set__data(farol_utils::rad2deg(farol_utils::wrapTo2Pi(x_(0)))));
+
+
+  // Set filtered values
+  filter_state_msg_.heading_rate = farol_utils::rad2deg(x_(1));
+
+  ////////////////////////////////////////////////////////////////
+  //  Estimate course angle using a simple complementary filter //
+  ////////////////////////////////////////////////////////////////
+
   // Measurement: course angle from inertial velocity
   double course_angle_meas = farol_utils::wrapTo2Pi(std::atan2(filter_state_msg_.ned_velocity_inertial.y, filter_state_msg_.ned_velocity_inertial.x));
   // debug_pub2_->publish(std_msgs::msg::Float64().set__data(farol_utils::rad2deg(course_angle_meas)));
     
   // Predict with gyro integration
-  course_angle_est_ += farol_utils::deg2rad(filter_state_msg_.orientation_rate.z) * dt;
+  course_angle_est_ += farol_utils::deg2rad(filter_state_msg_.heading_rate) * dt;
   course_angle_est_ = farol_utils::wrapTo2Pi(course_angle_est_);
   
   // Correct estimate

@@ -30,7 +30,7 @@ LowPassFilter::LowPassFilter() {
 void LowPassFilter::configure(double wc, double Ts, int order, std::string design, std::string method, bool wrap_angle) {
   if (wc <= 0.0)   throw std::invalid_argument("wc must be > 0");
   if (Ts <= 0.0)   throw std::invalid_argument("Ts must be > 0");
-  if (order < 2)   throw std::invalid_argument("order must be >= 2");
+  if (order < 1)   throw std::invalid_argument("order must be >= 1");
 
   wrap_angle_ = wrap_angle;
   wc_ = wc;
@@ -61,6 +61,8 @@ void LowPassFilter::step(double u, double dt) {
 
   last_u_ = u;
   last_x_ = x_;
+  last_dy_ = dy();  // Store current dy for next ddy calculation
+  last_dt_ = dt;    // Store actual dt for ddy finite difference
 
   if(method_ == "tustin")
     discretize_tustin(dt);
@@ -82,6 +84,7 @@ void LowPassFilter::reset(double u_hat0, double du_hat0)
   // If not configured yet, just remember the last input and bail
   if (n_ <= 0) {
     last_u_ = u_hat0;
+    last_dy_ = du_hat0;
     return;
   }
 
@@ -98,6 +101,8 @@ void LowPassFilter::reset(double u_hat0, double du_hat0)
   if (n_ >= 2) x_(1) = du_hat0;
 
   last_u_ = u_hat0;
+  last_dy_ = du_hat0;
+  last_dt_ = Ts_;
 }
 
 double LowPassFilter::y() const {
@@ -105,19 +110,41 @@ double LowPassFilter::y() const {
 }
 
 double LowPassFilter::dy() const {
+  if (n_ < 2) {
+    // For order 1: compute derivative as finite difference
+    return (x_(0) - last_x_(0)) / last_dt_;
+  }
   return x_(1);
 }
 
 double LowPassFilter::ddy() const {
   if (n_ < 3) {
-    // fallback finite difference if only 2nd order
-    return (x_(1) - last_x_(1)) / Ts_;
+    // For order < 3: compute second derivative as finite difference
+    // Use actual dt from last step for numerical stability
+    double current_dy = dy();
+    if (last_dt_ > 0.0) {
+      return (current_dy - last_dy_) / last_dt_;
+    }
+    return 0.0;
   }
   return x_(2);
 }
 
 void LowPassFilter::design_butterworth()
 {
+  // For order 1, use simple first-order system
+  if (n_ == 1) {
+    A_.setZero(1, 1);
+    A_(0, 0) = -wc_;
+    B_.setZero(1);
+    B_(0) = wc_;
+    Ad_.setZero(1, 1);
+    Bd_.setZero(1);
+    x_.setZero(1);
+    last_x_.setZero(1);
+    return;
+  }
+
   // Reallocate state-space matrices/vectors to the requested order
   A_.setZero(n_, n_);
   Ad_.setZero(n_, n_);
@@ -153,6 +180,19 @@ void LowPassFilter::design_butterworth()
 
 void LowPassFilter::design_bessel()
 {
+  // For order 1, use simple first-order system
+  if (n_ == 1) {
+    A_.setZero(1, 1);
+    A_(0, 0) = -wc_;
+    B_.setZero(1);
+    B_(0) = wc_;
+    Ad_.setZero(1, 1);
+    Bd_.setZero(1);
+    x_.setZero(1);
+    last_x_.setZero(1);
+    return;
+  }
+
   // Reallocate state-space matrices/vectors to the requested order
   A_.setZero(n_, n_);
   Ad_.setZero(n_, n_);

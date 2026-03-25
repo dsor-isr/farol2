@@ -166,7 +166,7 @@ void ThrusterRudderAllocation::computeRudderAngle(double tau_r)
   /* Compute rudder angle according to Fossen model, in "A Survey of Control Allocation Methods for Underwater Vehicles", p. 126 */
   /* N = K.l.v^2.δ */
   // rudder_angle_ = tau_r / (K_s_ * rudder_cm_distance_ * V_s_.dot(V_s_));
-  rudder_angle_ = tau_r / (K_s_ * rudder_cm_distance_ * 1.75);
+  rudder_angle_ = tau_r / (K_s_ * rudder_cm_distance_ * 1.75); // TODO: remove hardcoded velocity and use V_s_.dot(V_s_) instead, but be careful with low velocities that can cause very high rudder angles due to division by a small number
 
   /* Compute rudder angle using inversion of the function ... See ... i am the documentation bruh */
   // rudder_angle_ = solve_delta_from_tau(tau_r, gamma_, V_s_.dot(V_s_));
