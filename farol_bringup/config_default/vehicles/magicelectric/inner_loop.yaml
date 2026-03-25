@@ -107,3 +107,8 @@
       surge:
         enabled: true
         gain: 2000.0
+
+  rudder:
+    ros__parameters:
+      node_frequency: 10.0
+      deadzone: 4.0  # degrees

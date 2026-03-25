@@ -51,14 +51,24 @@ ament_target_dependencies(
 
 target_include_directories(auv_sim PUBLIC
   ${EIGEN3_INCLUDE_DIR}
+  ${GEOGRAPHICLIB_INCLUDE_DIRS}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
 )
 
+target_link_libraries(auv_sim
+  ${GEOGRAPHICLIB_LIBRARIES}
+)
+
 target_include_directories(magic_electric_sim PUBLIC
   ${EIGEN3_INCLUDE_DIR}
+  ${GEOGRAPHICLIB_INCLUDE_DIRS}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+)
+
+target_link_libraries(magic_electric_sim
+  ${GEOGRAPHICLIB_LIBRARIES}
 )
 
 target_compile_features(auv_sim PUBLIC cxx_std_17)
@@ -68,6 +78,10 @@ install(TARGETS
   auv_sim
   magic_electric_sim
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
 )
 
 ament_package()

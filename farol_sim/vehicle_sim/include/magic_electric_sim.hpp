@@ -13,8 +13,10 @@
 #include "geometry_msgs/msg/vector3.hpp"
 #include <Eigen/Dense>
 #include "farol_interfaces/msg/utm.hpp"
+#include "farol_interfaces/msg/measurement.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "sim_utilis/Utilis.hpp"
+#include <GeographicLib/UTMUPS.hpp>
 
 
 
@@ -61,8 +63,8 @@ class MagicElectricSim : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_acceleration_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr body_acceleration_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_pub_;
-
     rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
+    rclcpp::Publisher<farol_interfaces::msg::Measurement>::SharedPtr meas_pub_;
 
     rclcpp::Subscription<control_allocation::msg::ThrusterRPM>::SharedPtr rpm_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rudder_angle_sub_;
@@ -70,6 +72,9 @@ class MagicElectricSim : public rclcpp::Node {
 
     rclcpp::TimerBase::SharedPtr timer_;  
     rclcpp::Clock::SharedPtr clock_;
+
+    uint64_t sim_time_ns_{0};
+    uint64_t dt_ns_{0};
     
     // std::vector<double> position_;
     // std::vector<double> position_dot_;
@@ -97,12 +102,12 @@ class MagicElectricSim : public rclcpp::Node {
     void rpmCallback(const control_allocation::msg::ThrusterRPM::SharedPtr msg);
     void updateRudder(double command, double dt);
     void updateState();
-
-    rclcpp::Time last_rudder_time_;
-    bool have_last_rudder_time_{false};
+    void tickClock();
+    double rudder_command_{0.0};
 
     double node_frequency_;
     double node_period_;
+    double speedup_;
 
     double origin_latitude_, origin_longitude_;
     double fluid_density;
@@ -137,6 +142,27 @@ class MagicElectricSim : public rclcpp::Node {
     double deadzone_propeller_pos_;
     double deadzone_propeller_neg_;
 
-    bool rudder_actuation_sim_; 
+    bool rudder_actuation_sim_;
 
+    // Sensor / measurement publishing
+    void publishMeasurements();
+    double randn(double mu, double sigma);
+
+    bool gnss_activate_;
+    bool depth_sensor_activate_;
+    bool imu_activate_;
+    bool noise_activate_;
+    int    utm_zone_;
+    bool   northp_;
+    double northing_, easting_;
+
+    std::array<double,3> meas_pos_{};
+    std::array<double,3> pos_bias{};
+    std::array<double,3> pos_variance{};
+    std::array<double,3> ori_bias{};
+    std::array<double,3> ori_variance{};
+    std::array<double,3> vel_bias{};
+    std::array<double,3> vel_variance{};
+    std::array<double,3> ori_rate_bias{};
+    std::array<double,3> ori_rate_variance{};
 };

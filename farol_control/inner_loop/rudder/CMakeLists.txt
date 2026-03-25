@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(sensor_sim)
+project(rudder)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -9,58 +9,44 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(farol_interfaces REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GEOGRAPHICLIB REQUIRED geographiclib)
-
-
-
-
-#find_package(rosidl_default_generators REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 # Collect all .msg and .srv files
-#file(GLOB MSG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
-#file(GLOB SRV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "srv/*.srv")
+# file(GLOB MSG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
+# file(GLOB SRV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "srv/*.srv")
 
 # Generate messages and services
-#rosidl_generate_interfaces(${PROJECT_NAME}
-#  ${MSG_FILES}
-#  ${SRV_FILES}
-#  DEPENDENCIES std_msgs geometry_msgs
-#)
-#ament_export_dependencies(rosidl_default_runtime)
+# rosidl_generate_interfaces(${PROJECT_NAME}
+#   # ${MSG_FILES}
+#   # ${SRV_FILES}
+#   DEPENDENCIES std_msgs
+# )
 
-add_executable(sim_measurements src/sim_measurements.cpp)
+ament_export_dependencies(rosidl_default_runtime)
 
-
+add_executable(rudder src/rudder.cpp)
 
 ament_target_dependencies(
-  sim_measurements
+  rudder
   rclcpp
   std_msgs
-  farol_interfaces
 )
 
-target_include_directories(sim_measurements PRIVATE
-  ${GEOGRAPHICLIB_INCLUDE_DIRS}
-)
+# Link generated service types
+# rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
+# target_link_libraries(rudder "${cpp_typesupport_target}")
 
-target_link_libraries(sim_measurements
-  ${GEOGRAPHICLIB_LIBRARIES}
-)
-
-target_include_directories(sim_measurements PUBLIC
+target_include_directories(rudder PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
-)
-
-target_compile_features(sim_measurements PUBLIC c_std_99 cxx_std_17)
-
-install(TARGETS sim_measurements
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+  
+target_compile_features(rudder PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17 
+  
+install(TARGETS
+  rudder
   DESTINATION lib/${PROJECT_NAME}
 )
 

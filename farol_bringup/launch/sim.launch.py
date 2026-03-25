@@ -1,7 +1,6 @@
-from sympy import false
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.conditions import IfCondition
@@ -54,21 +53,12 @@ def generate_launch_description():
     description='Boolean to determine if auv_sim node is launched.'
   )
 
-  launch_sim_measurements_arg = DeclareLaunchArgument(
-    'sim_measurements',
-    default_value='true',
-    description='Boolean to determine if sim_measurements node is launched.'
-  )
-
-  ###################################
-  # Define parameters for all nodes #
-  ###################################
-  params = [
+  ####################################################
+  # Define shared parameters for all simulation nodes #
+  ####################################################
+  common_params = [
             # vehicle namespace
             {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
-
-            #{'use_sim_time': LaunchConfiguration('use_sim_time')},
-            {'use_sim_time': False},
 
             # load default ROS configurations (from tmp files)
             PathJoinSubstitution([
@@ -105,6 +95,9 @@ def generate_launch_description():
             ]),
           ]
 
+  vehicle_sim_params = common_params + [
+    {'use_sim_time': False}
+  ]
 
   ###################
   # Nodes to launch #
@@ -116,7 +109,7 @@ def generate_launch_description():
     name='auv_sim',
     output='screen',
     condition=IfCondition(LaunchConfiguration('auv_sim')),
-    parameters=params
+    parameters=vehicle_sim_params
   )
 
   magic_electric_sim_node = Node(
@@ -126,17 +119,7 @@ def generate_launch_description():
     name= 'magic_electric_sim',
     output='screen',
     condition=IfCondition(LaunchConfiguration('magic_electric_sim')),
-    parameters=params
-  )
-
-  sim_measurements_node = Node(
-    package='sensor_sim',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
-    executable='sim_measurements',
-    name='sim_measurements',
-    output='screen',
-    condition=IfCondition(LaunchConfiguration('sim_measurements')),
-    parameters=params
+    parameters=vehicle_sim_params
   )
 
   ######################################################
@@ -151,9 +134,7 @@ def generate_launch_description():
     config_package_path_real_arg,
     launch_magic_electric_sim_arg,
     launch_auv_sim_arg,
-    launch_sim_measurements_arg,
     # nodes
     auv_sim_node,
-    magic_electric_sim_node, 
-    sim_measurements_node
+    magic_electric_sim_node,
   ])

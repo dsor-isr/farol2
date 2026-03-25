@@ -78,15 +78,6 @@ processes:
     args:
       - magic_electric_sim:=false
       - auv_sim:=true
-      - sensor_sim:=true
     dependencies:
       []
   
-  - name: 'time'
-    launch_on_startup: false
-    delay_before_start: 0.1
-    cmd: 'ros2 launch farol_bringup time.launch.py'
-    args:
-      []
-    dependencies:
-      []
