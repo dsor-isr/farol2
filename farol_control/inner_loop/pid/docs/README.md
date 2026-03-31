@@ -1,72 +1,108 @@
-# PID package
+# PID Package
 
-## Description
-The *pid* ROS package contains PID controllers for multiple DOFs (Degrees of Freedom) of a vehicle. All PID controllers were designed having the Delta Implementation in mind, i.e., rearranging the control loop in order to have an integrator before the actuation on the system.
+## Overview
+The `pid` package provides inner-loop PI/PID control for vehicle DOFs and can now run as a standalone package with its own launch and default configuration.
 
-Currently implemented controllers are the following:
-- Surge,
-- Sway,
-- Heave,
-- Yaw,
-- Pitch,
-- Roll,
-- Yaw Rate,
-- Pitch Rate,
-- Roll Rate.
+Implemented channels:
+- surge
+- sway
+- heave
+- yaw
+- pitch
+- roll
+- yaw_rate
+- pitch_rate
+- roll_rate
 
-An Attitude controller is also accounted for in this node (having in vision the integration of Bottom Following in *FAROL2*), but it is not actually implemented at the moment.
+## Refactored Runtime Model
+The node uses a data-driven runtime model with behavior equivalent to the previous implementation:
 
-## Configuration
+- A single generic reference callback handles all channels.
+- A single generic controller execution function dispatches by controller type.
+- Runtime wiring is stored in a `ControllerConfig` table (state accessor, reference accessor, optional rate accessor, output accumulator, debug filler).
+- Only enabled controllers are instantiated, subscribed, and executed.
 
-A default configuration file *control.yaml* is available in the *farol_bringup* package, where parameters can be tuned.
+## Architecture (Short)
+Runtime control flow is:
 
-To turn on different controllers independently, simply change the *enabled* flag for each controller in the configuration file. This architecture makes it possible for the implementation of other inner-loop control packages (with the same base principal of parameter handling as the *pid* package) under the *farol_control/inner_loop/* folder structure and provides the means to have different types of controllers for different DOFs. An example follows:
+1. Load parameters from YAML.
+2. Select active channels: optional `controllers` allow-list, then `enabled: true` filter.
+3. Create only the active controller objects (PI/PID as required by channel).
+4. Create reference subscriptions only for active channels.
+5. On each timer tick, validate `dt`, execute active controllers, route outputs to axis publishers, then reset the accumulated wrench.
 
-```yaml
-/**:
-  ros__parameters:
-    control:
-      inner_loop:
-        pid:
-          surge:
-            enabled: true # <===== PID SURGE ENABLED
-            kp: 10.0
-            ki: 1.0
-            lpf_pole: 31.4 # rad/s
-            tau_min: -30.0 # N
-            tau_max: 30.0 # N
-          sway:
-            enabled: false # <===== DISABLED
-            kp: 1.0
-            ki: 1.0
-            lpf_pole: 31.4 # rad/s
-            tau_min: -20.0 # N
-            tau_max: 20.0 # N
-        sliding_mode: # an example of a different control structure that could be implemented
-          surge:
-            enabled: false # <===== DISABLED
-            param_1: 1.0
-            param_2: 1.0
-            # ...
-          sway:
-            enabled: true # <===== SLIDING MODE SWAY ENABLED
-            param_1: 1.0
-            param_2: 1.0
-            # ...
+Compact flow:
+
+```text
+pid.yaml -> loadParams -> active controllers
+active controllers -> createControllers + initialiseSubscribers
+timerCallback -> callControllers -> executeController
+executeController -> body_wrench_request_ accumulation
+body_wrench_request_ -> thrust/torque publishers -> resetBodyWrenchRequest
 ```
 
-Parameters can also be changed live through the *ChangeParams* service.
+Key architectural points:
+- Channel behavior is explicit by controller type; runtime activation is data-driven.
+- Yaw keeps special state selection (`course_angle` vs `orientation.z`).
+- Existing unit conversions, gating, and output mapping are preserved.
 
-## Implementation Details
+## Configuration
+Default parameters live in `pid/config/pid.yaml`.
 
-Some important implementation details to take into consideration.
+### Controller Activation
+Controllers are activated through each channel's `enabled` flag. The optional top-level `controllers` allow-list is supported but not required.
 
-### References callback
+Activation flow:
+1. Start from optional `controllers` allow-list (if present).
+2. Parse controller parameter blocks.
+3. Keep only channels with `enabled: true`.
 
-Given the frequency $f_i$ of a controller $i$ (defined in the *ros.yaml* configuration file), this controller should only compute an actuation if a reference has been received since the last computation cycle. Ideally (Scenario 1), the controller would compute an actuation if the last reference had been received less than or exactly $1/f$ seconds ago, but fluctuations in the frequency at which references are published could cause the controller to not compute an actuation even when the reference is still being published.
+This means memory/runtime cost scales with enabled channels only.
 
-In order to avoid this, it was decided that a reference is considered recent if it was received less than $2/f$ seconds ago (Scenario 2). In practice, the only drawback of this approach compared to Scenario 1 is that the controller will compute an actuation for one cycle more after the reference has stopped.
+### Yaw Special Logic
+Yaw control keeps the original behavior:
+- if `course_control == true`, yaw state uses `course_angle`
+- otherwise yaw state uses `orientation.z`
 
-## Nodes
+### Units and Routing
+The node preserves the original unit handling and output routing:
 
-* [pid](pid.md)
+- linear references/states: direct units
+- angular references/states/rates: converted with `deg2rad` where previously applied
+
+Output mapping:
+- surge -> force.x
+- sway -> force.y
+- heave -> force.z
+- yaw/yaw_rate -> torque.z
+- pitch/pitch_rate -> torque.y
+- roll/roll_rate -> torque.x
+
+## Safety and Gating
+Control execution and publication still use the original gates:
+
+- timer `dt` sanity guard (`dt <= 0` or `dt > 2/f` skips cycle)
+- per-controller enable gate
+- recent-reference gate (`< 2/f` since last reference)
+
+## Standalone Usage
+Build package:
+
+```bash
+colcon build --packages-select pid
+```
+
+Run with package launch (recommended):
+
+```bash
+source install/setup.bash
+ros2 launch pid pid.launch.py
+```
+
+`ros2 run pid pid_control` requires parameters to be provided (for topic/service names and controller gains).
+
+## Live Parameter Service
+The `ChangeParams` service keeps current behavior and updates yaw gains at runtime.
+
+## Node Documentation
+- [pid](pid.md)

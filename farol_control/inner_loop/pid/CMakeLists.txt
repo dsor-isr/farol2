@@ -100,6 +100,12 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(DIRECTORY
+  launch
+  config
+  DESTINATION share/${PROJECT_NAME}
+)
+
 # Export controller library for downstream packages
 ament_export_targets(export_${PROJECT_NAME}_controllers HAS_LIBRARY_TARGET)
 ament_export_include_directories(include)

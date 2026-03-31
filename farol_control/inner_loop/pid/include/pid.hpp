@@ -1,8 +1,12 @@
 #include <cstdio>
+#include <functional>
 #include <chrono>
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <iostream>
+#include <vector>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/parameter.hpp"
@@ -34,7 +38,6 @@ enum ControllerType {
   YAW_RATE = 6,
   PITCH_RATE = 7,
   ROLL_RATE = 8,
-  ATTITUDE = 9,
 };
 
 // Use the reusable controller classes from farol_control namespace
@@ -42,40 +45,91 @@ using farol_control::ControllerPI;
 using farol_control::ControllerPID;
 
 /**
+ * @brief Runtime descriptor for one enabled controller channel.
+ *
+ * This structure stores the callbacks needed by the generic execution path
+ * (`executeController`) so per-axis behavior can be configured once and then
+ * dispatched uniformly.
+ */
+struct ControllerConfig {
+  /** Controller name key (e.g. "yaw", "surge"). */
+  std::string name;
+  /** Controller type used in switch-based dispatch. */
+  ControllerType type;
+  /** True for PID channels that require a state-rate input. */
+  bool has_state_rate;
+  /** Required gain/limit parameter names for this channel. */
+  std::vector<std::string> required_params;
+  /** Returns the current measured state for this channel. */
+  std::function<double()> get_state;
+  /** Returns the latest reference for this channel. */
+  std::function<double()> get_ref;
+  /** Returns the measured state rate (used by PID channels). */
+  std::function<double()> get_rate;
+  /** Adds this channel's output to the wrench accumulator. */
+  std::function<void(double)> accumulate_output;
+  /** Fills debug message fields from controller internals. */
+  std::function<void(pid::msg::PidDebug &)> fill_debug;
+};
+
+/**
  * @brief   PID
  * @author  Eduardo Cunha
  */
 class PID : public rclcpp::Node {
   public:
-    /* Constructor */
+    /**
+     * @brief Construct the PID node and initialize runtime resources.
+     *
+     * Initialization order is intentionally fixed:
+     * load parameters -> create ROS interfaces -> create controllers ->
+     * build controller configuration table.
+     */
     PID();
 
-    /* Destructor */
+    /**
+     * @brief Destroy the node and stop the periodic timer.
+     */
     ~PID();
 
   private:
-    /* Load parameters */
+    /**
+     * @brief Load and parse node/controller parameters.
+     *
+     * This function builds `controller_parameters_`, `controller_debug_`, and
+     * `controller_names_` (enabled controllers only).
+     */
     void loadParams();
 
-    /* Initialise Subscribers */
+    /**
+     * @brief Create navigation state and per-controller reference subscribers.
+     */
     void initialiseSubscribers();
 
-    /* Initialise Publishers */
+    /**
+     * @brief Create force/torque publishers and optional debug publishers.
+     */
     void initialisePublishers();
 
-    /* Initialise Services */
+    /**
+     * @brief Create parameter-update and course-control services.
+     */
     void initialiseServices();
 
-    /* Initialise Timers */
+    /**
+     * @brief Create the periodic timer using `node_frequency_`.
+     */
     void initialiseTimers();
     
-    /* Timer callback */
+    /**
+     * @brief Main periodic loop: safety checks, control update, publish outputs.
+     */
     void timerCallback();
 
 
 
 
-    /* Timer for node's callbacks */
+    /** Timer that drives the control loop. */
     rclcpp::TimerBase::SharedPtr timer_;
     
     /* Declare publishers, subscribers, services, etc. */
@@ -87,43 +141,30 @@ class PID : public rclcpp::Node {
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_z_pub_;
 
     rclcpp::Subscription<farol_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr surge_ref_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr sway_ref_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr heave_ref_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr yaw_ref_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr pitch_ref_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr roll_ref_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr yaw_rate_ref_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr pitch_rate_ref_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr roll_rate_ref_sub_;
-
-    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr surge_debug_pub_;
-    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr sway_debug_pub_;
-    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr heave_debug_pub_;
-    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr yaw_debug_pub_;
-    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr pitch_debug_pub_;
-    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr roll_debug_pub_;
-    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr yaw_rate_debug_pub_;
-    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr pitch_rate_debug_pub_;
-    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr roll_rate_debug_pub_;
-    rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr attitude_debug_pub_;
+    std::map<std::string, rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr> reference_subscribers_;
 
     rclcpp::Service<pid::srv::ChangeParams>::SharedPtr change_params_srv_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr course_control_srv_;
 
-    /* Callbacks */
+    /** @brief Store latest navigation state sample. */
     void navStateCallback(const farol_interfaces::msg::NavigationState &msg);
-    void surgeRefCallback(const std_msgs::msg::Float32 &msg);
-    void swayRefCallback(const std_msgs::msg::Float32 &msg);
-    void heaveRefCallback(const std_msgs::msg::Float32 &msg);
-    void yawRefCallback(const std_msgs::msg::Float32 &msg);
-    void pitchRefCallback(const std_msgs::msg::Float32 &msg);
-    void rollRefCallback(const std_msgs::msg::Float32 &msg);
-    void yawRateRefCallback(const std_msgs::msg::Float32 &msg);
-    void pitchRateRefCallback(const std_msgs::msg::Float32 &msg);
-    void rollRateRefCallback(const std_msgs::msg::Float32 &msg);
+
+    /**
+     * @brief Update reference value for one controller and timestamp it.
+     * @param controller_name Controller key (e.g. "yaw", "surge").
+     * @param raw_value Incoming reference value in message units.
+     */
+    void referenceCallback(const std::string &controller_name, double raw_value);
+
+    /**
+     * @brief Service callback to update yaw-controller gains online.
+     */
     void changeParamsCallback(const std::shared_ptr<pid::srv::ChangeParams::Request> request,
                               std::shared_ptr<pid::srv::ChangeParams::Response> response);
+
+    /**
+     * @brief Service callback to select yaw-angle or course-angle control.
+     */
     void courseControlCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                                std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
@@ -137,69 +178,107 @@ class PID : public rclcpp::Node {
       {"roll", ROLL},
       {"yaw_rate", YAW_RATE},
       {"pitch_rate", PITCH_RATE},
-      {"roll_rate", ROLL_RATE},
-      {"attitude", ATTITUDE}
+      {"roll_rate", ROLL_RATE}
     };
 
-    /* Map with last received reference timestamps for each controller */
+        /** Last reference timestamp for each controller channel. */
     std::map<std::string, rclcpp::Time> controller_last_reference_;
-    // std::map<std::string, rclcpp::Time> controller_last_reference_ = {
-    //   {"surge", rclcpp::Time(0,1)}, /* 1 nanosecond */
-    //   {"sway", rclcpp::Time(0,1)},
-    //   {"heave", rclcpp::Time(0,1)},
-    //   {"yaw", rclcpp::Time(0,1)},
-    //   {"pitch", rclcpp::Time(0,1)},
-    //   {"roll", rclcpp::Time(0,1)},
-    //   {"yaw_rate", rclcpp::Time(0,1)},
-    //   {"pitch_rate", rclcpp::Time(0,1)},
-    //   {"roll_rate", rclcpp::Time(0,1)},
-    //   {"attitude", rclcpp::Time(0,1)}
-    // };
 
-    /* Other variables */
+        /** Control-loop frequency in Hz. */
     double node_frequency_;
+
+        /** Wrench accumulator updated by active controllers each cycle. */
     geometry_msgs::msg::WrenchStamped body_wrench_request_msg_;
+
+        /** Shared node clock used for dt and timestamp checks. */
     rclcpp::Clock::SharedPtr clock_;
+
+        /** Timestamp of previous timer callback, used to compute dt. */
     rclcpp::Time last_update_time_;
+
+        /** Reused scalar message for force/torque publications. */
     std_msgs::msg::Float32 float32_msg_;
+
+        /** Most recent navigation estimate. */
     farol_interfaces::msg::NavigationState nav_state_;
+
+        /** Enabled controller names after parsing/filtering configuration. */
     std::set<std::string> controller_names_;
+
+        /** Optional allow-list from `controllers` parameter. */
+    std::vector<std::string> configured_controllers_;
+
+        /** Debug-enable flag per controller. */
     std::map<std::string, bool> controller_debug_;
+
+        /** Flattened numeric parameters per controller. */
     std::map<std::string, std::map<std::string, double>> controller_parameters_;
+
+        /** Runtime configuration table used by generic execution. */
+    std::map<std::string, ControllerConfig> controller_configs_;
+
+        /** Optional per-controller debug publishers. */
     std::map<std::string, rclcpp::Publisher<pid::msg::PidDebug>::SharedPtr> debug_publishers_;
+
+        /** Latest references for all channels (internally stored in SI units). */
     double surge_ref_ = 0.0, sway_ref_ = 0.0, heave_ref_ = 0.0,
            yaw_ref_ = 0.0, pitch_ref_ = 0.0, roll_ref_ = 0.0,
            yaw_rate_ref_ = 0.0, pitch_rate_ref_ = 0.0, roll_rate_ref_ = 0.0;
+
+        /** Last controller output (used for debug publication). */
     double tau_;
+
+        /** Selects yaw state source: heading (`false`) or course angle (`true`). */
     bool course_control_{false}; // flag to switch between heading or course control
+
+        /** Low-pass filter configuration passed to PID controllers. */
     int lpf_order_;
     std::string lpf_method_, lpf_design_;
 
-    std::array<bool, 10> debug_mode_{}; 
+        /** Per-axis controller instances (allocated only when enabled). */
+    std::unique_ptr<ControllerPI> controller_surge_;
+    std::unique_ptr<ControllerPI> controller_sway_;
+    std::unique_ptr<ControllerPI> controller_heave_;
+    std::unique_ptr<ControllerPID> controller_yaw_;
+    std::unique_ptr<ControllerPID> controller_pitch_;
+    std::unique_ptr<ControllerPID> controller_roll_;
+    std::unique_ptr<ControllerPI> controller_yaw_rate_;
+    std::unique_ptr<ControllerPI> controller_pitch_rate_;
+    std::unique_ptr<ControllerPI> controller_roll_rate_;
 
-    ControllerPI controller_surge_;
-    ControllerPI controller_sway_;
-    ControllerPI controller_heave_;
-    ControllerPID controller_yaw_;
-    ControllerPID controller_pitch_;
-    ControllerPID controller_roll_;
-    ControllerPI controller_yaw_rate_;
-    ControllerPI controller_pitch_rate_;
-    ControllerPI controller_roll_rate_;
-
-    /* Other functions */
+    /**
+     * @brief Instantiate enabled controllers after parameter validation.
+     */
     void createControllers();
+
+    /**
+     * @brief Validate the required numeric parameters for one controller.
+     */
+    bool validateControllerParams(const std::string &controller_name,
+                    const std::vector<std::string> &required_params);
+
+    /**
+     * @brief Build controller configuration entries for the generic runtime path.
+     */
+    void initializeControllerConfigs();
+
+    /**
+     * @brief Execute one controller and accumulate its wrench contribution.
+     */
+    void executeController(const ControllerConfig &cfg);
+
+    /**
+     * @brief Check if the controller reference is still considered recent.
+     */
     bool hasRecentReference(const rclcpp::Time &last_reference_timestamp, const int &node_frequency);
+
+    /**
+     * @brief Execute all enabled controllers that pass recent-reference gating.
+     */
     void callControllers();
-    void callControllerSurge();
-    void callControllerSway();
-    void callControllerHeave();
-    void callControllerYaw();
-    void callControllerPitch();
-    void callControllerRoll();
-    void callControllerYawRate();
-    void callControllerPitchRate();
-    void callControllerRollRate();
-    void callControllerAttitude();
+
+    /**
+     * @brief Clear the accumulated wrench before/after each control cycle.
+     */
     void resetBodyWrenchRequest();
 };
