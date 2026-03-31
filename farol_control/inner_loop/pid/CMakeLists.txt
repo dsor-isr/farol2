@@ -32,6 +32,25 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 ament_export_dependencies(rosidl_default_runtime)
 
+# Create reusable controller library as STATIC to work with farol_utils
+# (farol_utils is compiled as static library without PIC)
+add_library(${PROJECT_NAME}_controllers STATIC
+  src/controller_pi.cpp
+  src/controller_pid.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}_controllers PUBLIC
+  farol_utils::farol_utils
+)
+
+target_include_directories(${PROJECT_NAME}_controllers PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+target_compile_features(${PROJECT_NAME}_controllers PUBLIC cxx_std_17)
+
+# Node executable
 add_executable(pid_control src/pid.cpp)
 
 ament_target_dependencies(
@@ -44,21 +63,52 @@ ament_target_dependencies(
   farol_utils
 )
 
+# Link controller library to the executable
+target_link_libraries(pid_control
+  ${PROJECT_NAME}_controllers
+  farol_utils::farol_utils
+)
+
 # Link generated service types
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
-target_link_libraries(pid_control "${cpp_typesupport_target}" farol_utils::farol_utils)
+target_link_libraries(pid_control "${cpp_typesupport_target}")
 
 target_include_directories(pid_control PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
   
-target_compile_features(pid_control PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17 
-  
+target_compile_features(pid_control PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+
+# Install headers
+install(DIRECTORY include/
+  DESTINATION include
+)
+
+# Install libraries
+install(TARGETS
+  ${PROJECT_NAME}_controllers
+  EXPORT export_${PROJECT_NAME}_controllers
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION lib
+)
+
+# Install executable
 install(TARGETS
   pid_control
   DESTINATION lib/${PROJECT_NAME}
 )
+
+install(DIRECTORY
+  launch
+  config
+  DESTINATION share/${PROJECT_NAME}
+)
+
+# Export controller library for downstream packages
+ament_export_targets(export_${PROJECT_NAME}_controllers HAS_LIBRARY_TARGET)
+ament_export_include_directories(include)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -34,6 +34,7 @@
           measurement: "/#vehicle#/measurement"
         publishers:
           state: "/#vehicle#/nav/low_pass/state"  
+
 #######################
 # ---  Actuation  --- #
 #######################  
@@ -68,7 +69,7 @@
           mission_status: "/#vehicle#/mission_status"
         publishers:
           thruster_force: "/#vehicle#/actuation/thruster_force"
-          rudder_angle_ref: "/#vehicle#/control/ref/rudder_angle"
+          rudder_angle_ref: "/#vehicle#/actuation/rudder_angle_ref"
 
   wrench_manager:
     ros__parameters:
@@ -130,7 +131,7 @@
     ros__parameters:
         topics:
           subscribers:
-            rudder_angle_ref: "/#vehicle#/control/ref/rudder_angle"
+            rudder_angle_ref: "/#vehicle#/actuation/rudder_angle_ref"
             rudder_angle: "/#vehicle#/drivers/can_instrumentation/rudder_angle"
           publishers:
             rudder_command: "/#vehicle#/rudder_command"
@@ -287,6 +288,7 @@
           orientation_rate: "/#vehicle#/sim/orientation_rate"
           body_acceleration: "/#vehicle#/sim/body_acceleration"
           angular_acceleration: "/#vehicle#/sim/angular_acceleration"
+          measurement: "/#vehicle#/measurement"
         services:
           test2: "/#vehicle#/sim/change_something"
 
@@ -305,7 +307,6 @@
           body_acceleration: "/#vehicle#/sim/body_acceleration"
           angular_acceleration: "/#vehicle#/sim/angular_acceleration"
           rudder_angle: "/#vehicle#/drivers/can_instrumentation/rudder_angle"
+          measurement: "/#vehicle#/measurement"
         services:
           test2: "/#vehicle#/sim/change_something"
-
-
