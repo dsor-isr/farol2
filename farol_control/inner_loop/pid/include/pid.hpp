@@ -21,6 +21,9 @@
 #include <farol_utils/filters/low_pass_filter.hpp>
 #include <farol_utils/angles.hpp>
 
+#include "controller_pi.hpp"
+#include "controller_pid.hpp"
+
 enum ControllerType {
   SURGE = 0,
   SWAY = 1,
@@ -34,108 +37,9 @@ enum ControllerType {
   ATTITUDE = 9,
 };
 
-class ControllerPI {
-  public:
-    /* Constructor */
-    ControllerPI(double kp, double ki, double lpf_wc, double tau_min, double tau_max);
-
-    /* Call for controller */
-    double callController(double state, double state_ref, double dt);
-
-    /* Methods for setting parameters */
-    void setParams(double kp, double ki, double lpf_wc, double tau_min, double tau_max);
-
-    double getError() { return error_; }
-    double getIntegralTerm() { return ki_*error_; }
-    double getProportionalTerm() { return kp_*error_; }
-    double getTau_d() { return tau_d_; }
-    double getTau_sat() { return tau_sat_; }
-    double getAntiWindupTerm() { return Ka_*(tau_prev_ - tau_sat_prev_); }
-    double getTauDot() { return tau_dot_; }
-    double getTau() { return tau_; }
-  
-  private:
-    /* Controllers' parameters */
-    double kp_;
-    double ki_;
-    double lpf_wc_;
-    double tau_min_;
-    double tau_max_;
-
-    /* Variables for control algorithm */
-    double error_, tau_d_;
-    bool first_it_ = true;
-    double state_prev_ = 0.0, state_dot_ = 0.0, state_dot_filter_ = 0.0, state_dot_filter_prev_ = 0.0;
-    double lpf_A_ = 0.0, lpf_B_ = 0.0;
-    double Ka_, tau_dot_, tau_, tau_prev_, tau_sat_, tau_sat_prev_ = 0.0;
-};
-
-class ControllerPID {
-  public:
-    /* Constructor */
-    ControllerPID(double kp, double ki, double kd, double lpf_wc, double tau_min, double tau_max, double kffv_lin, double kffv_sq, double kffa, bool wrapToPi, int lpf_order, std::string lpf_method, std::string lpf_design);
-
-    /* Call for controller */
-    double callController(double state, double state_ref, double state_rate, double dt);
-
-    /* Methods for setting parameters */
-    void setParams(double kp, double ki, double kd, double lpf_wc, double tau_min, double tau_max, double kffv_lin, double kffv_sq, double kffa);
-
-    double getError() { return error_; }
-    double getIntegralTerm() { return i_term_; }
-    double getProportionalTerm() { return p_term_; }
-    double getDerivativeTerm() { return d_term_; }
-    double getTau_d() { return tau_d_; }
-    double getTau_sat() { return tau_sat_; }
-    double getAntiWindupTerm() { return Ka_*(tau_prev_ - tau_sat_prev_); }
-    double getTauDot() { return tau_dot_; }
-    double getTau() { return tau_; }
-    
-    double ref_raw_; // unfiltered reference
-    double state_;
-    double ref_;
-    double dref_;
-    double ddref_;
-    double dddref_;
-    double kffv_lin_;
-    double kffv_sq_;
-    double kffa_;
-    double p_term_;
-    double i_term_;
-    double d_term_;
-    
-    /* Controllers' parameters */
-    double kp_;
-    double ki_;
-    double kd_;
-    double lpf_wc_;
-    double tau_min_;
-    double tau_max_;
-    bool wrapToPi_;
-    
-    
-    /* Variables for control algorithm */
-    double error_, error_rate_; // error and error rate computed from measured signals
-    double tau_d_;              //  derivative of output, used before antiwindup  
-    
-    // to compute discrete derivative in controller
-    bool first_it_ = true;
-    double error_dot_{0.0}, error_rate_dot_{0.0}, state_rate_dot_{0.0},  ddref_dot_{0.0};
-    double state_dot_{0.0}, state_prev_{0.0};
-    double error_prev_{0.0}, error_rate_prev_{0.0}, state_rate_prev_{0.0},  ddref_prev_{0.0};
-    
-    double Ka_, tau_dot_, tau_, tau_prev_=0.0, tau_sat_, tau_sat_prev_=0.0;
-    
-    // for shitty low pass filter to be deleted
-    double state_rate_dot_filter_ = 0.0, state_rate_dot_filter_prev_ = 0.0;
-    double error_rate_dot_filter_ = 0.0, error_rate_dot_filter_prev_ = 0.0;
-    double lpf_A_ = 0.0, lpf_B_ = 0.0;
-    
-    // low pass filter for reference signal
-    farol_utils::LowPassFilter lpf_;
-    private:
-    
-};
+// Use the reusable controller classes from farol_control namespace
+using farol_control::ControllerPI;
+using farol_control::ControllerPID;
 
 /**
  * @brief   PID
