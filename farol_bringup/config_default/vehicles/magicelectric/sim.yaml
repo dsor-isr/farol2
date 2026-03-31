@@ -6,9 +6,10 @@
 
 /**/sim/**:
   ros__parameters:
-    # node_frequency: 10.0
+    node_frequency: 10.0
+    speedup: 1.0
     initial_state:
-      position: [38.692017, -9.211419, 0.0] # (lat, lon, depth) from expo   
+      position: [38.690323, -9.211736, 0.0] # (lat, lon, depth) from expo   
       body_velocity: [1.78, 0.0, 0.0]
       orientation: [0.0, 0.0, 0.0]
       orientation_rate: [0.0, 0.0, 0.0]
@@ -39,14 +40,14 @@
           ang_vel: 10.0 #deg/s
         propulsion:
         #False means that it is subscribed to a topic, true means that it is fixed to the value defined in rpm
-          fixed_rpm: true 
+          fixed_rpm: false 
           fixed_rpm_value: 660.0 
           max_rpm: 2000.0
           min_rpm: -2000.0
           K_T_BP: 0.061461915
           prop_pitch: 0.381
           D: 0.4318
-          l_: 3.5
+          l_: 4.0
           deadzone_pos: 0.0
           deadzone_neg: 0.0
 
