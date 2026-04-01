@@ -1,4 +1,4 @@
-#include "controller_pid.hpp"
+#include "farol2_pid_controller/controller_pid.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -6,11 +6,10 @@
 
 namespace farol_control {
 
-/* Constructor */
-ControllerPID::ControllerPID(double kp, double ki, double kd, double lpf_wc, double tau_min,
-                             double tau_max, double kffv_lin, double kffv_sq, double kffa,
-                             bool wrapToPi, int lpf_order, std::string lpf_method,
-                             std::string lpf_design) {
+void ControllerPID::configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq,
+                              double kffa, double tau_min, double tau_max, bool use_lpf,
+                              double lpf_wc, int lpf_order, std::string lpf_design,
+                              std::string lpf_method, bool wrapToPi) {
   /* Set parameters */
   kp_ = kp;
   ki_ = ki;
@@ -22,20 +21,30 @@ ControllerPID::ControllerPID(double kp, double ki, double kd, double lpf_wc, dou
   tau_min_ = tau_min;
   tau_max_ = tau_max;
   wrapToPi_ = wrapToPi;
+  use_lpf_ = use_lpf;
 
   lpf_.configure(lpf_wc_, 0.1, lpf_order, lpf_design, lpf_method, wrapToPi_);
+  configured_ = true;
 }
 
 // Delta implementation for PID
 double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
+  if (!configured_) return 0.0;
   ref_raw_ = state_ref;
   state_ = state;
 
   // Pass reference signal through LPF to extract reference derivatives for ff terms
-  lpf_.step(state_ref, dt);
-  ref_ = lpf_.y();
-  dref_ = lpf_.dy();
-  ddref_ = lpf_.ddy();
+  if (use_lpf_) {
+    lpf_.step(state_ref, dt);
+    ref_ = lpf_.y();
+    dref_ = lpf_.dy();
+    ddref_ = lpf_.ddy();
+  } else {
+    ref_ = state_ref;
+    dref_ = 0.0;
+    ddref_ = 0.0;
+    dddref_ = 0.0;
+  }
 
   // Compute error
   error_ = state - state_ref;
@@ -83,17 +92,13 @@ double ControllerPID::callController(double state, double state_ref, double stat
   return tau_sat_;
 }
 
-void ControllerPID::setParams(double kp, double ki, double kd, double lpf_wc, double tau_min,
-                              double tau_max, double kffv_lin, double kffv_sq, double kffa) {
+void ControllerPID::setGains(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa) {
   kp_ = kp;
   ki_ = ki;
   kd_ = kd;
   kffv_lin_ = kffv_lin;
   kffv_sq_ = kffv_sq;
   kffa_ = kffa;
-  lpf_wc_ = lpf_wc;
-  tau_min_ = tau_min;
-  tau_max_ = tau_max;
 }
 
 }  // namespace farol_control

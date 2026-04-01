@@ -100,7 +100,7 @@ def generate_launch_description():
   # Nodes to launch #
   ###################
   pid_node = Node(
-    package='pid',
+    package='farol2_pid_controller',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'inner_loop']),
     executable='pid_control',
     name='pid',

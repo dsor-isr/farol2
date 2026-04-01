@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(pid)
+project(farol2_pid_controller)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -31,6 +31,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 )
 
 ament_export_dependencies(rosidl_default_runtime)
+ament_export_dependencies(farol_utils)
 
 # Create reusable controller library as STATIC to work with farol_utils
 # (farol_utils is compiled as static library without PIC)
@@ -76,7 +77,7 @@ target_link_libraries(pid_control "${cpp_typesupport_target}")
 target_include_directories(pid_control PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+  $<INSTALL_INTERFACE:include>)
   
 target_compile_features(pid_control PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
