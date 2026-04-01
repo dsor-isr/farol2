@@ -220,7 +220,7 @@ void PathFollowingNode::SetRelativeHeadingService(const std::shared_ptr<path_fol
         this->pf_algorithm_ = new RelativeHeading(kx, ky, kz, Eigen::Vector2d(p_sat.data()), yaw_offset, this->publishers_[0], this->publishers_[1], this->publishers_[2], this->publishers_[3]);
 
         /* Path the debug variables publisher to the class*/
-        pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol_interfaces::msg::PFDebug>(
+        pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
                                                     get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
 
         /* Return success */
@@ -288,7 +288,7 @@ void PathFollowingNode::SetMarceloService(const std::shared_ptr<path_following::
       new Marcelo(delta, kk, kz, k_pos, k_currents, rd.data(), d.data(), this->publishers_[0],
           this->publishers_[1], this->publishers_[2], this->publishers_[3], this->publishers_[4]);
 
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol_interfaces::msg::PFDebug>(
+    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
                                                 get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
     
     res->success = true;
@@ -346,7 +346,7 @@ void PathFollowingNode::SetAguiarService(const std::shared_ptr<path_following::s
       new Aguiar(delta, kk, kz, k_pos, k_currents, this->publishers_[0],
           this->publishers_[1], this->publishers_[2]);
 
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol_interfaces::msg::PFDebug>(
+    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
                                                 get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
     
     res->success = true;
@@ -394,7 +394,7 @@ void PathFollowingNode::SetBreivikService(const std::shared_ptr<path_following::
     this->pf_algorithm_ = new Breivik(this->publishers_[0], 
         this->publishers_[1], this->publishers_[2], delta_h);
     res->success = true;
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol_interfaces::msg::PFDebug>(
+    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
                                                 get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
 
   } catch (...) {
@@ -433,7 +433,7 @@ void PathFollowingNode::SetFossenService(const std::shared_ptr<path_following::s
     /* Assign the new controller */
     this->pf_algorithm_ = new Fossen(this->publishers_[0], this->publishers_[1], this->set_path_mode_client_);
     res->success = true;
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol_interfaces::msg::PFDebug>(
+    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
                                                 get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
 
   } catch (...) {
@@ -486,7 +486,7 @@ void PathFollowingNode::SetRomuloService(const std::shared_ptr<path_following::s
       new Romulo(controller_gains, this->publishers_[0],
           this->publishers_[1], this->publishers_[2]);
     res->success = true;
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol_interfaces::msg::PFDebug>(
+    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
                                                 get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
 
   } catch (...) {
@@ -536,7 +536,7 @@ void PathFollowingNode::SetLapierreService(const std::shared_ptr<path_following:
 
     /* Assign the new controller */
     this->pf_algorithm_ = new Lapierre(k1, k2, k3, theta, k_delta, this->publishers_[0], this->publishers_[1], this->publishers_[2]);
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol_interfaces::msg::PFDebug>(
+    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
                                                 get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
     res->success = true;
 
@@ -589,7 +589,7 @@ void PathFollowingNode::SetPramodService(const std::shared_ptr<path_following::s
     /* Assign the new controller */
     this->pf_algorithm_ = new Pramod(controller_gains, this->publishers_[0],
         this->publishers_[1], this->publishers_[2], this->set_path_mode_client_);
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol_interfaces::msg::PFDebug>(
+    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
                                                 get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
     res->success = true;
 
@@ -638,7 +638,7 @@ void PathFollowingNode::SetSamsonService(const std::shared_ptr<path_following::s
 
     /* Assign the new controller */
     this->pf_algorithm_ = new Samson(k1, k2, k3, theta, k_delta, this->publishers_[0], this->publishers_[1], this->set_path_mode_client_ );
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol_interfaces::msg::PFDebug>(
+    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
                                                 get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
     res->success = true;
 

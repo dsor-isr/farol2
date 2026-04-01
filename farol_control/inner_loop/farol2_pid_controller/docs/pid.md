@@ -4,7 +4,7 @@
 <!-- ![pid Diagram](img/pid.png) -->
 
 ## Subscribers
-- `topics.subscribers.nav_state` (`farol_interfaces/msg/NavigationState`)
+- `topics.subscribers.nav_state` (`farol2_interfaces/msg/NavigationState`)
 - `topics.subscribers.<controller>_ref` (`std_msgs/msg/Float32`) for each enabled controller
 
 Notes:

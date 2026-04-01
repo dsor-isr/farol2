@@ -2,7 +2,7 @@
 #define CONTROLLER_PID_HPP_
 
 #include <string>
-#include <farol_utils/filters/low_pass_filter.hpp>
+#include <farol2_utils/filters/low_pass_filter.hpp>
 
 /**
  * @file controller_pid.hpp
@@ -89,7 +89,7 @@ class ControllerPID {
   double lpf_A_ = 0.0;
   double lpf_B_ = 0.0;
 
-  farol_utils::LowPassFilter lpf_;
+  farol2_utils::LowPassFilter lpf_;
 
  private:
 };

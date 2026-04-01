@@ -17,13 +17,13 @@
 #include "geometry_msgs/msg/wrench.hpp"
 
 #include "geometry_msgs/msg/wrench_stamped.hpp"
-#include "farol_interfaces/msg/navigation_state.hpp"
+#include "farol2_interfaces/msg/navigation_state.hpp"
 #include "farol2_pid_controller/srv/change_params.hpp"
 #include "farol2_pid_controller/msg/pid_debug.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 
-#include <farol_utils/filters/low_pass_filter.hpp>
-#include <farol_utils/angles.hpp>
+#include <farol2_utils/filters/low_pass_filter.hpp>
+#include <farol2_utils/angles.hpp>
 
 #include "farol2_pid_controller/controller_pi.hpp"
 #include "farol2_pid_controller/controller_pid.hpp"
@@ -140,14 +140,14 @@ class PID : public rclcpp::Node {
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_y_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_z_pub_;
 
-    rclcpp::Subscription<farol_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
+    rclcpp::Subscription<farol2_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
     std::map<std::string, rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr> reference_subscribers_;
 
     rclcpp::Service<farol2_pid_controller::srv::ChangeParams>::SharedPtr change_params_srv_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr course_control_srv_;
 
     /** @brief Store latest navigation state sample. */
-    void navStateCallback(const farol_interfaces::msg::NavigationState &msg);
+    void navStateCallback(const farol2_interfaces::msg::NavigationState &msg);
 
     /**
      * @brief Update reference value for one controller and timestamp it.
@@ -200,7 +200,7 @@ class PID : public rclcpp::Node {
     std_msgs::msg::Float32 float32_msg_;
 
         /** Most recent navigation estimate. */
-    farol_interfaces::msg::NavigationState nav_state_;
+    farol2_interfaces::msg::NavigationState nav_state_;
 
         /** Enabled controller names after parsing/filtering configuration. */
     std::set<std::string> controller_names_;

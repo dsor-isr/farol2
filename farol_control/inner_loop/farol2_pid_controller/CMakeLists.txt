@@ -10,10 +10,10 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
-find_package(farol_interfaces REQUIRED)
+find_package(farol2_interfaces REQUIRED)
 find_package(control_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
-find_package(farol_utils REQUIRED)
+find_package(farol2_utils REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -31,17 +31,17 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 )
 
 ament_export_dependencies(rosidl_default_runtime)
-ament_export_dependencies(farol_utils)
+ament_export_dependencies(farol2_utils)
 
-# Create reusable controller library as STATIC to work with farol_utils
-# (farol_utils is compiled as static library without PIC)
+# Create reusable controller library as STATIC to work with farol2_utils
+# (farol2_utils is compiled as static library without PIC)
 add_library(${PROJECT_NAME}_controllers STATIC
   src/controller_pi.cpp
   src/controller_pid.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_controllers PUBLIC
-  farol_utils::farol_utils
+  farol2_utils::farol2_utils
 )
 
 target_include_directories(${PROJECT_NAME}_controllers PUBLIC
@@ -59,15 +59,15 @@ ament_target_dependencies(
   rclcpp
   std_msgs
   std_srvs
-  farol_interfaces
+  farol2_interfaces
   control_allocation
-  farol_utils
+  farol2_utils
 )
 
 # Link controller library to the executable
 target_link_libraries(pid_control
   ${PROJECT_NAME}_controllers
-  farol_utils::farol_utils
+  farol2_utils::farol2_utils
 )
 
 # Link generated service types

@@ -161,7 +161,7 @@ void AuvSim::initialisePublishers() {
   angular_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
       get_parameter("topics.publishers.angular_acceleration").as_string(), 1);
 
-  meas_pub_ = create_publisher<farol_interfaces::msg::Measurement>(
+  meas_pub_ = create_publisher<farol2_interfaces::msg::Measurement>(
       get_parameter("topics.publishers.measurement").as_string(), 1);
 
   return;
@@ -255,8 +255,8 @@ void AuvSim::publishMeasurements()
   double depth = auv_->getZ();
 
   if (gnss_activate_) {
-    farol_interfaces::msg::Measurement pos_msg, vel_msg;
-    pos_msg.type = farol_interfaces::msg::Measurement::MEAS_UTM_POSITION;
+    farol2_interfaces::msg::Measurement pos_msg, vel_msg;
+    pos_msg.type = farol2_interfaces::msg::Measurement::MEAS_UTM_POSITION;
     pos_msg.value = {
       north + (noise_activate_ ? randn(pos_bias[0], pos_variance[0]) : 0.0),
       east  + (noise_activate_ ? randn(pos_bias[1], pos_variance[1]) : 0.0),
@@ -264,7 +264,7 @@ void AuvSim::publishMeasurements()
     };
     meas_pub_->publish(pos_msg);
 
-    vel_msg.type = farol_interfaces::msg::Measurement::MEAS_INERTIAL_VELOCITY;
+    vel_msg.type = farol2_interfaces::msg::Measurement::MEAS_INERTIAL_VELOCITY;
     vel_msg.value = {
       auv_->getSurge() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0),
       auv_->getSway()  + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0),
@@ -274,15 +274,15 @@ void AuvSim::publishMeasurements()
   }
 
   if (depth_sensor_activate_) {
-    farol_interfaces::msg::Measurement depth_msg;
-    depth_msg.type = farol_interfaces::msg::Measurement::MEAS_DEPTH;
+    farol2_interfaces::msg::Measurement depth_msg;
+    depth_msg.type = farol2_interfaces::msg::Measurement::MEAS_DEPTH;
     depth_msg.value = {depth + (noise_activate_ ? randn(pos_bias[2], pos_variance[2]) : 0.0)};
     meas_pub_->publish(depth_msg);
   }
 
   if (imu_activate_) {
-    farol_interfaces::msg::Measurement ori_msg, ori_rate_msg;
-    ori_msg.type = farol_interfaces::msg::Measurement::MEAS_ATTITUDE;
+    farol2_interfaces::msg::Measurement ori_msg, ori_rate_msg;
+    ori_msg.type = farol2_interfaces::msg::Measurement::MEAS_ATTITUDE;
     ori_msg.value = {
       auv_->getRoll()  + (noise_activate_ ? randn(ori_bias[0], ori_variance[0]) : 0.0),
       auv_->getPitch() + (noise_activate_ ? randn(ori_bias[1], ori_variance[1]) : 0.0),
@@ -290,7 +290,7 @@ void AuvSim::publishMeasurements()
     };
     meas_pub_->publish(ori_msg);
 
-    ori_rate_msg.type = farol_interfaces::msg::Measurement::MEAS_ANGULAR_VELOCITY;
+    ori_rate_msg.type = farol2_interfaces::msg::Measurement::MEAS_ANGULAR_VELOCITY;
     ori_rate_msg.value = {
       auv_->getRollRate()  + (noise_activate_ ? randn(ori_rate_bias[0], ori_rate_variance[0]) : 0.0),
       auv_->getPitchRate() + (noise_activate_ ? randn(ori_rate_bias[1], ori_rate_variance[1]) : 0.0),

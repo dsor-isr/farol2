@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <farol_utils/angles.hpp>
+#include <farol2_utils/angles.hpp>
 
 namespace farol_control {
 
@@ -49,7 +49,7 @@ double ControllerPID::callController(double state, double state_ref, double stat
   // Compute error
   error_ = state - state_ref;
   if (wrapToPi_)  // Wrap to [-pi, pi] if needed
-    error_ = farol_utils::wrapToPi(error_);
+    error_ = farol2_utils::wrapToPi(error_);
   // Compute error derivative
   error_rate_ = state_rate - dref_;
 
@@ -58,7 +58,7 @@ double ControllerPID::callController(double state, double state_ref, double stat
   // Compute derivative of all terms except the integral
   if (!first_it_) {
     state_rate_dot_ = (state_rate - state_rate_prev_) / dt;
-    state_dot_ = farol_utils::wrapToPi(state_ - state_prev_) / dt;
+    state_dot_ = farol2_utils::wrapToPi(state_ - state_prev_) / dt;
     error_rate_dot_ = (error_rate_ - error_rate_prev_) / dt;
     ddref_dot_ = (ddref_ - ddref_prev_) / dt;
   } else
