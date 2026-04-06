@@ -127,16 +127,6 @@
           # torque_y: "/#vehicle#/actuation/torque_y"
           # torque_z: "/#vehicle#/actuation/torque_z"
 
-  rudder:
-    ros__parameters:
-        topics:
-          subscribers:
-            rudder_angle_ref: "/#vehicle#/actuation/rudder_angle_ref"
-            rudder_angle: "/#vehicle#/drivers/can_instrumentation/rudder_angle"
-          publishers:
-            rudder_command: "/#vehicle#/rudder_command"
-
-
 ########################
 # ---  Outer-Loop  --- #
 ########################
