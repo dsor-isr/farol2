@@ -12,6 +12,7 @@
       # Speeds (surge, sway, heave)
       surge:
         enabled: false
+        delta_implementation: true
         kp: 10.0
         ki: 1.0
         use_lpf: true
@@ -20,6 +21,7 @@
         tau_max: 30.0 # N
       sway:
         enabled: false
+        delta_implementation: true
         kp: 1.0
         ki: 1.0
         use_lpf: true
@@ -28,6 +30,7 @@
         tau_max: 20.0 # N
       heave:
         enabled: false
+        delta_implementation: true
         kp: 1.0
         ki: 1.0
         use_lpf: true
@@ -38,6 +41,7 @@
       yaw:
         debug: true
         enabled: true
+        delta_implementation: true
         # Following Gains are for:
         #   m_r = 88.0; N_r = 14.0; N_rr = 260.0; xi = 0.7; additional pole @ 10*xi*wn
         # wc = 0.2
@@ -65,6 +69,7 @@
         tau_max: 6.0 # N.m
       pitch:
         enabled: false
+        delta_implementation: true
         kp: 1.0
         ki: 1.0
         kd: 1.0
@@ -74,6 +79,7 @@
         tau_max: 10.0 # N.m
       roll:
         enabled: false
+        delta_implementation: true
         kp: 1.0
         ki: 1.0
         kd: 1.0
@@ -84,6 +90,7 @@
       # Angle rates (yaw rate, pitch rate, roll rate)
       yaw_rate:
         enabled: false
+        delta_implementation: true
         kp: 1.0
         ki: 1.0
         use_lpf: true
@@ -92,6 +99,7 @@
         tau_max: 10.0 # N.m
       pitch_rate:
         enabled: false
+        delta_implementation: true
         kp: 1.0
         ki: 1.0
         use_lpf: true
@@ -100,6 +108,7 @@
         tau_max: 10.0 # N.m
       roll_rate:
         enabled: false
+        delta_implementation: true
         kp: 1.0
         ki: 1.0
         use_lpf: true

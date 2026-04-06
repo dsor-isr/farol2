@@ -123,6 +123,9 @@ void PID::loadParams() {
         } else if (param_name == "use_lpf") {
           controller_parameters_[name].insert({param_name, param.as_bool() ? 1.0 : 0.0});
           RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
+        } else if (param_name == "delta_implementation") {
+          controller_parameters_[name].insert({param_name, param.as_bool() ? 1.0 : 0.0});
+          RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
         } else {
           controller_parameters_[name].insert({param_name, param.as_double()});
           RCLCPP_DEBUG(get_logger(), "DOUBLE %s: %f", key.c_str(), param.as_double());
@@ -310,6 +313,8 @@ void PID::createControllers() {
                                  double kffv_sq,
                                  double kffa) {
     const bool use_lpf = controller_parameters_[name].count("use_lpf") ? controller_parameters_[name]["use_lpf"] != 0.0 : true;
+    const bool delta_implementation =
+      controller_parameters_[name].count("delta_implementation") ? controller_parameters_[name]["delta_implementation"] != 0.0 : true;
     controller = std::make_unique<ControllerPID>();
     controller->configure(controller_parameters_[name]["kp"],
                           controller_parameters_[name]["ki"],
@@ -324,6 +329,7 @@ void PID::createControllers() {
                           lpf_order_,
                           lpf_design_,
                           lpf_method_,
+                          delta_implementation,
                           true);
   };
 

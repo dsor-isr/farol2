@@ -18,7 +18,13 @@ class ControllerPID {
 
   void configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa,
                  double tau_min, double tau_max, bool use_lpf, double lpf_wc,
-                 int lpf_order, std::string lpf_design, std::string lpf_method, bool wrapToPi);
+                 int lpf_order, std::string lpf_design, std::string lpf_method,
+                 bool delta_implementation, bool wrapToPi);
+
+    // Backward-compatible overload: defaults to delta implementation enabled.
+    void configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa,
+                                 double tau_min, double tau_max, bool use_lpf, double lpf_wc,
+                                 int lpf_order, std::string lpf_design, std::string lpf_method, bool wrapToPi);
 
   double callController(double state, double state_ref, double state_rate, double dt);
 
@@ -58,6 +64,7 @@ class ControllerPID {
   bool wrapToPi_;
   bool use_lpf_;
   bool configured_ = false;
+  bool delta_implementation_ = true;
 
   double error_ = 0.0;
   double error_rate_ = 0.0;

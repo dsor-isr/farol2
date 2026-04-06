@@ -9,7 +9,7 @@ namespace farol_control {
 void ControllerPID::configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq,
                               double kffa, double tau_min, double tau_max, bool use_lpf,
                               double lpf_wc, int lpf_order, std::string lpf_design,
-                              std::string lpf_method, bool wrapToPi) {
+                              std::string lpf_method, bool delta_implementation, bool wrapToPi) {
   /* Set parameters */
   kp_ = kp;
   ki_ = ki;
@@ -22,9 +22,18 @@ void ControllerPID::configure(double kp, double ki, double kd, double kffv_lin, 
   tau_max_ = tau_max;
   wrapToPi_ = wrapToPi;
   use_lpf_ = use_lpf;
+  delta_implementation_ = delta_implementation;
 
   lpf_.configure(lpf_wc_, 0.1, lpf_order, lpf_design, lpf_method, wrapToPi_);
   configured_ = true;
+}
+
+void ControllerPID::configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq,
+                              double kffa, double tau_min, double tau_max, bool use_lpf,
+                              double lpf_wc, int lpf_order, std::string lpf_design,
+                              std::string lpf_method, bool wrapToPi) {
+  configure(kp, ki, kd, kffv_lin, kffv_sq, kffa, tau_min, tau_max, use_lpf, lpf_wc,
+            lpf_order, lpf_design, lpf_method, true, wrapToPi);
 }
 
 // Delta implementation for PID
@@ -64,34 +73,49 @@ double ControllerPID::callController(double state, double state_ref, double stat
   } else
     first_it_ = false;  // Reset first iteration flag
 
-  /* Add all PID terms */
-  tau_d_ = -ki_ * error_ - kp_ * error_dot_ - kd_ * error_rate_dot_ + kffa_ * ddref_dot_ +
-           kffv_lin_ * state_rate_dot_ + kffv_sq_ * state_rate_dot_ * abs(state_rate_dot_);
+  
+  if(delta_implementation_){
+    // Add all PID terms 
+    tau_d_ = -ki_ * error_ - kp_ * error_dot_ - kd_ * error_rate_dot_ + kffa_ * ddref_dot_ +
+            kffv_lin_ * state_rate_dot_ + kffv_sq_ * state_rate_dot_ * abs(state_rate_dot_);
 
-  // for debug only
-  p_term_ = -kp_ * error_ * dt;
-  i_term_ = -ki_ * error_ * dt;
-  d_term_ = -kd_ * error_rate_ * dt;
+    // for debug only
+    p_term_ = -kp_ * error_ * dt;
+    i_term_ = -ki_ * error_ * dt;
+    d_term_ = -kd_ * error_rate_ * dt;
 
-  /* Anti-windup */
-  Ka_ = 1.0 / dt;
-  tau_dot_ = tau_d_ - Ka_ * (tau_prev_ - tau_sat_prev_);
-  tau_ = tau_prev_ + tau_dot_ * dt;
-  tau_sat_ = std::clamp(tau_, tau_min_, tau_max_);
+    // Anti-windup 
+    Ka_ = 1.0 / dt;
+    tau_dot_ = tau_d_ - Ka_ * (tau_prev_ - tau_sat_prev_);
+    tau_ = tau_prev_ + tau_dot_ * dt;
+    tau_sat_ = std::clamp(tau_, tau_min_, tau_max_);
 
-  /* Set prev values */
-  error_prev_ = error_;
-  state_prev_ = state_;
-  state_rate_prev_ = state_rate;
-  error_rate_prev_ = error_rate_;
-  state_rate_dot_filter_prev_ = state_rate_dot_filter_;
-  tau_prev_ = tau_;
-  tau_sat_prev_ = tau_sat_;
-  ddref_prev_ = ddref_;
+  }else{
+    // integral term with anti-windup
+    tau_d_ = -ki_*error_;
+    Ka_ = 1.0/dt;
+    tau_dot_ = tau_d_ - Ka_*(tau_prev_ - tau_sat_prev_);
+    tau_ = tau_prev_ + tau_dot_*dt ;
+
+    // add all pid terms
+    
+    tau_ = tau_ -kp_ *error_  -kd_*error_rate_;
+    // antiwindup saturation
+    tau_sat_ = std::clamp(tau_, tau_min_, tau_max_);
+  }
+    // Set prev values 
+    error_prev_ = error_;
+    state_prev_ = state_;
+    state_rate_prev_ = state_rate;
+    error_rate_prev_ = error_rate_;
+    state_rate_dot_filter_prev_ = state_rate_dot_filter_;
+    tau_prev_ = tau_;
+    tau_sat_prev_ = tau_sat_;
+    ddref_prev_ = ddref_;
 
   return tau_sat_;
-}
 
+}
 void ControllerPID::setGains(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa) {
   kp_ = kp;
   ki_ = ki;
