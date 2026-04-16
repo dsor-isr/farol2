@@ -21,10 +21,10 @@ void ThrusterRudderAllocation::initialiseSubscribers() {
     rclcpp::QoS(1),
     [this](geometry_msgs::msg::WrenchStamped::SharedPtr msg){bodyWrenchRequestCallback(msg);});
 
-  nav_state_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
+  nav_state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
     declare_parameter<std::string>("topics.subscribers.nav_state"),
     rclcpp::QoS(1),
-    [this](farol_interfaces::msg::NavigationState::SharedPtr msg){nav_state_ = *msg;});
+    [this](farol2_interfaces::msg::NavigationState::SharedPtr msg){nav_state_ = *msg;});
   
   mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
     declare_parameter<std::string>("topics.subscribers.mission_status"),
@@ -136,7 +136,7 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(geometry_msgs::msg::Wre
   }
 
   /* Create message to publish rudder angle reference */
-  rudder_angle_ref_msg_.data = farol_utils::rad2deg(rudder_angle_);
+  rudder_angle_ref_msg_.data = farol2_utils::rad2deg(rudder_angle_);
   rudder_angle_ref_pub_->publish(rudder_angle_ref_msg_);
 }
 
@@ -161,7 +161,7 @@ void ThrusterRudderAllocation::computeRudderAngle(double tau_r)
   V_s_ = V_cm_ + V_r_;
 
   // angle between Vs and x_body of the boat
-  gamma_ = farol_utils::wrapToPi(std::atan2(V_s_(1),V_s_(0)) - nav_state_.orientation.z);
+  gamma_ = farol2_utils::wrapToPi(std::atan2(V_s_(1),V_s_(0)) - nav_state_.orientation.z);
 
   /* Compute rudder angle according to Fossen model, in "A Survey of Control Allocation Methods for Underwater Vehicles", p. 126 */
   /* N = K.l.v^2.δ */

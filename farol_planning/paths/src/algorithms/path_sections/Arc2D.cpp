@@ -1,6 +1,6 @@
 #include "Arc2D.h"
 #include <math.h>
-#include <farol_utils/angles.hpp> 
+#include <farol2_utils/angles.hpp> 
 #include <stdexcept>
 
 /**
@@ -34,8 +34,8 @@ Arc2D::Arc2D(Eigen::Vector2d start_point, Eigen::Vector2d end_point, Eigen::Vect
   this->psif_ = atan2(end_point[1] - center_point[1], 
                       end_point[0] - center_point[0]);
 
-  double max_gamma = (direction == -1) ? farol_utils::wrapTo2Pi(this->psif_ - this->psi0_)/M_PI :           // if turning right (-1)
-                                         (2*M_PI - farol_utils::wrapTo2Pi(this->psif_ - this->psi0_))/M_PI; // if turning left  (+1)
+  double max_gamma = (direction == -1) ? farol2_utils::wrapTo2Pi(this->psif_ - this->psi0_)/M_PI :           // if turning right (-1)
+                                         (2*M_PI - farol2_utils::wrapTo2Pi(this->psif_ - this->psi0_))/M_PI; // if turning left  (+1)
 
   /* Set the gamma max for this path to be between 0 and 1 */
   this->setMinGammaValue(0.0);
@@ -135,12 +135,12 @@ double Arc2D::getClosestPointGamma(Eigen::Vector3d &coordinate) {
     double psi = atan2(coordinate[1] - this->center_point_[1], 
                        coordinate[0] - this->center_point_[0]);
     
-    double psi_init = farol_utils::wrapTo2Pi(this->psi0_);
-    double psi_end = farol_utils::wrapTo2Pi(psie);
-    double psi_act = farol_utils::wrapTo2Pi(psi);
+    double psi_init = farol2_utils::wrapTo2Pi(this->psi0_);
+    double psi_end = farol2_utils::wrapTo2Pi(psie);
+    double psi_act = farol2_utils::wrapTo2Pi(psi);
       
-    psi_end = farol_utils::wrapTo2Pi(psi_end - psi_init);
-    psi_act = farol_utils::wrapTo2Pi(psi_act - psi_init);
+    psi_end = farol2_utils::wrapTo2Pi(psi_end - psi_init);
+    psi_act = farol2_utils::wrapTo2Pi(psi_act - psi_init);
     
     // For a normalized radius of 1
     double arc_len = fabs((this->direction_ == -1) ? 2 * M_PI - psi_end : psi_end);

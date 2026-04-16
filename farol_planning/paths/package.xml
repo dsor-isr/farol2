@@ -16,8 +16,8 @@
   <!-- dependencies libraries -->
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
-  <depend>farol_interfaces</depend>
-  <depend>farol_utils</depend>
+  <depend>farol2_interfaces</depend>
+  <depend>farol2_utils</depend>
   <depend>eigen3_cmake_module</depend>
   <depend>Eigen3</depend>
 

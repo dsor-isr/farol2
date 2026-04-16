@@ -25,7 +25,7 @@ void Nav2ConsoleState::loadParams() {
  * @brief Initialise Subscribers
  */
 void Nav2ConsoleState::initialiseSubscribers() {
-  nav_state_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
+  nav_state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
                 get_parameter("topics.subscribers.nav_state").as_string(), 
                 1, std::bind(&Nav2ConsoleState::nav_state_callback, this, std::placeholders::_1));
 
@@ -36,11 +36,11 @@ void Nav2ConsoleState::initialiseSubscribers() {
  * @brief Initialise Publishers
  */
 void Nav2ConsoleState::initialisePublishers() {
-  console_state_pub_ = create_publisher<farol_interfaces::msg::StateConsole>(
+  console_state_pub_ = create_publisher<farol2_interfaces::msg::StateConsole>(
                         get_parameter("topics.publishers.console_state").as_string(), 1);
 }
 
-void Nav2ConsoleState::nav_state_callback(const farol_interfaces::msg::NavigationState &msg) {
+void Nav2ConsoleState::nav_state_callback(const farol2_interfaces::msg::NavigationState &msg) {
   /* Update console_state_msg_ */
   console_state_msg_.header.stamp = this->now();
 
@@ -85,7 +85,7 @@ void Nav2ConsoleState::nav_state_callback(const farol_interfaces::msg::Navigatio
   console_state_msg_.altitude = -1.0;
 
   /* Maybe also add some safeguards and conditions around this flag... */
-  console_state_msg_.status = farol_interfaces::msg::StateConsole::STATUS_ALL_OK;
+  console_state_msg_.status = farol2_interfaces::msg::StateConsole::STATUS_ALL_OK;
 
   console_state_pub_->publish(console_state_msg_);
 }

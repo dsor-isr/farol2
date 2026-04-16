@@ -9,7 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(farol_interfaces REQUIRED)
+find_package(farol2_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(rosgraph_msgs REQUIRED)
 find_package(control_allocation REQUIRED)
@@ -33,7 +33,7 @@ ament_target_dependencies(
   auv_sim
   rclcpp
   std_msgs
-  farol_interfaces
+  farol2_interfaces
   geometry_msgs
   rosgraph_msgs
   control_allocation
@@ -43,7 +43,7 @@ ament_target_dependencies(
   magic_electric_sim
   rclcpp
   std_msgs
-  farol_interfaces
+  farol2_interfaces
   geometry_msgs
   rosgraph_msgs
   control_allocation

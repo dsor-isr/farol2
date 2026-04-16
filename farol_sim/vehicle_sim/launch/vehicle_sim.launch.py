@@ -71,7 +71,7 @@ def generate_launch_description():
 
     # default sim config
     PathJoinSubstitution([
-      FindPackageShare('farol_bringup'),
+      FindPackageShare('farol2_bringup'),
       'config_default',
       'vehicles',
       LaunchConfiguration('vehicle_name'),

@@ -1,5 +1,5 @@
 #include "wp_heading.h"
-#include <farol_utils/angles.hpp> 
+#include <farol2_utils/angles.hpp> 
 WpHeading::WpHeading(rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surge_pub,
                      rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr sway_pub,
                      rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_rate_pub)
@@ -57,7 +57,7 @@ void WpHeading::calculateRef(Vehicle_t state, WPref_t wp_ref, bool turn_radius_f
     u_ref = 0;
     v_ref = 0;
   }
-  r_ref = -k3 * farol_utils::wrapToPi(yaw_rad - yaw_ref_rad) * 180.0 / M_PI;
+  r_ref = -k3 * farol2_utils::wrapToPi(yaw_rad - yaw_ref_rad) * 180.0 / M_PI;
   setSurgeOut(u_ref);
   setSwayOut(v_ref);
   setYawrateOut(r_ref);

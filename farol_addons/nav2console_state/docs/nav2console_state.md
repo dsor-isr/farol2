@@ -1,7 +1,7 @@
 # nav2console_state Node
 
 ## In a nutshell
-This node converts state in *farol_interfaces::NavigationState* to state in *farol_interfaces::StateConsole*.
+This node converts state in *farol2_interfaces::NavigationState* to state in *farol2_interfaces::StateConsole*.
 
 <!-- ## Diagram
 ![AuvState2mState Diagram](img/auvstate2mstate.png) -->

@@ -104,7 +104,7 @@ void Pramod::publish_private() {
   this->surge_pub_->publish(msg);
 
   // desired yaw in degrees
-  msg.data = farol_utils::rad2deg(farol_utils::wrapTo2Pi(this->desired_yaw_));
+  msg.data = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(this->desired_yaw_));
   this->yaw_pub_->publish(msg);
 
   // Publish path gamma
