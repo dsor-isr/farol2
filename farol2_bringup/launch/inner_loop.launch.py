@@ -47,11 +47,6 @@ def generate_launch_description():
     description='Boolean to determine if "open_loop" node is launched.'
   )
 
-  launch_rudder_arg = DeclareLaunchArgument(
-    'rudder',
-    default_value='true',
-    description='Boolean to determine if "rudder" node is launched.'
-  )
 
   ###################################
   # Define parameters for all nodes #
@@ -119,16 +114,6 @@ def generate_launch_description():
     parameters=params
   )
 
-  rudder_node = Node(
-    package='rudder',
-    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'inner_loop']),
-    executable='rudder',
-    name='rudder',
-    output='screen',
-    condition=IfCondition(LaunchConfiguration('rudder')),
-    parameters=params
-  )
-
   ######################################################
   # Return launch description with arguments and nodes #
   ######################################################
@@ -140,9 +125,7 @@ def generate_launch_description():
     config_package_path_real_arg,
     launch_pid_arg,
     launch_open_loop_arg,
-    launch_rudder_arg,
     # nodes
     pid_node,
     open_loop_node,
-    rudder_node,
   ])
