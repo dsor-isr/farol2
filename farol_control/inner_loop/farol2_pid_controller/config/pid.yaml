@@ -15,7 +15,7 @@
         enabled: false
         kp: 10.0
         ki: 1.0
-        use_lpf: true
+        use_ref_lpf: true
         lpf_wc: 31.4 # rad/s
         tau_min: -30.0 # N
         tau_max: 30.0 # N
@@ -23,7 +23,7 @@
         enabled: false
         kp: 1.0
         ki: 1.0
-        use_lpf: true
+        use_ref_lpf: true
         lpf_wc: 31.4 # rad/s
         tau_min: -20.0 # N
         tau_max: 20.0 # N
@@ -31,7 +31,7 @@
         enabled: false
         kp: 1.0
         ki: 1.0
-        use_lpf: true
+        use_ref_lpf: true
         lpf_wc: 31.4 # rad/s
         tau_min: -20.0 # N
         tau_max: 20.0 # N
@@ -59,7 +59,7 @@
         kffv_lin: 0.0
         kffv_sq: 0.0
         kffa: 0.0
-        use_lpf: true
+        use_ref_lpf: true
         lpf_wc: 1.0 # rad/s (2hz about the maximum possible given that sampling is 10hz)
         # lpf_wc: 12.5664 # rad/s (2hz about the maximum possible given that sampling is 10hz)
         tau_min: -6.0  # N.m (actual in simulation is 5.93)
@@ -69,7 +69,7 @@
         kp: 1.0
         ki: 1.0
         kd: 1.0
-        use_lpf: true
+        use_ref_lpf: true
         lpf_wc: 3.1416 # rad/s
         tau_min: -10.0 # N.m
         tau_max: 10.0 # N.m
@@ -78,7 +78,7 @@
         kp: 1.0
         ki: 1.0
         kd: 1.0
-        use_lpf: true
+        use_ref_lpf: true
         lpf_wc: 3.1416 # rad/s
         tau_min: -10.0 # N.m
         tau_max: 10.0 # N.m
@@ -87,7 +87,7 @@
         enabled: false
         kp: 1.0
         ki: 1.0
-        use_lpf: true
+        use_ref_lpf: true
         lpf_wc: 31.4 # rad/s
         tau_min: -10.0 # N.m
         tau_max: 10.0 # N.m
@@ -95,7 +95,7 @@
         enabled: false
         kp: 1.0
         ki: 1.0
-        use_lpf: true
+        use_ref_lpf: true
         lpf_wc: 31.4 # rad/s
         tau_min: -10.0 # N.m
         tau_max: 10.0 # N.m
@@ -103,7 +103,7 @@
         enabled: false
         kp: 1.0
         ki: 1.0
-        use_lpf: true
+        use_ref_lpf: true
         lpf_wc: 31.4 # rad/s
         tau_min: -10.0 # N
         tau_max: 10.0 # N-m
