@@ -265,7 +265,7 @@ class PID : public rclcpp::Node {
     /**
      * @brief Execute one controller and accumulate its wrench contribution.
      */
-    void executeController(const ControllerConfig &cfg);
+    void executeController(const ControllerConfig &cfg, double dt);
 
     /**
      * @brief Check if the controller reference is still considered recent.
@@ -275,7 +275,7 @@ class PID : public rclcpp::Node {
     /**
      * @brief Execute all enabled controllers that pass recent-reference gating.
      */
-    void callControllers();
+    void callControllers(double dt);
 
     /**
      * @brief Clear the accumulated wrench before/after each control cycle.

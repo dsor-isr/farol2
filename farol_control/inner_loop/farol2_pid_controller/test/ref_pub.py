@@ -30,9 +30,9 @@ class YawRefPublisher(Node):
 
         # Parameters
         self.declare_parameter('mode', 'sine')        # 'sine' or 'ramp'
-        self.declare_parameter('amplitude', 1.0) # rad (sine only)
+        self.declare_parameter('amplitude', 0.25) # rad (sine only)
         self.declare_parameter('frequency', 0.01)     # Hz
-        self.declare_parameter('offset', 0.0)         # rad
+        self.declare_parameter('offset', 5.32)         # rad
         self.declare_parameter('rate', 10.0)          # Hz
 
         self.mode = str(self.get_parameter('mode').value).lower()
@@ -91,6 +91,10 @@ class YawRefPublisher(Node):
             yaw = (self.offset + self.A * s) + np.random.uniform(-0.0001, 0.0001)
             yaw_dot = self.A * w * c
             yaw_ddot = -self.A * (w * w) * s
+
+            yaw = yaw *180/math.pi
+            yaw_dot = yaw_dot *180/math.pi
+            yaw_ddot = yaw_ddot *180/math.pi
             return yaw, yaw_dot, yaw_ddot
 
         if self.mode == 'ramp':

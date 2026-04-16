@@ -120,10 +120,29 @@ void PID::loadParams() {
         } else if (param_name == "debug") {
           controller_debug_[name] = param.as_bool();
           RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
-        } else if (param_name == "use_lpf") {
+        } else if (param_name == "use_ref_lpf") {
           controller_parameters_[name].insert({param_name, param.as_bool() ? 1.0 : 0.0});
           RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
+        } else if (param_name == "use_lpf") {
+          // Backward compatibility for legacy configs.
+          controller_parameters_[name].insert({"use_ref_lpf", param.as_bool() ? 1.0 : 0.0});
+          RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
         } else if (param_name == "delta_implementation") {
+          controller_parameters_[name].insert({param_name, param.as_bool() ? 1.0 : 0.0});
+          RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
+        } else if (param_name == "use_state_lpf") {
+          controller_parameters_[name].insert({param_name, param.as_bool() ? 1.0 : 0.0});
+          RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
+        } else if (param_name == "use_state_lpf_for_state_rate") {
+          controller_parameters_[name].insert({param_name, param.as_bool() ? 1.0 : 0.0});
+          RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
+        } else if (param_name == "use_filtered_state_for_control") {
+          controller_parameters_[name].insert({param_name, param.as_bool() ? 1.0 : 0.0});
+          RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
+        } else if (param_name == "use_filtered_ref_for_control") {
+          controller_parameters_[name].insert({param_name, param.as_bool() ? 1.0 : 0.0});
+          RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
+        } else if (param_name == "use_rate_limiter") {
           controller_parameters_[name].insert({param_name, param.as_bool() ? 1.0 : 0.0});
           RCLCPP_DEBUG(get_logger(), "BOOL %s: %d", key.c_str(), param.as_bool());
         } else {
@@ -297,13 +316,13 @@ void PID::createControllers() {
   const std::vector<std::string> yaw_required = {"kp", "ki", "kd", "kffa", "kffv_lin", "kffv_sq", "lpf_wc", "tau_min", "tau_max"};
 
   const auto create_pi = [this](const std::string &name, std::unique_ptr<ControllerPI> &controller) {
-    const bool use_lpf = controller_parameters_[name].count("use_lpf") ? controller_parameters_[name]["use_lpf"] != 0.0 : true;
+    const bool use_ref_lpf = controller_parameters_[name].count("use_ref_lpf") ? controller_parameters_[name]["use_ref_lpf"] != 0.0 : true;
     controller = std::make_unique<ControllerPI>();
     controller->configure(controller_parameters_[name]["kp"],
                           controller_parameters_[name]["ki"],
                           controller_parameters_[name]["tau_min"],
                           controller_parameters_[name]["tau_max"],
-                          use_lpf,
+                          use_ref_lpf,
                           controller_parameters_[name]["lpf_wc"]);
   };
 
@@ -312,9 +331,21 @@ void PID::createControllers() {
                                  double kffv_lin,
                                  double kffv_sq,
                                  double kffa) {
-    const bool use_lpf = controller_parameters_[name].count("use_lpf") ? controller_parameters_[name]["use_lpf"] != 0.0 : true;
+    const bool use_ref_lpf = controller_parameters_[name].count("use_ref_lpf") ? controller_parameters_[name]["use_ref_lpf"] != 0.0 : true;
     const bool delta_implementation =
       controller_parameters_[name].count("delta_implementation") ? controller_parameters_[name]["delta_implementation"] != 0.0 : true;
+    const bool use_state_lpf =
+      controller_parameters_[name].count("use_state_lpf") ? controller_parameters_[name]["use_state_lpf"] != 0.0 : false;
+    const bool use_state_lpf_for_state_rate =
+      controller_parameters_[name].count("use_state_lpf_for_state_rate") ? controller_parameters_[name]["use_state_lpf_for_state_rate"] != 0.0 : false;
+    const bool use_filtered_state_for_control =
+      controller_parameters_[name].count("use_filtered_state_for_control") ? controller_parameters_[name]["use_filtered_state_for_control"] != 0.0 : false;
+    const bool use_filtered_ref_for_control =
+      controller_parameters_[name].count("use_filtered_ref_for_control") ? controller_parameters_[name]["use_filtered_ref_for_control"] != 0.0 : false;
+    const bool use_rate_limiter =
+      controller_parameters_[name].count("use_rate_limiter") ? controller_parameters_[name]["use_rate_limiter"] != 0.0 : false;
+    const double rate_limit =
+      controller_parameters_[name].count("rate_limit") ? controller_parameters_[name]["rate_limit"] : 0.0;
     controller = std::make_unique<ControllerPID>();
     controller->configure(controller_parameters_[name]["kp"],
                           controller_parameters_[name]["ki"],
@@ -324,13 +355,19 @@ void PID::createControllers() {
                           kffa,
                           controller_parameters_[name]["tau_min"],
                           controller_parameters_[name]["tau_max"],
-                          use_lpf,
+                          use_ref_lpf,
                           controller_parameters_[name]["lpf_wc"],
                           lpf_order_,
                           lpf_design_,
                           lpf_method_,
                           delta_implementation,
-                          true);
+                          true,
+                          use_state_lpf,
+                          use_state_lpf_for_state_rate,
+                          use_filtered_state_for_control,
+                          use_filtered_ref_for_control,
+                          use_rate_limiter,
+                          rate_limit);
   };
 
   if (controller_names_.count("surge") && !validateControllerParams("surge", pi_required)) {
@@ -653,7 +690,7 @@ void PID::timerCallback() {
 
 
   /* Run controllers to update body wrench request */
-  callControllers();
+  callControllers(dt);
 
   /* Go through existing controllers */
   /* Don't publish if controller hasn't received references */
@@ -743,7 +780,6 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_pid_controller::srv:
     response->success = true;
     response->message = "Changed " + request->controller + " controller's params based on w0 and xi";
     tau_ = 0.0;
-    return;
   }
   else{
     controller_yaw_->kp_ = request->kp;
@@ -752,8 +788,23 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_pid_controller::srv:
     response->success = true;
     response->message = "Changed " + request->controller + " controller's params to specified (kp, ki, kd)";
     tau_ = 0.0;
-    return;
   }
+  
+  /* Set additional parameters if provided */
+  if (request->lpf_wc > 0) {
+    controller_yaw_->lpf_wc_ = request->lpf_wc;
+    response->message += "; lpf_wc=" + std::to_string(request->lpf_wc);
+  }
+  if (request->tau_min > 0) {
+    controller_yaw_->tau_min_ = request->tau_min;
+    response->message += "; tau_min=" + std::to_string(request->tau_min);
+  }
+  if (request->tau_max > 0) {
+    controller_yaw_->tau_max_ = request->tau_max;
+    response->message += "; tau_max=" + std::to_string(request->tau_max);
+  }
+  
+  return;
 }
 
 void PID::courseControlCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -782,7 +833,7 @@ bool PID::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const
   return false;
 }
 
-void PID::callControllers() {
+void PID::callControllers(double dt) {
   for (const auto &name : controller_names_) {
     // Compute only for enabled channels with fresh references.
     if (!controller_parameters_[name]["enabled"] || !hasRecentReference(controller_last_reference_[name], node_frequency_)) {
@@ -791,15 +842,14 @@ void PID::callControllers() {
 
     auto it = controller_configs_.find(name);
     if (it != controller_configs_.end()) {
-      executeController(it->second);
+      executeController(it->second, dt);
     }
   }
 
   return;
 }
 
-void PID::executeController(const ControllerConfig &cfg) {
-  const double dt = 1.0 / node_frequency_;
+void PID::executeController(const ControllerConfig &cfg, double dt) {
 
   // Dispatch by controller type while preserving each channel's PI/PID flavor.
   switch (cfg.type) {
@@ -817,7 +867,8 @@ void PID::executeController(const ControllerConfig &cfg) {
       break;
     case YAW:
       if (!controller_yaw_) return;
-      tau_ = controller_yaw_->callController(cfg.get_state(), cfg.get_ref(), cfg.get_rate(), dt);
+      // tau_ = controller_yaw_->callController(cfg.get_state(), cfg.get_ref(), cfg.get_rate(), dt);
+      tau_ = controller_yaw_->callController(cfg.get_state(), cfg.get_ref(), 0.0, dt);
       break;
     case PITCH:
       if (!controller_pitch_) return;

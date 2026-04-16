@@ -17,13 +17,19 @@ class ControllerPID {
   ControllerPID() = default;
 
   void configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa,
-                 double tau_min, double tau_max, bool use_lpf, double lpf_wc,
+                 double tau_min, double tau_max, bool use_ref_lpf, double lpf_wc,
                  int lpf_order, std::string lpf_design, std::string lpf_method,
-                 bool delta_implementation, bool wrapToPi);
+                 bool delta_implementation, bool wrapToPi,
+                 bool use_state_lpf = false,
+                 bool use_state_lpf_for_state_rate = false,
+                 bool use_filtered_state_for_control = false,
+                 bool use_filtered_ref_for_control = false,
+                 bool use_rate_limiter = false,
+                 double rate_limit = 0.0);
 
     // Backward-compatible overload: defaults to delta implementation enabled.
     void configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa,
-                                 double tau_min, double tau_max, bool use_lpf, double lpf_wc,
+                                 double tau_min, double tau_max, bool use_ref_lpf, double lpf_wc,
                                  int lpf_order, std::string lpf_design, std::string lpf_method, bool wrapToPi);
 
   double callController(double state, double state_ref, double state_rate, double dt);
@@ -41,7 +47,9 @@ class ControllerPID {
   double getTau() { return tau_; }
 
   double ref_raw_;
+    double state_raw_;
   double state_;
+    double state_filt_;
   double ref_;
   double dref_;
   double ddref_;
@@ -49,11 +57,16 @@ class ControllerPID {
   double kffv_lin_;
   double kffv_sq_;
   double kffa_;
-  double p_term_;
-  double i_term_;
-  double d_term_;
-  double error_dot_;
-  double error_rate_dot_;
+  double p_term_{0.0};
+  double i_term_{0.0};
+  double d_term_{0.0};
+  double error_dot_{0.0};
+  double error_rate_dot_{0.0};
+  double state_rate_raw_ = 0.0;
+  double state_rate_lpf_ = 0.0;
+  double state_rate_used_ = 0.0;
+  double state_used_for_control_ = 0.0;
+  double ref_used_for_control_ = 0.0;
 
   double kp_;
   double ki_;
@@ -62,7 +75,15 @@ class ControllerPID {
   double tau_min_;
   double tau_max_;
   bool wrapToPi_;
-  bool use_lpf_;
+  bool use_ref_lpf_;
+    bool use_state_lpf_;
+    bool use_state_lpf_for_state_rate_;
+    bool use_filtered_state_for_control_;
+    bool use_filtered_ref_for_control_;
+    bool use_rate_limiter_;
+  double rate_limit_ = 0.0;
+  double ref_rate_limited_ = 0.0;
+  bool rate_limiter_initialized_ = false;
   bool configured_ = false;
   bool delta_implementation_ = true;
 
@@ -88,6 +109,7 @@ class ControllerPID {
   double tau_prev_ = 0.0;
   double tau_sat_ = 0.0;
   double tau_sat_prev_ = 0.0;
+  double output_ = 0.0;
 
   double state_rate_dot_filter_ = 0.0;
   double state_rate_dot_filter_prev_ = 0.0;
@@ -97,6 +119,7 @@ class ControllerPID {
   double lpf_B_ = 0.0;
 
   farol2_utils::LowPassFilter lpf_;
+    farol2_utils::LowPassFilter state_lpf_;
 
  private:
 };
