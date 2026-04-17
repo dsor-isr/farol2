@@ -184,6 +184,12 @@ class PID : public rclcpp::Node {
         /** Last reference timestamp for each controller channel. */
     std::map<std::string, rclcpp::Time> controller_last_reference_;
 
+        /** Tracks whether each controller has received at least one real reference. */
+    std::map<std::string, bool> controller_has_reference_;
+
+        /** True once the first NavigationState message has been received. */
+    bool has_nav_state_ = false;
+
         /** Control-loop frequency in Hz. */
     double node_frequency_;
 

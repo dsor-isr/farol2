@@ -22,6 +22,18 @@ PID::PID() : Node("pid",
     {"pitch_rate", now},
     {"roll_rate", now}
   };
+
+  controller_has_reference_ = {
+    {"surge", false},
+    {"sway", false},
+    {"heave", false},
+    {"yaw", false},
+    {"pitch", false},
+    {"roll", false},
+    {"yaw_rate", false},
+    {"pitch_rate", false},
+    {"roll_rate", false}
+  };
   
   /* Initialise body wrench request forces and torques as 0 */
   resetBodyWrenchRequest();
@@ -276,6 +288,7 @@ void PID::initialiseTimers() {
 
 void PID::navStateCallback(const farol2_interfaces::msg::NavigationState &msg) {
   nav_state_ = msg;
+  has_nav_state_ = true;
 }
 
 void PID::referenceCallback(const std::string &controller_name, double raw_value) {
@@ -291,6 +304,7 @@ void PID::referenceCallback(const std::string &controller_name, double raw_value
   else if (controller_name == "pitch_rate") pitch_rate_ref_ = farol2_utils::deg2rad(raw_value);
   else if (controller_name == "roll_rate") roll_rate_ref_ = farol2_utils::deg2rad(raw_value);
 
+  controller_has_reference_[controller_name] = true;
   controller_last_reference_[controller_name] = clock_->now();
 }
 
@@ -313,7 +327,7 @@ bool PID::validateControllerParams(const std::string &controller_name,
 void PID::createControllers() {
   const std::vector<std::string> pi_required = {"kp", "ki", "lpf_wc", "tau_min", "tau_max"};
   const std::vector<std::string> pid_required = {"kp", "ki", "kd", "lpf_wc", "tau_min", "tau_max"};
-  const std::vector<std::string> yaw_required = {"kp", "ki", "kd", "kffa", "kffv_lin", "kffv_sq", "lpf_wc", "tau_min", "tau_max"};
+  const std::vector<std::string> yaw_required = {"kp", "ki", "kd", "kdff", "kffa", "kffv_lin", "kffv_sq", "lpf_wc", "tau_min", "tau_max"};
 
   const auto create_pi = [this](const std::string &name, std::unique_ptr<ControllerPI> &controller) {
     const bool use_ref_lpf = controller_parameters_[name].count("use_ref_lpf") ? controller_parameters_[name]["use_ref_lpf"] != 0.0 : true;
@@ -328,6 +342,7 @@ void PID::createControllers() {
 
   const auto create_pid = [this](const std::string &name,
                                  std::unique_ptr<ControllerPID> &controller,
+                                 double kdff,
                                  double kffv_lin,
                                  double kffv_sq,
                                  double kffa) {
@@ -350,6 +365,7 @@ void PID::createControllers() {
     controller->configure(controller_parameters_[name]["kp"],
                           controller_parameters_[name]["ki"],
                           controller_parameters_[name]["kd"],
+                          kdff,
                           kffv_lin,
                           kffv_sq,
                           kffa,
@@ -395,6 +411,7 @@ void PID::createControllers() {
   if (controller_names_.count("yaw")) {
     create_pid("yaw",
                controller_yaw_,
+               controller_parameters_["yaw"]["kdff"],
                controller_parameters_["yaw"]["kffv_lin"],
                controller_parameters_["yaw"]["kffv_sq"],
                controller_parameters_["yaw"]["kffa"]);
@@ -404,13 +421,13 @@ void PID::createControllers() {
     RCLCPP_ERROR(get_logger(), "Pitch Controller missing parameters (kp, ki, kd, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
-  if (controller_names_.count("pitch")) create_pid("pitch", controller_pitch_, 0.0, 0.0, 0.0);
+  if (controller_names_.count("pitch")) create_pid("pitch", controller_pitch_, 0.0, 0.0, 0.0, 0.0);
 
   if (controller_names_.count("roll") && !validateControllerParams("roll", pid_required)) {
     RCLCPP_ERROR(get_logger(), "Roll Controller missing parameters (kp, ki, kd, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
-  if (controller_names_.count("roll")) create_pid("roll", controller_roll_, 0.0, 0.0, 0.0);
+  if (controller_names_.count("roll")) create_pid("roll", controller_roll_, 0.0, 0.0, 0.0, 0.0);
 
   if (controller_names_.count("yaw_rate") && !validateControllerParams("yaw_rate", pi_required)) {
     RCLCPP_ERROR(get_logger(), "Yaw Rate Controller missing parameters (kp, ki, lpf_wc, tau_min or tau_max).");
@@ -436,7 +453,7 @@ void PID::initializeControllerConfigs() {
 
   const auto pi_required = std::vector<std::string>{"kp", "ki", "lpf_wc", "tau_min", "tau_max"};
   const auto pid_required = std::vector<std::string>{"kp", "ki", "kd", "lpf_wc", "tau_min", "tau_max"};
-  const auto yaw_required = std::vector<std::string>{"kp", "ki", "kd", "kffa", "kffv_lin", "kffv_sq", "lpf_wc", "tau_min", "tau_max"};
+  const auto yaw_required = std::vector<std::string>{"kp", "ki", "kd", "kdff", "kffa", "kffv_lin", "kffv_sq", "lpf_wc", "tau_min", "tau_max"};
 
   const auto make_pi_config = [this](const std::string &name,
                                      ControllerType type,
@@ -548,12 +565,14 @@ void PID::initializeControllerConfigs() {
             debug_msg.p_term = controller_yaw_->getProportionalTerm();
             debug_msg.i_term = controller_yaw_->getIntegralTerm();
             debug_msg.d_term = controller_yaw_->getDerivativeTerm();
+            debug_msg.ff_term = controller_yaw_->getFFTerm();
             debug_msg.tau_d = controller_yaw_->getTau_d();
             debug_msg.tau_dot = controller_yaw_->getTauDot();
             debug_msg.tau_sat = controller_yaw_->getTau_sat();
             debug_msg.a_term = controller_yaw_->getAntiWindupTerm();
-            debug_msg.tau = tau_;
+            debug_msg.tau = controller_yaw_->getOutput();
             debug_msg.state = controller_yaw_->state_;
+            debug_msg.state_rate_used = controller_yaw_->state_rate_used_;
             debug_msg.ref_raw = farol2_utils::wrapTo2Pi(controller_yaw_->ref_raw_);
             debug_msg.ref_filt = farol2_utils::wrapTo2Pi(controller_yaw_->ref_);
             debug_msg.dref_filt = controller_yaw_->dref_;
@@ -575,11 +594,13 @@ void PID::initializeControllerConfigs() {
             debug_msg.p_term = controller_pitch_->getProportionalTerm();
             debug_msg.i_term = controller_pitch_->getIntegralTerm();
             debug_msg.d_term = controller_pitch_->getDerivativeTerm();
+            debug_msg.ff_term = controller_pitch_->getFFTerm();
             debug_msg.tau_d = controller_pitch_->getTau_d();
             debug_msg.tau_dot = controller_pitch_->getTauDot();
             debug_msg.tau_sat = controller_pitch_->getTau_sat();
             debug_msg.a_term = controller_pitch_->getAntiWindupTerm();
-            debug_msg.tau = tau_;
+            debug_msg.tau = controller_pitch_->getOutput();
+            debug_msg.state_rate_used = controller_pitch_->state_rate_used_;
           });
         break;
 
@@ -597,11 +618,13 @@ void PID::initializeControllerConfigs() {
             debug_msg.p_term = controller_roll_->getProportionalTerm();
             debug_msg.i_term = controller_roll_->getIntegralTerm();
             debug_msg.d_term = controller_roll_->getDerivativeTerm();
+            debug_msg.ff_term = controller_roll_->getFFTerm();
             debug_msg.tau_d = controller_roll_->getTau_d();
             debug_msg.tau_dot = controller_roll_->getTauDot();
             debug_msg.tau_sat = controller_roll_->getTau_sat();
             debug_msg.a_term = controller_roll_->getAntiWindupTerm();
             debug_msg.tau = tau_;
+            debug_msg.state_rate_used = controller_roll_->state_rate_used_;
           });
         break;
 
@@ -697,7 +720,7 @@ void PID::timerCallback() {
   static std::set<std::string>::iterator it;
   for (it = controller_names_.begin(); it != controller_names_.end(); it++) {
     /* If controller is not enabled or hasn't received a reference, skip it publishing */
-    if (!controller_parameters_[*it]["enabled"] || !hasRecentReference(controller_last_reference_[*it], node_frequency_)) {
+    if (!has_nav_state_ || !controller_parameters_[*it]["enabled"] || !controller_has_reference_[*it] || !hasRecentReference(controller_last_reference_[*it], node_frequency_)) {
       continue;
     }
 
@@ -778,7 +801,7 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_pid_controller::srv:
     controller_yaw_->ki_ = request->mr*(10*request->xi*request->w0*request->w0*request->w0);
     controller_yaw_->kd_ = request->mr*(12*request->xi*request->w0);
     response->success = true;
-    response->message = "Changed " + request->controller + " controller's params based on w0 and xi";
+    response->message = "Changed " + request->controller + " controller's params based on w0 and xi. New gains are: kp: " + std::to_string(controller_yaw_->kp_) + " ki: " + std::to_string(controller_yaw_->ki_) + " kd: " + std::to_string(controller_yaw_->kd_);
     tau_ = 0.0;
   }
   else{
@@ -786,7 +809,7 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_pid_controller::srv:
     controller_yaw_->ki_ = request->ki;
     controller_yaw_->kd_ = request->kd;
     response->success = true;
-    response->message = "Changed " + request->controller + " controller's params to specified (kp, ki, kd)";
+    response->message = "Changed " + request->controller + " controller's params to specified (kp, ki, kd). New gains are: kp=" + std::to_string(controller_yaw_->kp_) + ", ki=" + std::to_string(controller_yaw_->ki_) + ", kd=" + std::to_string(controller_yaw_->kd_);
     tau_ = 0.0;
   }
   
@@ -802,6 +825,10 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_pid_controller::srv:
   if (request->tau_max > 0) {
     controller_yaw_->tau_max_ = request->tau_max;
     response->message += "; tau_max=" + std::to_string(request->tau_max);
+  }
+  if (request->kdff > 0) {
+    controller_yaw_->kdff_ = request->kdff;
+    response->message += "; kdff=" + std::to_string(request->kdff);
   }
   
   return;
@@ -836,7 +863,7 @@ bool PID::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const
 void PID::callControllers(double dt) {
   for (const auto &name : controller_names_) {
     // Compute only for enabled channels with fresh references.
-    if (!controller_parameters_[name]["enabled"] || !hasRecentReference(controller_last_reference_[name], node_frequency_)) {
+    if (!has_nav_state_ || !controller_parameters_[name]["enabled"] || !controller_has_reference_[name] || !hasRecentReference(controller_last_reference_[name], node_frequency_)) {
       continue;
     }
 
@@ -867,8 +894,7 @@ void PID::executeController(const ControllerConfig &cfg, double dt) {
       break;
     case YAW:
       if (!controller_yaw_) return;
-      // tau_ = controller_yaw_->callController(cfg.get_state(), cfg.get_ref(), cfg.get_rate(), dt);
-      tau_ = controller_yaw_->callController(cfg.get_state(), cfg.get_ref(), 0.0, dt);
+      tau_ = controller_yaw_->callController(cfg.get_state(), cfg.get_ref(), cfg.get_rate(), dt);
       break;
     case PITCH:
       if (!controller_pitch_) return;

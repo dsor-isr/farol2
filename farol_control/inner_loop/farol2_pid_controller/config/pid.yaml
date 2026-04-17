@@ -58,6 +58,7 @@
         # kffa: 88.478840
         kffv_lin: 0.0
         kffv_sq: 0.0
+        kdff: 0.0
         kffa: 0.0
         use_ref_lpf: true
         lpf_wc: 1.0 # rad/s (2hz about the maximum possible given that sampling is 10hz)

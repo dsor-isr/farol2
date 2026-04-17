@@ -16,7 +16,7 @@ class ControllerPID {
  public:
   ControllerPID() = default;
 
-  void configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa,
+  void configure(double kp, double ki, double kd, double kdff, double kffv_lin, double kffv_sq, double kffa,
                  double tau_min, double tau_max, bool use_ref_lpf, double lpf_wc,
                  int lpf_order, std::string lpf_design, std::string lpf_method,
                  bool delta_implementation, bool wrapToPi,
@@ -28,23 +28,25 @@ class ControllerPID {
                  double rate_limit = 0.0);
 
     // Backward-compatible overload: defaults to delta implementation enabled.
-    void configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa,
+    void configure(double kp, double ki, double kd, double kdff, double kffv_lin, double kffv_sq, double kffa,
                                  double tau_min, double tau_max, bool use_ref_lpf, double lpf_wc,
                                  int lpf_order, std::string lpf_design, std::string lpf_method, bool wrapToPi);
 
   double callController(double state, double state_ref, double state_rate, double dt);
 
-  void setGains(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa);
+  void setGains(double kp, double ki, double kd, double kdff, double kffv_lin, double kffv_sq, double kffa);
 
   double getError() { return error_; }
   double getIntegralTerm() { return i_term_; }
   double getProportionalTerm() { return p_term_; }
   double getDerivativeTerm() { return d_term_; }
+  double getFFTerm() { return ff_term_; }
   double getTau_d() { return tau_d_; }
   double getTau_sat() { return tau_sat_; }
   double getAntiWindupTerm() { return Ka_ * (tau_prev_ - tau_sat_prev_); }
   double getTauDot() { return tau_dot_; }
   double getTau() { return tau_; }
+  double getOutput() { return output_; }
 
   double ref_raw_;
     double state_raw_;
@@ -60,6 +62,7 @@ class ControllerPID {
   double p_term_{0.0};
   double i_term_{0.0};
   double d_term_{0.0};
+  double ff_term_{0.0};
   double error_dot_{0.0};
   double error_rate_dot_{0.0};
   double state_rate_raw_ = 0.0;
@@ -71,6 +74,7 @@ class ControllerPID {
   double kp_;
   double ki_;
   double kd_;
+  double kdff_;
   double lpf_wc_;
   double tau_min_;
   double tau_max_;
