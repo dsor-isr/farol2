@@ -21,51 +21,50 @@ AuvSim::~AuvSim() {
  */
 void AuvSim::loadParams() {
 
-  
-  freq_ = get_parameter("node_frequency").as_int(); 
-  fluid_density = get_parameter("environment.fluid_density").as_double();
+  freq_ = declare_parameter<int>("node_frequency", 10);
+  fluid_density = declare_parameter<double>("environment.fluid_density", 1.025);
 
-  mass = get_parameter("vehicle.mass").as_double();
-  zg = get_parameter("vehicle.zg").as_double();
-  vehicle_density = get_parameter("vehicle.vehicle_density").as_double();
-  
-  inertia = get_parameter("vehicle.inertia_tensor").as_double_array();
-  Dl = get_parameter("vehicle.linear_damping_tensor").as_double_array();
-  Dq = get_parameter("vehicle.quadratic_damping_tensor").as_double_array();
-  added_mass = get_parameter("vehicle.added_mass_tensor").as_double_array();
+  mass = declare_parameter<double>("vehicle.mass", 30.0);
+  zg = declare_parameter<double>("vehicle.zg", 0.0);
+  vehicle_density = declare_parameter<double>("vehicle.vehicle_density", 1.0);
 
-  allocation_flat = get_parameter("vehicle.actuators.allocation_matrix").as_double_array();
-  lump_pos = get_parameter("vehicle.actuators.lump_param_positive").as_double_array();
-  lump_neg = get_parameter("vehicle.actuators.lump_param_negative").as_double_array();
-  minmax_input = get_parameter("vehicle.actuators.min_max_thruster_input").as_double_array();
+  inertia = declare_parameter<std::vector<double>>("vehicle.inertia_tensor", {1000.0, 1000.0, 4.14});
+  Dl = declare_parameter<std::vector<double>>("vehicle.linear_damping_tensor", {0.0, -55.1, -4.1879, -3000.0, -3000.0, -4.14});
+  Dq = declare_parameter<std::vector<double>>("vehicle.quadratic_damping_tensor", {-27.5, -101.0, -40.9649, -3000.0, -3000.0, -6.23});
+  added_mass = declare_parameter<std::vector<double>>("vehicle.added_mass_tensor", {20.0, 30.0, 80.088, 0.0, 0.0, 0.5});
 
-  thruster_gain = get_parameter("vehicle.actuators.gain").as_double();
-  thruster_pole = get_parameter("vehicle.actuators.pole").as_double();
-  thruster_delay = get_parameter("vehicle.actuators.delay").as_double();
-  sampling_period = get_parameter("vehicle.actuators.period").as_double();
+  allocation_flat = declare_parameter<std::vector<double>>("vehicle.actuators.allocation_matrix", {1.0, 0.0, 0.0, -0.25, -0.15, 0.0, 1.0, 0.0, 0.0, -0.25, 0.15, 0.0});
+  lump_pos = declare_parameter<std::vector<double>>("vehicle.actuators.lump_param_positive", {0.00000177778, 0.0, 0.0});
+  lump_neg = declare_parameter<std::vector<double>>("vehicle.actuators.lump_param_negative", {-0.00000177778, 0.0, 0.0});
+  minmax_input = declare_parameter<std::vector<double>>("vehicle.actuators.min_max_thruster_input", {8.6, 100.0});
 
-  disturbance_mean = get_parameter("environment.current.mean").as_double_array();
-  disturbance_sigma = get_parameter("environment.current.sigma").as_double_array();
-  disturbance_min = get_parameter("environment.current.minimum").as_double_array();
-  disturbance_max = get_parameter("environment.current.maximum").as_double_array();
+  thruster_gain = declare_parameter<double>("vehicle.actuators.gain", 50.0);
+  thruster_pole = declare_parameter<double>("vehicle.actuators.pole", 7.2115);
+  thruster_delay = declare_parameter<double>("vehicle.actuators.delay", 0.345);
+  sampling_period = declare_parameter<double>("vehicle.actuators.period", 0.01);
+
+  disturbance_mean = declare_parameter<std::vector<double>>("environment.current.mean", {0.0, 0.0, 0.0});
+  disturbance_sigma = declare_parameter<std::vector<double>>("environment.current.sigma", {0.0, 0.0, 0.0});
+  disturbance_min = declare_parameter<std::vector<double>>("environment.current.minimum", {0.0, 0.0, 0.0});
+  disturbance_max = declare_parameter<std::vector<double>>("environment.current.maximum", {0.0, 0.0, 0.0});
 
   node_period_ = 1.0/freq_;
   dt_ns_ = static_cast<uint64_t>(std::llround(node_period_ * 1e9));
 
   // Sensor params
-  gnss_activate_         = get_parameter("sensor.gnss").as_bool();
-  depth_sensor_activate_ = get_parameter("sensor.depth_sensor").as_bool();
-  imu_activate_          = get_parameter("sensor.imu").as_bool();
-  noise_activate_        = get_parameter("sensor.noise.activate").as_bool();
+  gnss_activate_         = declare_parameter<bool>("sensor.gnss", true);
+  depth_sensor_activate_ = declare_parameter<bool>("sensor.depth_sensor", true);
+  imu_activate_          = declare_parameter<bool>("sensor.imu", true);
+  noise_activate_        = declare_parameter<bool>("sensor.noise.activate", true);
 
-  auto p_bias = get_parameter("sensor.noise.position.bias").as_double_array();
-  auto p_var  = get_parameter("sensor.noise.position.variance").as_double_array();
-  auto o_bias = get_parameter("sensor.noise.orientation.bias").as_double_array();
-  auto o_var  = get_parameter("sensor.noise.orientation.variance").as_double_array();
-  auto v_bias = get_parameter("sensor.noise.body_velocity.bias").as_double_array();
-  auto v_var  = get_parameter("sensor.noise.body_velocity.variance").as_double_array();
-  auto r_bias = get_parameter("sensor.noise.orientation_rate.bias").as_double_array();
-  auto r_var  = get_parameter("sensor.noise.orientation_rate.variance").as_double_array();
+  auto p_bias = declare_parameter<std::vector<double>>("sensor.noise.position.bias", {0.0, 0.0, 0.0});
+  auto p_var  = declare_parameter<std::vector<double>>("sensor.noise.position.variance", {0.0, 0.0, 0.0});
+  auto o_bias = declare_parameter<std::vector<double>>("sensor.noise.orientation.bias", {0.0, 0.0, 0.0});
+  auto o_var  = declare_parameter<std::vector<double>>("sensor.noise.orientation.variance", {0.0, 0.0, 0.0});
+  auto v_bias = declare_parameter<std::vector<double>>("sensor.noise.body_velocity.bias", {0.0, 0.0, 0.0});
+  auto v_var  = declare_parameter<std::vector<double>>("sensor.noise.body_velocity.variance", {0.0, 0.0, 0.0});
+  auto r_bias = declare_parameter<std::vector<double>>("sensor.noise.orientation_rate.bias", {0.0, 0.0, 0.0});
+  auto r_var  = declare_parameter<std::vector<double>>("sensor.noise.orientation_rate.variance", {0.0, 0.0, 0.0});
   for (int i = 0; i < 3; ++i) {
     pos_bias[i] = p_bias[i]; pos_variance[i] = p_var[i];
     ori_bias[i] = o_bias[i]; ori_variance[i] = o_var[i];
@@ -73,8 +72,9 @@ void AuvSim::loadParams() {
     ori_rate_bias[i] = r_bias[i]; ori_rate_variance[i] = r_var[i];
   }
 
-  double originLat_ = get_parameter("initial_state.position").as_double_array()[0];
-  double originLon_ = get_parameter("initial_state.position").as_double_array()[1];
+  auto initial_position = declare_parameter<std::vector<double>>("initial_state.position", {38.692017, -9.211419, 0.0});
+  double originLat_ = initial_position[0];
+  double originLon_ = initial_position[1];
   GeographicLib::UTMUPS::Forward(originLat_, originLon_, utm_zone_, northp_, easting_, northing_);
 
   Eigen::Vector3d inertia_tensor(inertia[0], inertia[1], inertia[2]);
@@ -134,7 +134,7 @@ void AuvSim::initialiseSubscribers() {
 
 
   rpm_sub_  = create_subscription<control_allocation::msg::ThrusterRPM>(
-                          get_parameter("topics.subscribers.rpm_command").as_string(), 
+                          declare_parameter<std::string>("topics.subscribers.rpm_command", "/vehicle0/actuation/rpm_command"), 
                           1, std::bind(&AuvSim::rpmCallback, this, std::placeholders::_1));
   return;
 }
@@ -149,20 +149,20 @@ void AuvSim::initialisePublishers() {
 
 
   position_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("topics.publishers.position").as_string(), 1);
+      declare_parameter<std::string>("topics.publishers.position", "/vehicle0/sim/position"), 1);
   body_velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("topics.publishers.body_velocity").as_string(), 1);
+      declare_parameter<std::string>("topics.publishers.body_velocity", "/vehicle0/sim/body_velocity"), 1);
   orientation_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("topics.publishers.orientation").as_string(), 1);
+      declare_parameter<std::string>("topics.publishers.orientation", "/vehicle0/sim/orientation"), 1);
   orientation_rate_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("topics.publishers.orientation_rate").as_string(), 1);
+      declare_parameter<std::string>("topics.publishers.orientation_rate", "/vehicle0/sim/orientation_rate"), 1);
   body_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("topics.publishers.body_acceleration").as_string(), 1);
+      declare_parameter<std::string>("topics.publishers.body_acceleration", "/vehicle0/sim/body_acceleration"), 1);
   angular_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      get_parameter("topics.publishers.angular_acceleration").as_string(), 1);
+      declare_parameter<std::string>("topics.publishers.angular_acceleration", "/vehicle0/sim/angular_acceleration"), 1);
 
   meas_pub_ = create_publisher<farol_interfaces::msg::Measurement>(
-      get_parameter("topics.publishers.measurement").as_string(), 1);
+      declare_parameter<std::string>("topics.publishers.measurement", "/vehicle0/measurement"), 1);
 
   return;
 }
@@ -362,7 +362,7 @@ AUV::AUV(double mass,
                 disturbance_maximum_(disturbance_maximum) {
 
     /* Compute the radius of a sphere with equivalent density to the vehicle */
-    this->radius_ = std::pow(mass/((3.0/4.0)*M_PI*vehicle_density), 1.0/3.0);
+    this->radius_ = std::pow(mass/((4.0/3.0)*M_PI*vehicle_density), 1.0/3.0);
 
     /* Create a 6x6 diagonal rigid body mass matrix */
     Eigen::Matrix<double, 6, 6> mass_matrix = Eigen::Matrix<double, 6, 6>::Zero(6, 6);

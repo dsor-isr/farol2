@@ -1,7 +1,9 @@
-/**:
+/**/actuation/**:
   ros__parameters:
     actuation:
       thrusters:
+        open_loop: true
+        n_thrusters: 2
         configuration:
           0:
             name: "Portside"
@@ -9,12 +11,36 @@
             angles: [0.0, 0.0, 0.0]
           1:
             name: "Starboard"
-            moment_arms: [-0.25,  0.15, 0.0]
+            moment_arms: [-0.25, 0.15, 0.0]
             angles: [0.0, 0.0, 0.0]
 
-        
-        rpm_conversion:
-          coef_fwd: [0.00000177778, 0.0, 0.0]
-          coef_bwd: [-0.00000177778, 0.0, 0.0]
-          max_rpm:  5000.0
-          min_rpm: -5000.0
+/**:
+  wrench_manager:
+    ros__parameters:
+      node_frequency: 10.0
+
+  static_thruster_allocation:
+    ros__parameters:
+      node_frequency: 10.0
+
+  thruster_rudder_allocation:
+    ros__parameters:
+      node_frequency: 10.0
+
+  rpm_conversion:
+    ros__parameters:
+      mode: 1
+      max_rpm: 5000.0
+      min_rpm: -5000.0
+      mode0:
+        rho: 1025.0
+        K_T_BP: 0.061461915
+        prop_pitch: 0.381
+        D: 0.4318
+      mode1:
+        coef_fwd: [0.00000177778, 0.0, 0.0]
+        coef_bwd: [-0.00000177778, 0.0, 0.0]
+
+  throttle_conversion:
+    ros__parameters:
+      k: 20.0
