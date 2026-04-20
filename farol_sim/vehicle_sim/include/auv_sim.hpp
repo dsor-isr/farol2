@@ -87,6 +87,7 @@ class AuvSim : public rclcpp::Node {
 
     std::unique_ptr<AUV> auv_;
 
+    double speedup_;
     int freq_;
     double node_period_;
     Eigen::VectorXd rpm_; 

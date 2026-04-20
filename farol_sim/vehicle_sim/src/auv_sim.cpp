@@ -21,6 +21,7 @@ AuvSim::~AuvSim() {
  */
 void AuvSim::loadParams() {
 
+  speedup_ = declare_parameter<double>("speedup");
   freq_ = declare_parameter<int>("node_frequency", 10);
   fluid_density = declare_parameter<double>("environment.fluid_density", 1.025);
 
@@ -185,9 +186,8 @@ void AuvSim::initialiseServices() {
  */
 void AuvSim::initialiseTimers() {
 
-  timer_ = create_timer(
-    std::chrono::milliseconds(int(node_period_*1000)),
-    std::bind(&AuvSim::timerCallback, this));
+  timer_ = create_wall_timer(std::chrono::nanoseconds(int(node_period_ * 1e9 / speedup_)), std::bind(&AuvSim::timerCallback, this));
+  
 }
 
 
