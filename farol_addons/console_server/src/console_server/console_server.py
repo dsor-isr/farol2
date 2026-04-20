@@ -29,7 +29,7 @@ import importlib
 
 # Messages
 from std_msgs.msg import *
-from farol_interfaces.msg import *
+from farol2_interfaces.msg import *
 from geometry_msgs.msg import *
 
 # Services

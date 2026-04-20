@@ -12,10 +12,10 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(farol_interfaces REQUIRED)
+find_package(farol2_interfaces REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(farol_utils REQUIRED)
+find_package(farol2_utils REQUIRED)
 
 find_library(GEOGRAPHIC_LIB GeographicLib)
 
@@ -45,21 +45,21 @@ ament_target_dependencies(filter_handler
   rclcpp
   std_msgs
   sensor_msgs
-  farol_interfaces
+  farol2_interfaces
 )
 
 ament_target_dependencies(sample_and_hold
   rclcpp
   std_msgs
-  farol_interfaces
-  farol_utils
+  farol2_interfaces
+  farol2_utils
 )
 
 ament_target_dependencies(low_pass
   rclcpp
   std_msgs
-  farol_interfaces
-  farol_utils
+  farol2_interfaces
+  farol2_utils
 )
 
 # Include dirs

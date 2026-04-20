@@ -12,7 +12,7 @@
 #include <chrono>
 
 /* Farol Utils */
-#include <farol_utils/angles.hpp>
+#include <farol2_utils/angles.hpp>
 
 // ROS Fundamentals
 #include "rclcpp/rclcpp.hpp"
@@ -36,10 +36,10 @@
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/point_stamped.hpp"
 // #include "geometry_msgs/msg/vector3_stamped.hpp"
-#include "farol_interfaces/msg/navigation_state.hpp"
-#include "farol_interfaces/msg/formation.hpp"
-#include "farol_interfaces/msg/multi_section.hpp"
-#include "farol_interfaces/msg/section.hpp"
+#include "farol2_interfaces/msg/navigation_state.hpp"
+#include "farol2_interfaces/msg/formation.hpp"
+#include "farol2_interfaces/msg/multi_section.hpp"
+#include "farol2_interfaces/msg/section.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/float64.hpp"
@@ -73,7 +73,7 @@ class ConsoleParser : public rclcpp::Node {
     std::list<Section>::iterator act_section;
 
     // +.+ Without this variable gamma will be a huge value. Pfs will work, but not ideal
-    farol_interfaces::msg::Section section_copy; 	
+    farol2_interfaces::msg::Section section_copy; 	
 
     rclcpp::Time depth_end;
 
@@ -110,17 +110,17 @@ class ConsoleParser : public rclcpp::Node {
 
     // +.+ Subscribers
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr missionstring_sub_;
-    rclcpp::Subscription<farol_interfaces::msg::NavigationState>::SharedPtr state_sub_;
+    rclcpp::Subscription<farol2_interfaces::msg::NavigationState>::SharedPtr state_sub_;
     rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr mission_status_sub_;
 
     // +.+ Publishers
-    rclcpp::Publisher<farol_interfaces::msg::Section>::SharedPtr section_pub_;
-    rclcpp::Publisher<farol_interfaces::msg::Formation>::SharedPtr formation_pub_;
-    rclcpp::Publisher<farol_interfaces::msg::Formation>::SharedPtr biased_formation_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::Section>::SharedPtr section_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::Formation>::SharedPtr formation_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::Formation>::SharedPtr biased_formation_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr wpref_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr altitude_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr depth_pub_;
-    rclcpp::Publisher<farol_interfaces::msg::MultiSection>::SharedPtr fullpath_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::MultiSection>::SharedPtr fullpath_pub_;
     rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr flag_pub_;
 
     // +.+ Parameters
@@ -234,6 +234,6 @@ class ConsoleParser : public rclcpp::Node {
      * 
      * @param msg  
      */
-    void stateCallback(const farol_interfaces::msg::NavigationState &msg);
+    void stateCallback(const farol2_interfaces::msg::NavigationState &msg);
 };
 

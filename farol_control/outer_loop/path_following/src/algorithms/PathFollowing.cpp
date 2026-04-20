@@ -17,7 +17,7 @@ void PathFollowing::publish() {
   
   publish_private();
 
-  farol_interfaces::msg::PFDebug pf_debug;
+  farol2_interfaces::msg::PFDebug pf_debug;
 
   // pf_debug.header.stamp = clock_.now();
   pf_debug.algorithm = pfollowing_debug_.algorithm;

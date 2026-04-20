@@ -1,6 +1,6 @@
 #include "PathFollowingNode.h"
 
-#include <farol_utils/angles.hpp> /* Contains auxiliary functions for angle wrap */
+#include <farol2_utils/angles.hpp> /* Contains auxiliary functions for angle wrap */
 
 PathFollowingNode::PathFollowingNode() : Node("path_following", 
                                               rclcpp::NodeOptions()
@@ -17,7 +17,7 @@ PathFollowingNode::PathFollowingNode() : Node("path_following",
 
   /* Set PF Debug publisher */
   pf_algorithm_->setPFollowingDebugPublisher(
-    create_publisher<farol_interfaces::msg::PFDebug>(
+    create_publisher<farol2_interfaces::msg::PFDebug>(
       get_parameter("topics.publishers.pfollowing_debug").as_string(), 1)
   );
 }
@@ -136,7 +136,7 @@ void PathFollowingNode::deleteCurrentController() {
  */
 void PathFollowingNode::initialiseSubscribers() {
 
-  this->state_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
+  this->state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
                       get_parameter("topics.subscribers.state").as_string(), 
                       1, std::bind(&PathFollowingNode::vehicleStateCallback, this, std::placeholders::_1));
 
@@ -216,10 +216,10 @@ void PathFollowingNode::pathStateCallback(const paths::msg::PathData &msg) {
 /**
  * @brief  Vehicle state callback to update the state of the vehicle
  *
- * @param msg  A pointer to a farol_interfaces::msg::NavigationState that contains
+ * @param msg  A pointer to a farol2_interfaces::msg::NavigationState that contains
  * information regarding the vehicle
  */
-void PathFollowingNode::vehicleStateCallback(const farol_interfaces::msg::NavigationState &msg) {
+void PathFollowingNode::vehicleStateCallback(const farol2_interfaces::msg::NavigationState &msg) {
 
   /* If the algorithm is running, signal that we have received data from the
    * vehicle state */
@@ -233,9 +233,9 @@ void PathFollowingNode::vehicleStateCallback(const farol_interfaces::msg::Naviga
                                msg.altimeter;
 
   /* Update the vehicle orientation */
-  double roll = farol_utils::wrapToPi(farol_utils::deg2rad(msg.orientation.x));
-  double pitch = farol_utils::wrapToPi(farol_utils::deg2rad(msg.orientation.y));
-  double yaw = farol_utils::wrapToPi(farol_utils::deg2rad(msg.orientation.z));
+  double roll = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.orientation.x));
+  double pitch = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.orientation.y));
+  double yaw = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.orientation.z));
   this->vehicle_state_.eta2 << roll, pitch, yaw;
 
   /* Update the vehicle linear velocity */
@@ -244,9 +244,9 @@ void PathFollowingNode::vehicleStateCallback(const farol_interfaces::msg::Naviga
                              msg.body_velocity_inertial.z;
 
   /* Update the vehicle angular velocity */
-  this->vehicle_state_.v2 << farol_utils::deg2rad(msg.orientation_rate.x),
-                             farol_utils::deg2rad(msg.orientation_rate.y), 
-                             farol_utils::deg2rad(msg.orientation_rate.z);
+  this->vehicle_state_.v2 << farol2_utils::deg2rad(msg.orientation_rate.x),
+                             farol2_utils::deg2rad(msg.orientation_rate.y), 
+                             farol2_utils::deg2rad(msg.orientation_rate.z);
 }
 
 /**

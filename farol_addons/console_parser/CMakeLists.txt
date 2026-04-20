@@ -9,8 +9,8 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(farol_interfaces REQUIRED)
-find_package(farol_utils REQUIRED)
+find_package(farol2_interfaces REQUIRED)
+find_package(farol2_utils REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(paths REQUIRED)
 find_package(path_following REQUIRED)
@@ -29,8 +29,8 @@ ament_target_dependencies(
   console_parser_node
   rclcpp
   std_msgs
-  farol_interfaces
-  farol_utils
+  farol2_interfaces
+  farol2_utils
   paths
   path_following
   Eigen3

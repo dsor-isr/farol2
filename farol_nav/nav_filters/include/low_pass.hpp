@@ -6,10 +6,10 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
-#include "farol_interfaces/msg/navigation_state.hpp"
-#include "farol_interfaces/msg/measurement.hpp"
-#include "farol_utils/angles.hpp"
-#include "farol_utils/filters/low_pass_filter.hpp"
+#include "farol2_interfaces/msg/navigation_state.hpp"
+#include "farol2_interfaces/msg/measurement.hpp"
+#include "farol2_utils/angles.hpp"
+#include "farol2_utils/filters/low_pass_filter.hpp"
 
 /**
  * @brief   Low pass navigation filter
@@ -46,20 +46,20 @@ class LowPass : public rclcpp::Node {
     rclcpp::TimerBase::SharedPtr timer_;
 
     /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<farol_interfaces::msg::NavigationState>::SharedPtr state_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::NavigationState>::SharedPtr state_pub_;
     
-    rclcpp::Subscription<farol_interfaces::msg::Measurement>::SharedPtr measurement_sub_;
+    rclcpp::Subscription<farol2_interfaces::msg::Measurement>::SharedPtr measurement_sub_;
 
     /* Callbacks */
-    void measurement_callback(farol_interfaces::msg::Measurement::SharedPtr msg);
+    void measurement_callback(farol2_interfaces::msg::Measurement::SharedPtr msg);
 
 
     /* Other variables */
-    farol_interfaces::msg::NavigationState filter_state_msg_;
+    farol2_interfaces::msg::NavigationState filter_state_msg_;
     rclcpp::Clock clock_;
     bool neglect_current_;
 
-    std::array<farol_utils::LowPassFilter, 17> lpfs_;
+    std::array<farol2_utils::LowPassFilter, 17> lpfs_;
     std::array<double, 17> last_meas_{};
     std::string utm_zone_;
     double node_frequency_;

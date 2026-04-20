@@ -13,8 +13,8 @@
   <!-- dependencies libraries -->
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
-  <depend>farol_interfaces</depend>
-  <depend>farol_utils</depend>
+  <depend>farol2_interfaces</depend>
+  <depend>farol2_utils</depend>
   <depend>sensor_msgs</depend>
 
   <build_depend>rosidl_default_generators</build_depend>

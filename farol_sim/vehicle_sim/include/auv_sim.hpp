@@ -14,8 +14,8 @@
 #include "sim_utilis/AUV.hpp"
 #include "sim_utilis/Utilis.hpp"
 #include <Eigen/Dense>
-#include "farol_interfaces/msg/utm.hpp"
-#include "farol_interfaces/msg/measurement.hpp"
+#include "farol2_interfaces/msg/utm.hpp"
+#include "farol2_interfaces/msg/measurement.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include <GeographicLib/UTMUPS.hpp>
 
@@ -63,7 +63,7 @@ class AuvSim : public rclcpp::Node {
     /* Timer for node's callbacks */
 
     /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<farol_interfaces::msg::UTM>::SharedPtr utm_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::UTM>::SharedPtr utm_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr position_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr body_velocity_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr orientation_pub_;
@@ -72,7 +72,7 @@ class AuvSim : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_acceleration_pub_;
 
     rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
-    rclcpp::Publisher<farol_interfaces::msg::Measurement>::SharedPtr meas_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::Measurement>::SharedPtr meas_pub_;
 
     rclcpp::Subscription<control_allocation::msg::ThrusterRPM>::SharedPtr rpm_sub_;
     

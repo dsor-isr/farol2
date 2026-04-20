@@ -16,10 +16,10 @@
 #include "std_msgs/msg/int8.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "control_allocation/msg/thruster_force.hpp"
-#include "farol_interfaces/msg/navigation_state.hpp"
+#include "farol2_interfaces/msg/navigation_state.hpp"
 
 #include <actuation_utils.hpp>
-#include <farol_utils/angles.hpp>
+#include <farol2_utils/angles.hpp>
 
 /**
  * @brief   Thruster Rudder Allocation
@@ -59,12 +59,12 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     rclcpp::Publisher<control_allocation::msg::ThrusterForce>::SharedPtr thruster_force_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_angle_ref_pub_, debug1_pub_;
     rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr body_wrench_request_sub_;
-    rclcpp::Subscription<farol_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
+    rclcpp::Subscription<farol2_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
     rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr mission_status_sub_;
     
     /* Callbacks */
     void bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped::SharedPtr msg);
-    void navStateCallback(farol_interfaces::msg::NavigationState::SharedPtr msg);
+    void navStateCallback(farol2_interfaces::msg::NavigationState::SharedPtr msg);
     void missionStatusCallback(std_msgs::msg::Int8::SharedPtr msg);
 
     /* Other functions */
@@ -86,7 +86,7 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     Eigen::Vector<double, Eigen::Dynamic> forces_;
     double rudder_angle_, rudder_x_body_drag_ = 0; /* [rad], [N] */
     size_t nr_thrusters_;
-    farol_interfaces::msg::NavigationState nav_state_;
+    farol2_interfaces::msg::NavigationState nav_state_;
     double rudder_angle_max_, rudder_angle_min_; /* [rad] */
     double rudder_cm_distance_;
     double course_angle_, sideslip_angle_, flow_to_rudder_angle_, V_s_angle_;

@@ -8,10 +8,10 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "std_msgs/msg/float32.hpp"
-#include "farol_interfaces/msg/navigation_state.hpp"
-#include "farol_interfaces/msg/measurement.hpp"
-#include "farol_utils/angles.hpp"
-#include "farol_utils/filters/low_pass_filter.hpp"
+#include "farol2_interfaces/msg/navigation_state.hpp"
+#include "farol2_interfaces/msg/measurement.hpp"
+#include "farol2_utils/angles.hpp"
+#include "farol2_utils/filters/low_pass_filter.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include <GeographicLib/UTMUPS.hpp>
 
@@ -51,23 +51,23 @@ class SampleAndHold : public rclcpp::Node {
     rclcpp::TimerBase::SharedPtr timer_;
 
     /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<farol_interfaces::msg::NavigationState>::SharedPtr state_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::NavigationState>::SharedPtr state_pub_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr debug_pub2_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr debug_pub1_;
     
-    rclcpp::Subscription<farol_interfaces::msg::Measurement>::SharedPtr measurement_sub_;
+    rclcpp::Subscription<farol2_interfaces::msg::Measurement>::SharedPtr measurement_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rudder_sub_;
 
     /* Callbacks */
-    void measurement_callback(farol_interfaces::msg::Measurement::ConstSharedPtr msg);
+    void measurement_callback(farol2_interfaces::msg::Measurement::ConstSharedPtr msg);
 
 
     /* Other variables */
-    farol_interfaces::msg::NavigationState filter_state_msg_;
+    farol2_interfaces::msg::NavigationState filter_state_msg_;
     rclcpp::Clock::SharedPtr clock_;
     bool neglect_current_;
     double node_frequency_;
-    farol_utils::LowPassFilter yaw_rate_lpf_;
+    farol2_utils::LowPassFilter yaw_rate_lpf_;
     double last_time_{-1.0};
     double course_angle_est_{0.0};
     bool use_yaw_rate_lpf_;

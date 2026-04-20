@@ -10,13 +10,13 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
-find_package(farol_interfaces REQUIRED)
+find_package(farol2_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(waypoint REQUIRED)
 find_package(paths REQUIRED)
-find_package(farol_utils REQUIRED)
+find_package(farol2_utils REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -58,12 +58,12 @@ ament_target_dependencies(
   rclcpp
   std_msgs
   std_srvs
-  farol_interfaces
+  farol2_interfaces
   Eigen3
   eigen3_cmake_module
   waypoint
   paths
-  farol_utils
+  farol2_utils
 )
 
 # Link generated service types

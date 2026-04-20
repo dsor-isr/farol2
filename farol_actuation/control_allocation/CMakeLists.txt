@@ -9,12 +9,12 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(farol_interfaces REQUIRED)
+find_package(farol2_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
-find_package(farol_utils REQUIRED)
+find_package(farol2_utils REQUIRED)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -42,7 +42,7 @@ ament_target_dependencies(
   static_thruster_allocation
   rclcpp
   std_msgs
-  farol_interfaces
+  farol2_interfaces
   Eigen3
   eigen3_cmake_module
 )
@@ -51,24 +51,24 @@ ament_target_dependencies(
   thruster_rudder_allocation
   rclcpp
   std_msgs
-  farol_interfaces
+  farol2_interfaces
   Eigen3
   eigen3_cmake_module
-  farol_utils
+  farol2_utils
 )
 
 ament_target_dependencies(
   rpm_conversion
   rclcpp
   std_msgs
-  farol_interfaces
+  farol2_interfaces
 )
 
 ament_target_dependencies(
   throttle_conversion
   rclcpp
   std_msgs
-  farol_interfaces
+  farol2_interfaces
 )
 
 # Link generated service types

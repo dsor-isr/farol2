@@ -9,8 +9,8 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(farol_interfaces REQUIRED)
-find_package(farol_utils REQUIRED)
+find_package(farol2_interfaces REQUIRED)
+find_package(farol2_utils REQUIRED)
 # find_package(path_following REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 # uncomment the following section in order to fill in
@@ -25,8 +25,8 @@ ament_target_dependencies(
   nav2console_state_node
   rclcpp
   std_msgs
-  farol_interfaces
-  farol_utils
+  farol2_interfaces
+  farol2_utils
 )
 
 target_include_directories(nav2console_state_node PUBLIC

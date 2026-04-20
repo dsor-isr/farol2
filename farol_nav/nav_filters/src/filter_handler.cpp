@@ -53,7 +53,7 @@ void FilterHandler::loadParams()
 
 void FilterHandler::initialisePublishers()
 {
-  state_pub_ = create_publisher<farol_interfaces::msg::NavigationState>(
+  state_pub_ = create_publisher<farol2_interfaces::msg::NavigationState>(
       declare_parameter<std::string>("topics.publishers.state"),
       rclcpp::QoS(1));
   nav_sat_fix_pub_ = create_publisher<sensor_msgs::msg::NavSatFix>(
@@ -107,10 +107,10 @@ bool FilterHandler::switchSubscription(const std::string & filter_name)
   active_sub_.reset();
 
   // Create new subscription with callback that republishes messages to output topic
-  active_sub_ = create_subscription<farol_interfaces::msg::NavigationState>(
+  active_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
       topic,
       rclcpp::QoS(1),
-      [this](farol_interfaces::msg::NavigationState::ConstSharedPtr msg){
+      [this](farol2_interfaces::msg::NavigationState::ConstSharedPtr msg){
         // relay state 
         state_pub_->publish(*msg);
         // publish global coordinates 
