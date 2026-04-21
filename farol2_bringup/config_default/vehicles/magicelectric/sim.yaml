@@ -34,7 +34,7 @@
       actuation:
         rudder:
         #If false, the rudder angle is directly set to the reference of the controller. If true, the rudder angle is simulated
-          sim_rudder: true
+          sim_rudder: false
           max_angle_deg: 35.0
           min_angle_deg: -35.0
           ang_vel: 10.0 #deg/s
