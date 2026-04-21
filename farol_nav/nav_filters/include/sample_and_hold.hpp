@@ -12,6 +12,7 @@
 #include "farol2_interfaces/msg/measurement.hpp"
 #include "farol2_utils/angles.hpp"
 #include "farol2_utils/filters/low_pass_filter.hpp"
+#include "farol2_utils/filters/notch_filter.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include <GeographicLib/UTMUPS.hpp>
 
@@ -68,11 +69,17 @@ class SampleAndHold : public rclcpp::Node {
     bool neglect_current_;
     double node_frequency_;
     farol2_utils::LowPassFilter yaw_rate_lpf_;
+    farol2_utils::NotchFilter yaw_rate_notch_filter_;
     double last_time_{-1.0};
     double course_angle_est_{0.0};
-    bool use_yaw_rate_lpf_;
-    double last_yaw_rate_meas_;
-    double course_angle_cutoff_frequency_;
+    bool use_yaw_rate_lpf_{false};
+    bool use_yaw_rate_kf_{false};
+    bool use_course_cf_{false};
+    bool use_yaw_rate_notch_filter_{false};
+    double yaw_rate_notch_f0_hz_{1.0};
+    double yaw_rate_notch_q_{2.0};
+    double last_yaw_rate_meas_{0.0};
+    double course_angle_cutoff_frequency_{0.0};
 
     // Kalman filter states
     Eigen::Vector2d x_;  // State vector: [yaw_rate (rad/s), yaw (rad)]
