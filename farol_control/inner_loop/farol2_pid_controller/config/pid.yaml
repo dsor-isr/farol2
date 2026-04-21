@@ -6,6 +6,7 @@
     ros__parameters:
       node_frequency: 10.0
       course_control: false   # set to true to control course angle instead of yaw
+      use_heading_rate_as_yaw_rate: false # set to true to use heading_rate instead of orientation_rate.z for yaw PID rate input
       lpf_order: 3
       lpf_method: "tustin"
       lpf_design: "bessel"
@@ -58,7 +59,6 @@
         # kffa: 88.478840
         kffv_lin: 0.0
         kffv_sq: 0.0
-        kdff: 0.0
         kffa: 0.0
         use_ref_lpf: true
         lpf_wc: 1.0 # rad/s (2hz about the maximum possible given that sampling is 10hz)

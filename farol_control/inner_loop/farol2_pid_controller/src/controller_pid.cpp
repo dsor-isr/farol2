@@ -7,124 +7,41 @@
 
 namespace farol_control {
 
-void ControllerPID::configure(double kp, double ki, double kd, double kdff, double kffv_lin, double kffv_sq,
-                              double kffa, double tau_min, double tau_max, bool use_ref_lpf,
-                              double lpf_wc, int lpf_order, std::string lpf_design,
-                              std::string lpf_method, bool delta_implementation, bool wrapToPi,
-                              bool use_state_lpf, bool use_state_lpf_for_state_rate,
-                              bool use_filtered_state_for_control,
-                              bool use_filtered_ref_for_control,
-                              bool use_rate_limiter,
-                              double rate_limit) {
+void ControllerPID::configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq,
+                              double kffa, double tau_min, double tau_max,
+                              bool delta_implementation, bool wrapToPi) {
   /* Set parameters */
   kp_ = kp;
   ki_ = ki;
   kd_ = kd;
-  kdff_ = kdff;
   kffv_lin_ = kffv_lin;
   kffv_sq_ = kffv_sq;
   kffa_ = kffa;
-  lpf_wc_ = (lpf_wc > 0.0) ? lpf_wc : 1.0;
   tau_min_ = tau_min;
   tau_max_ = tau_max;
   wrapToPi_ = wrapToPi;
-  use_ref_lpf_ = use_ref_lpf;
-  use_state_lpf_ = use_state_lpf;
-  use_state_lpf_for_state_rate_ = use_state_lpf_for_state_rate;
-  use_filtered_state_for_control_ = use_filtered_state_for_control;
-  use_filtered_ref_for_control_ = use_filtered_ref_for_control;
-  use_rate_limiter_ = use_rate_limiter;
-  rate_limit_ = std::max(0.0, rate_limit);
-  if(wrapToPi) rate_limit_ = farol2_utils::deg2rad(rate_limit_);                            
-  rate_limiter_initialized_ = false;
-  ref_rate_limited_ = 0.0;
   delta_implementation_ = delta_implementation;
-
-  // If any feature needs the state LPF output, ensure the LPF is active.
-  use_state_lpf_ = use_state_lpf_ || use_state_lpf_for_state_rate_ || use_filtered_state_for_control_;
-
-  lpf_.configure(lpf_wc_, 0.1, lpf_order, lpf_design, lpf_method, wrapToPi_);
-  state_lpf_.configure(lpf_wc_, 0.1, lpf_order, lpf_design, lpf_method, wrapToPi_);
   configured_ = true;
 }
 
-void ControllerPID::configure(double kp, double ki, double kd, double kdff, double kffv_lin, double kffv_sq,
-                              double kffa, double tau_min, double tau_max, bool use_ref_lpf,
-                              double lpf_wc, int lpf_order, std::string lpf_design,
-                              std::string lpf_method, bool wrapToPi) {
-  configure(kp, ki, kd, kdff, kffv_lin, kffv_sq, kffa, tau_min, tau_max, use_ref_lpf, lpf_wc,
-            lpf_order, lpf_design, lpf_method, true, wrapToPi, false, false, false, false, false, 0.0);
+void ControllerPID::configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq,
+                              double kffa, double tau_min, double tau_max, bool wrapToPi) {
+  configure(kp, ki, kd, kffv_lin, kffv_sq, kffa, tau_min, tau_max, true, wrapToPi);
 }
 
 // Delta implementation for PID
-double ControllerPID::callController(double state, double state_ref, double state_rate, double dt) {
-  // make sure ref is smooth
-  if (first_it_) {
-    state_ref = state;
-    lpf_.reset(state_ref);
-    state_lpf_.reset(state);
-  }
-
+double ControllerPID::callController(double state, double state_ref, double state_rate,
+                                     double dref, double ddref, double dt) {
   if (!configured_) return 0.0;
-  ref_raw_ = state_ref;
-  state_raw_ = state;
   state_rate_raw_ = state_rate;
   state_ = state;
+  ref_ = state_ref;
+  dref_ = dref;
+  ddref_ = ddref;
 
-  
-  // Aply a rate limiter to the reference to make it feasisble for the controller to track position and velocity errors
-  double limited_ref = state_ref;
-  if (use_rate_limiter_ && rate_limit_ > 0.0 && dt > 0.0) {
-    if (!rate_limiter_initialized_) {
-      ref_rate_limited_ = state_ref;
-      rate_limiter_initialized_ = true;
-    } else {
-      double delta_ref = state_ref - ref_rate_limited_;
-      if (wrapToPi_) {
-        delta_ref = farol2_utils::wrapToPi(delta_ref);
-      }
-      
-      const double max_step = rate_limit_ * dt;
-      delta_ref = std::clamp(delta_ref, -max_step, max_step);
-      ref_rate_limited_ += delta_ref;
-      
-      if (wrapToPi_) {
-        ref_rate_limited_ = farol2_utils::wrapToPi(ref_rate_limited_);
-      }
-    }
-    limited_ref = ref_rate_limited_;
-  } else {
-    rate_limiter_initialized_ = false;
-    ref_rate_limited_ = state_ref;
-  }
-  
-  // Pass reference signal through LPF to extract reference derivatives for ff terms
-  if (use_ref_lpf_) {
-    lpf_.step(limited_ref, dt);
-    ref_ = lpf_.y();
-    dref_ = lpf_.dy();
-    ddref_ = lpf_.ddy();
-  } else {
-    ref_ = limited_ref;
-    dref_ = 0.0;
-    ddref_ = 0.0;
-    dddref_ = 0.0;
-  }
-  
-  // Pass state through LPF to extract state in case it is not measured
-  double dstate_from_lpf = 0.0;
-  if (use_state_lpf_) {
-    state_lpf_.step(state, dt);
-    state_filt_ = state_lpf_.y();
-    dstate_from_lpf = state_lpf_.dy();
-  } else {
-    state_filt_ = state;
-  }
-  state_rate_lpf_ = dstate_from_lpf;
-
-  const double state_for_control = use_filtered_state_for_control_ ? state_filt_ : state;
-  const double ref_for_control = use_filtered_ref_for_control_ ? ref_ : limited_ref;
-  const double state_rate_used = use_state_lpf_for_state_rate_ ? dstate_from_lpf : state_rate;
+  const double state_for_control = state;
+  const double ref_for_control = ref_;
+  const double state_rate_used = state_rate;
   state_used_for_control_ = state_for_control;
   ref_used_for_control_ = ref_for_control;
   state_rate_used_ = state_rate_used;
@@ -164,7 +81,7 @@ double ControllerPID::callController(double state, double state_ref, double stat
     tau_sat_ = std::clamp(tau_, tau_min_, tau_max_);
 
     // add FF terms after antiwindup block
-    // ff_term_ =  kdff_ *kd_ * dref_;// +  kffa_ * ddref_;
+    // ff_term_ =  kd_ * dref_;// +  kffa_ * ddref_;
     // output_ = std::clamp(tau_sat_ + ff_term_, tau_min_, tau_max_);
     // output_ = tau_sat_;
   }
@@ -180,7 +97,7 @@ double ControllerPID::callController(double state, double state_ref, double stat
     if(abs(tau_d_) < 0.0001) i_term_ = 0.0; // fix estupido
     p_term_ = -kp_ * error_;
     d_term_ = -kd_ * error_rate_;
-    ff_term_ = kdff_* dref_;
+    ff_term_ = 0.0;
     
     // add all pid terms
     tau_ =  p_term_ + i_term_ + d_term_ + ff_term_;
@@ -190,13 +107,11 @@ double ControllerPID::callController(double state, double state_ref, double stat
     // output_ = tau_sat_;
   }
 
-
   // Set prev values 
   error_prev_ = error_;
   state_prev_ = state_for_control;
   state_rate_prev_ = state_rate_used;
   error_rate_prev_ = error_rate_;
-  state_rate_dot_filter_prev_ = state_rate_dot_filter_;
   tau_prev_ = tau_;
   tau_sat_prev_ = tau_sat_;
   ddref_prev_ = ddref_;
@@ -205,11 +120,10 @@ double ControllerPID::callController(double state, double state_ref, double stat
 }
 
 
-void ControllerPID::setGains(double kp, double ki, double kd, double kdff, double kffv_lin, double kffv_sq, double kffa) {
+void ControllerPID::setGains(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa) {
   kp_ = kp;
   ki_ = ki;
   kd_ = kd;
-  kdff_ = kdff;
   kffv_lin_ = kffv_lin;
   kffv_sq_ = kffv_sq;
   kffa_ = kffa;

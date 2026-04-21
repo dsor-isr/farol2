@@ -27,6 +27,7 @@
 
 #include "farol2_pid_controller/controller_pi.hpp"
 #include "farol2_pid_controller/controller_pid.hpp"
+#include "farol2_pid_controller/reference_generator.hpp"
 
 enum ControllerType {
   SURGE = 0,
@@ -220,6 +221,12 @@ class PID : public rclcpp::Node {
         /** Flattened numeric parameters per controller. */
     std::map<std::string, std::map<std::string, double>> controller_parameters_;
 
+        /** Reference preprocessing block per controller channel. */
+    std::map<std::string, std::unique_ptr<farol_control::ReferenceGenerator>> reference_generators_;
+
+        /** Latest preprocessed reference signals per controller channel. */
+    std::map<std::string, farol_control::ReferenceGeneratorOutput> reference_outputs_;
+
         /** Runtime configuration table used by generic execution. */
     std::map<std::string, ControllerConfig> controller_configs_;
 
@@ -236,6 +243,7 @@ class PID : public rclcpp::Node {
 
         /** Selects yaw state source: heading (`false`) or course angle (`true`). */
     bool course_control_{false}; // flag to switch between heading or course control
+    bool use_heading_rate_as_yaw_rate_{false};
 
         /** Low-pass filter configuration passed to PID controllers. */
     int lpf_order_;
