@@ -135,7 +135,7 @@ void AuvSim::initialiseSubscribers() {
 
 
   rpm_sub_  = create_subscription<control_allocation::msg::ThrusterRPM>(
-                          declare_parameter<std::string>("topics.subscribers.rpm_command", "/vehicle0/actuation/rpm_command"), 
+                          declare_parameter<std::string>("topics.subscribers.rpm_command"), 
                           1, std::bind(&AuvSim::rpmCallback, this, std::placeholders::_1));
   return;
 }
@@ -150,25 +150,20 @@ void AuvSim::initialisePublishers() {
 
 
   position_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.position", "/vehicle0/sim/position"), 1);
+      declare_parameter<std::string>("topics.publishers.position"), 1);
   body_velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.body_velocity", "/vehicle0/sim/body_velocity"), 1);
+      declare_parameter<std::string>("topics.publishers.body_velocity"), 1);
   orientation_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.orientation", "/vehicle0/sim/orientation"), 1);
+      declare_parameter<std::string>("topics.publishers.orientation"), 1);
   orientation_rate_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.orientation_rate", "/vehicle0/sim/orientation_rate"), 1);
+      declare_parameter<std::string>("topics.publishers.orientation_rate"), 1);
   body_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.body_acceleration", "/vehicle0/sim/body_acceleration"), 1);
+      declare_parameter<std::string>("topics.publishers.body_acceleration"), 1);
   angular_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.angular_acceleration", "/vehicle0/sim/angular_acceleration"), 1);
+      declare_parameter<std::string>("topics.publishers.angular_acceleration"), 1);
 
-<<<<<<< HEAD
-  meas_pub_ = create_publisher<farol_interfaces::msg::Measurement>(
-      declare_parameter<std::string>("topics.publishers.measurement", "/vehicle0/measurement"), 1);
-=======
-  meas_pub_ = create_publisher<farol2_interfaces::msg::Measurement>(
-      get_parameter("topics.publishers.measurement").as_string(), 1);
->>>>>>> dev
+   meas_pub_ = create_publisher<farol2_interfaces::msg::Measurement>(
+      declare_parameter<std::string>("topics.publishers.measurement"), 1);
 
   return;
 }
