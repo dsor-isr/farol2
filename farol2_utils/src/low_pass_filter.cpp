@@ -27,14 +27,19 @@ LowPassFilter::LowPassFilter() {
   reset();
 }
 
-void LowPassFilter::configure(double wc, double Ts, int order, std::string design, std::string method, bool wrap_angle) {
+void LowPassFilter::configure(double wc, int order, std::string design, std::string method, bool wrap_angle, bool use_fixed_Ts, double Ts) {
+  configure(wc, Ts, order, design, method, wrap_angle, use_fixed_Ts);
+}
+
+void LowPassFilter::configure(double wc, double Ts, int order, std::string design, std::string method, bool wrap_angle, bool use_fixed_Ts) {
   if (wc <= 0.0)   throw std::invalid_argument("wc must be > 0");
-  if (Ts <= 0.0)   throw std::invalid_argument("Ts must be > 0");
+  if (use_fixed_Ts && Ts <= 0.0)   throw std::invalid_argument("Ts must be > 0");
   if (order < 1)   throw std::invalid_argument("order must be >= 1");
 
   wrap_angle_ = wrap_angle;
   wc_ = wc;
   Ts_ = Ts;
+  use_fixed_Ts_ = use_fixed_Ts;
   n_ = order;
   method_ = method;
 
@@ -50,9 +55,22 @@ void LowPassFilter::configure(double wc, double Ts, int order, std::string desig
   // std::cout << "\nA_:\n" << A_ << "\nB_:\n" << B_ << "\nAd_:\n" << Ad_ << "\nBd_:\n" << Bd_ << "\nx_:\n" << x_ << std::endl;
 }
 
+void LowPassFilter::step(double u) {
+  if (configured_ && !use_fixed_Ts_) {
+    throw std::runtime_error("LowPassFilter: step(u) requires use_fixed_Ts=true");
+  }
+
+  step(u, Ts_);
+}
+
 void LowPassFilter::step(double u, double dt) {
   if (!configured_) {
     throw std::runtime_error("LowPassFilter: call configure*() before step()");
+  }
+
+  const double dt_used = use_fixed_Ts_ ? Ts_ : dt;
+  if (dt_used <= 0.0) {
+    throw std::invalid_argument("dt must be > 0");
   }
 
   bool did_wrap = false;
@@ -62,14 +80,14 @@ void LowPassFilter::step(double u, double dt) {
   last_u_ = u;
   last_x_ = x_;
   last_dy_ = dy();  // Store current dy for next ddy calculation
-  last_dt_ = dt;    // Store actual dt for ddy finite difference
+  last_dt_ = dt_used;
 
   if(method_ == "tustin")
-    discretize_tustin(dt);
+    discretize_tustin(dt_used);
   else if (method_ == "zoh")
-    discretize_zoh(dt);
+    discretize_zoh(dt_used);
   else
-    discretize_euler(dt);
+    discretize_euler(dt_used);
 
   // computation step
   x_ = Ad_ * x_ + Bd_ * u;

@@ -13,11 +13,21 @@ class LowPassFilter {
 public:
   LowPassFilter();
 
-  // Configure with cutoff in rad/s, dampening and time step (assumed constant)
-  void configure(double wc, double Ts, int order=2, std::string design="butterworth", std::string method="tustin", bool wrap_angle=false);
+  // Legacy signature kept for backward compatibility.
+  // Configure with cutoff in rad/s and nominal/fixed time step.
+  // If use_fixed_Ts is false, runtime dt passed to step() is used.
+  // If use_fixed_Ts is true, Ts is always used and step dt is ignored.
+  void configure(double wc, double Ts, int order=2, std::string design="butterworth", std::string method="tustin", bool wrap_angle=false, bool use_fixed_Ts=false);
+
+  // Overload with optional trailing Ts for fixed-step mode.
+  // Use this when variable-step mode is desired and Ts should be omitted.
+  void configure(double wc, int order=2, std::string design="butterworth", std::string method="tustin", bool wrap_angle=false, bool use_fixed_Ts=false, double Ts=0.0);
 
   // Reset filter state (optionally to known initial conditions)
   void reset(double u_hat0 = 0.0, double du_hat0 = 0.0);
+
+  // Step using configured fixed Ts (requires use_fixed_Ts=true).
+  void step(double u);
 
   void step(double u, double dt);
 
@@ -40,6 +50,7 @@ private:
 
   bool configured_{false};
   bool wrap_angle_{false};
+  bool use_fixed_Ts_{false};
   std::string method_;
 
   double wc_{0.0};
