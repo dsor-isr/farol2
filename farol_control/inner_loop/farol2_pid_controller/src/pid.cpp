@@ -226,7 +226,7 @@ void PID::initialisePublishers() {
   torque_z_pub_ = create_publisher<std_msgs::msg::Float32>(
                     get_parameter("topics.publishers.torque_z").as_string(), 1);
   /*
-  body_wrench_request_pub_ = create_publisher<control_allocation::msg::BodyWrenchRequest>(
+  body_wrench_request_pub_ = create_publisher<farol2_control_allocation::msg::BodyWrenchRequest>(
                     get_parameter("topics.publishers.body_wrench_request").as_string(), 1);
   
   */

@@ -39,7 +39,7 @@ class Samson : public PathFollowing {
     Samson(double k1, double k2, double k3, double theta, double k_delta, 
            rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surge_pub, 
            rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_rate_pub, 
-           rclcpp::Client<paths::srv::SetMode>::SharedPtr mode_client);
+           rclcpp::Client<farol2_paths::srv::SetMode>::SharedPtr mode_client);
     
     /**
      * @brief  Method that given a vector of doubles, updates the gains of the controller
@@ -124,5 +124,5 @@ class Samson : public PathFollowing {
     /**
      * @brief ROS service to use the closest point to the path 
      */
-    rclcpp::Client<paths::srv::SetMode>::SharedPtr mode_client_;
+    rclcpp::Client<farol2_paths::srv::SetMode>::SharedPtr mode_client_;
 };

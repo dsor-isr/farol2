@@ -15,7 +15,7 @@
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
   <depend>farol2_interfaces</depend>
-  <depend>control_allocation</depend>
+  <depend>farol2_control_allocation</depend>
   <depend>farol2_utils</depend>
 
 

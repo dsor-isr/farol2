@@ -24,10 +24,10 @@
 #include <formation.h>
 
 /* Required to call the path services*/
-#include "paths/srv/reset_path.hpp"
-#include "paths/srv/spawn_arc2_d.hpp"
-#include "paths/srv/spawn_line.hpp"
-#include "paths/srv/set_const_speed.hpp"
+#include "farol2_paths/srv/reset_path.hpp"
+#include "farol2_paths/srv/spawn_arc2_d.hpp"
+#include "farol2_paths/srv/spawn_line.hpp"
+#include "farol2_paths/srv/set_const_speed.hpp"
 
 #include "path_following/srv/start_pf.hpp"
 #include "path_following/srv/stop_pf.hpp"
@@ -127,10 +127,10 @@ class ConsoleParser : public rclcpp::Node {
     bool p_console_new_{false};
 
     /* Path Service clients - used to construct the path to follow */
-    rclcpp::Client<paths::srv::ResetPath>::SharedPtr reset_path_client_;
-    rclcpp::Client<paths::srv::SpawnArc2D>::SharedPtr spawn_arc_client_;
-    rclcpp::Client<paths::srv::SpawnLine>::SharedPtr spawn_line_client_;
-    rclcpp::Client<paths::srv::SetConstSpeed>::SharedPtr set_path_speed_client_;
+    rclcpp::Client<farol2_paths::srv::ResetPath>::SharedPtr reset_path_client_;
+    rclcpp::Client<farol2_paths::srv::SpawnArc2D>::SharedPtr spawn_arc_client_;
+    rclcpp::Client<farol2_paths::srv::SpawnLine>::SharedPtr spawn_line_client_;
+    rclcpp::Client<farol2_paths::srv::SetConstSpeed>::SharedPtr set_path_speed_client_;
 
     /* Path Following clients - to start and stop the path following algorithm */
     rclcpp::Client<path_following::srv::StartPF>::SharedPtr start_pf_client_;

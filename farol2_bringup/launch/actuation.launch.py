@@ -103,7 +103,7 @@ def generate_launch_description():
   # Nodes to launch #
   ###################
   static_thruster_allocation_node = Node(
-    package='control_allocation',
+    package='farol2_control_allocation',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'actuation']),
     executable='static_thruster_allocation',
     name='static_thruster_allocation',
@@ -113,7 +113,7 @@ def generate_launch_description():
   )
 
   thruster_rudder_allocation_node = Node(
-    package='control_allocation',
+    package='farol2_control_allocation',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'actuation']),
     executable='thruster_rudder_allocation',
     name='thruster_rudder_allocation',
@@ -123,7 +123,7 @@ def generate_launch_description():
   )
 
   rpm_conversion_node = Node(
-    package='control_allocation',
+    package='farol2_control_allocation',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'actuation']),
     executable='rpm_conversion',
     name='rpm_conversion',
@@ -132,7 +132,7 @@ def generate_launch_description():
   )
 
   throttle_conversion_node = Node(
-    package='control_allocation',
+    package='farol2_control_allocation',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'actuation']),
     executable='throttle_conversion',
     name='throttle_conversion',
@@ -141,7 +141,7 @@ def generate_launch_description():
   )
 
   wrench_manager_node = Node(
-    package='wrench_manager',
+    package='farol2_wrench_manager',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'actuation']),
     executable='wrench_manager_node',
     name='wrench_manager',

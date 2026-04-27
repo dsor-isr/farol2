@@ -103,7 +103,7 @@ def generate_launch_description():
   # Nodes to launch #
   ###################
   filter_handler_node = Node(
-    package='nav_filters',
+    package='farol2_nav_filters',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'nav']),
     executable='filter_handler',
     name='filter_handler',
@@ -112,7 +112,7 @@ def generate_launch_description():
   )
 
   sample_and_hold_filter_node = Node(
-    package='nav_filters',
+    package='farol2_nav_filters',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'nav']),
     executable='sample_and_hold',
     name='sample_and_hold',
@@ -122,7 +122,7 @@ def generate_launch_description():
   )
 
   low_pass_filter_node = Node(
-    package='nav_filters',
+    package='farol2_nav_filters',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'nav']),
     executable='low_pass',
     name='low_pass',

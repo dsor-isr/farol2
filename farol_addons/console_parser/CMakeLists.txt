@@ -12,7 +12,7 @@ find_package(std_msgs REQUIRED)
 find_package(farol2_interfaces REQUIRED)
 find_package(farol2_utils REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(paths REQUIRED)
+find_package(farol2_paths REQUIRED)
 find_package(path_following REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -31,7 +31,7 @@ ament_target_dependencies(
   std_msgs
   farol2_interfaces
   farol2_utils
-  paths
+  farol2_paths
   path_following
   Eigen3
   eigen3_cmake_module

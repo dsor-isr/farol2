@@ -140,7 +140,7 @@ void PathFollowingNode::initialiseSubscribers() {
                       get_parameter("topics.subscribers.state").as_string(), 
                       1, std::bind(&PathFollowingNode::vehicleStateCallback, this, std::placeholders::_1));
 
-  this->path_data_sub_ = create_subscription<paths::msg::PathData>(
+  this->path_data_sub_ = create_subscription<farol2_paths::msg::PathData>(
                           get_parameter("topics.subscribers.path_data").as_string(), 
                           1, std::bind(&PathFollowingNode::pathStateCallback, this, std::placeholders::_1));
 
@@ -181,7 +181,7 @@ void PathFollowingNode::vcCallback(const std_msgs::msg::Float32 &msg) {
  * @param msg  A pointer to a dsor_paths::PathData that contains information of
  * the path
  */
-void PathFollowingNode::pathStateCallback(const paths::msg::PathData &msg) {
+void PathFollowingNode::pathStateCallback(const farol2_paths::msg::PathData &msg) {
 
   /* If the algorithm is running, signal that we have received data from the
    * path */
@@ -338,7 +338,7 @@ void PathFollowingNode::stopAlgorithm() {
   this->has_received_path_state = false;
 
   /* Call the service to reset the path */
-  std::shared_ptr<paths::srv::ResetPath::Request> req = std::make_shared<paths::srv::ResetPath::Request>();
+  std::shared_ptr<farol2_paths::srv::ResetPath::Request> req = std::make_shared<farol2_paths::srv::ResetPath::Request>();
   req->reset_path = true;
   reset_path_client_->async_send_request(req);
 }

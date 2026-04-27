@@ -11,7 +11,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(farol2_interfaces REQUIRED)
-find_package(control_allocation REQUIRED)
+find_package(farol2_control_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(farol2_utils REQUIRED)
 # uncomment the following section in order to fill in
@@ -60,7 +60,7 @@ ament_target_dependencies(
   std_msgs
   std_srvs
   farol2_interfaces
-  control_allocation
+  farol2_control_allocation
   farol2_utils
 )
 

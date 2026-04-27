@@ -10,7 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(farol2_interfaces REQUIRED)
-find_package(control_allocation REQUIRED)
+find_package(farol2_control_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -36,7 +36,7 @@ ament_target_dependencies(
   rclcpp
   std_msgs
   farol2_interfaces
-  control_allocation
+  farol2_control_allocation
 )
 
 # Link generated service types

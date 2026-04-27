@@ -89,7 +89,7 @@ def generate_launch_description():
   # Nodes to launch #
   ###################
   paths_node = Node(
-    package='paths',
+    package='farol2_paths',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'planning']),
     executable='path_node',
     name='paths',

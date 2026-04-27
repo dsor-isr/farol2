@@ -16,7 +16,7 @@
   <depend>geometry_msgs</depend>
   <depend>farol2_interfaces</depend>
   <depend>farol2_utils</depend>
-  <depend>paths</depend>
+  <depend>farol2_paths</depend>
   <depend>path_following</depend>
   <depend>Eigen3</depend>
 

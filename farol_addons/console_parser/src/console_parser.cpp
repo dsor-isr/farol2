@@ -72,16 +72,16 @@ void ConsoleParser::initializePublishers() {
  */
 void ConsoleParser::initializeServices() {
   /* Service clients */
-  reset_path_client_ = create_client<paths::srv::ResetPath>(
+  reset_path_client_ = create_client<farol2_paths::srv::ResetPath>(
                         get_parameter("topics.services.reset_path").as_string());
 
-  spawn_arc_client_ = create_client<paths::srv::SpawnArc2D>(
+  spawn_arc_client_ = create_client<farol2_paths::srv::SpawnArc2D>(
                         get_parameter("topics.services.arc2d_path").as_string());
 
-  spawn_line_client_ = create_client<paths::srv::SpawnLine>(
+  spawn_line_client_ = create_client<farol2_paths::srv::SpawnLine>(
                         get_parameter("topics.services.line_path").as_string());
 
-  set_path_speed_client_ = create_client<paths::srv::SetConstSpeed>(
+  set_path_speed_client_ = create_client<farol2_paths::srv::SetConstSpeed>(
                             get_parameter("topics.services.set_speed").as_string());
 
   start_pf_client_ = create_client<path_following::srv::StartPF>(
@@ -152,7 +152,7 @@ void ConsoleParser::requestPath() {
   int run = 0;
 
   /* Call the service to reset the path */
-  std::shared_ptr<paths::srv::ResetPath::Request> req = std::make_shared<paths::srv::ResetPath::Request>();
+  std::shared_ptr<farol2_paths::srv::ResetPath::Request> req = std::make_shared<farol2_paths::srv::ResetPath::Request>();
   req->reset_path = true;
   // reset_path_client_->async_send_request(req);
   reset_path_client_->async_send_request(req);
@@ -172,7 +172,7 @@ void ConsoleParser::requestPath() {
       /* Make sure the line received is valid */
       if(!(it->xi == it->xe && it->yi == it->ye)) {
         /* Call the service to spawn a line in the path */
-        std::shared_ptr<paths::srv::SpawnLine::Request> req = std::make_shared<paths::srv::SpawnLine::Request>();
+        std::shared_ptr<farol2_paths::srv::SpawnLine::Request> req = std::make_shared<farol2_paths::srv::SpawnLine::Request>();
         req->start_point[1] = xrefpoint + it->xi;
         req->start_point[0] = yrefpoint + it->yi;
         req->start_point[2] = 0.0;
@@ -191,7 +191,7 @@ void ConsoleParser::requestPath() {
         // }}
 
         /* Call the service to specify the section desired speed for this section */
-        std::shared_ptr<paths::srv::SetConstSpeed::Request> speed_req = std::make_shared<paths::srv::SetConstSpeed::Request>();
+        std::shared_ptr<farol2_paths::srv::SetConstSpeed::Request> speed_req = std::make_shared<farol2_paths::srv::SetConstSpeed::Request>();
         speed_req->speed = it->velocity;
         speed_req->default_speed = it->velocity;
         set_path_speed_client_->async_send_request(speed_req);
@@ -213,7 +213,7 @@ void ConsoleParser::requestPath() {
            (it->xc == it->xe && it->yc == it->ye))) {
 
         /* Call the service to spawn an arc in the path */
-        std::shared_ptr<paths::srv::SpawnArc2D::Request> req = std::make_shared<paths::srv::SpawnArc2D::Request>();
+        std::shared_ptr<farol2_paths::srv::SpawnArc2D::Request> req = std::make_shared<farol2_paths::srv::SpawnArc2D::Request>();
         req->start_point[1] = xrefpoint + it->xi;
         req->start_point[0] = yrefpoint + it->yi;
       
@@ -234,7 +234,7 @@ void ConsoleParser::requestPath() {
         // }}
       
         /* Call the service to specify the section desired speed for this section */
-        std::shared_ptr<paths::srv::SetConstSpeed::Request> speed_req = std::make_shared<paths::srv::SetConstSpeed::Request>();
+        std::shared_ptr<farol2_paths::srv::SetConstSpeed::Request> speed_req = std::make_shared<farol2_paths::srv::SetConstSpeed::Request>();
         speed_req->speed = it->velocity;
         speed_req->default_speed = it->velocity;
         set_path_speed_client_->async_send_request(speed_req);
