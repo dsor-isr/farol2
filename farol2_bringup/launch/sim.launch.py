@@ -103,7 +103,7 @@ def generate_launch_description():
   # Nodes to launch #
   ###################
   auv_sim_node = Node(
-    package='vehicle_sim',
+    package='farol2_vehicle_sim',
     namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
     executable='auv_sim',
     name='auv_sim',
@@ -113,7 +113,7 @@ def generate_launch_description():
   )
 
   magic_electric_sim_node = Node(
-    package='vehicle_sim',
+    package='farol2_vehicle_sim',
     namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
     executable='magic_electric_sim',
     name= 'magic_electric_sim',

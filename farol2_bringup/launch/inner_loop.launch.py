@@ -105,7 +105,7 @@ def generate_launch_description():
   )
 
   open_loop_node = Node(
-    package='open_loop',
+    package='farol2_open_loop',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'inner_loop']),
     executable='open_loop_control',
     name='open_loop',

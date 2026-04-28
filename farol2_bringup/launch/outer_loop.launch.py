@@ -103,7 +103,7 @@ def generate_launch_description():
   ###################
 
   waypoint_node = Node(
-    package='waypoint',
+    package='farol2_waypoint',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'control', 'outer_loop']),
     executable='waypoint_node',
     name='waypoint',
@@ -113,7 +113,7 @@ def generate_launch_description():
   )
 
   path_following_node = Node(
-    package='path_following',
+    package='farol2_path_following',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'control', 'outer_loop']),
     executable='path_following_node',
     name='path_following',
