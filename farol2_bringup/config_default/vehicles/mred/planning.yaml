@@ -1,5 +1,8 @@
+################################
+#   Default Parameters
+################################
 /**:
-  ros__parameters:
-    planning:
-      paths:
-        frame_id: "Path_frame"
+  paths:
+    ros__parameters:
+      node_frequency: 10.0
+      frame_id: "Path_frame"
