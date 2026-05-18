@@ -25,9 +25,9 @@
 #include <farol2_utils/filters/low_pass_filter.hpp>
 #include <farol2_utils/angles.hpp>
 
-#include "farol2_pid/controller_pi.hpp"
-#include "farol2_pid/controller_pid.hpp"
-#include "farol2_pid/reference_generator.hpp"
+#include "controller_pi.hpp"
+#include "controller_pid.hpp"
+#include "reference_generator.hpp"
 
 enum ControllerType {
   SURGE = 0,
