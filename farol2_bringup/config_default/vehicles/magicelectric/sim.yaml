@@ -31,7 +31,7 @@
       m_r: 88.478840
       Y_v: -500.0 #Not estimated ye
       Y_vv: -1500.0 #Not estimated yet
-      actuation:
+      allocation:
         rudder:
         #If false, the rudder angle is directly set to the reference of the controller. If true, the rudder angle is simulated
           sim_rudder: false
@@ -40,7 +40,7 @@
           ang_vel: 10.0 #deg/s
         propulsion:
         #False means that it is subscribed to a topic, true means that it is fixed to the value defined in rpm
-          fixed_rpm: false 
+          fixed_rpm: true 
           fixed_rpm_value: 660.0 
           max_rpm: 2000.0
           min_rpm: -2000.0

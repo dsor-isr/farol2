@@ -1,8 +1,10 @@
 /**:
-  ros__parameters:
-    sim:
+  auv_sim:
+    ros__parameters:
+      node_frequency: 100
+      speedup: 1.0
       initial_state:
-        position: [38.692017, -9.211419, 0.0]
+        position: [38.690323, -9.211736, 0.0] # (lat, lon, depth) from expo   
         body_velocity: [0.0, 0.0, 0.0]
         orientation: [0.0, 0.0, 0.0]
         orientation_rate: [0.0, 0.0, 0.0]
@@ -32,34 +34,35 @@
           lump_param_positive: [0.00000177778, 0.0, 0.0]  # (a*|x|^{2} + b*|x| + c)
           lump_param_negative: [-0.00000177778, 0.0, 0.0] # (a*|x|^{2} + b*|x| + c)
 
-          max_input: 100.0 # Maximum normalized input value
-          min_input: 8.6 # Minimum normalized input value (for values < |min_input|) the motors "won't" spin <-> dead-zone
-          min_max_thruster_input: [8.6, 100.0] # Minimum and maximum input values for thrusters
-
-          # A gain used to scale the applied normalized input thrust (in this case used to convert from % to RPM)
-          # This gain is mainly used to convert between scales
-          gain: 50.0
+          max_input: 5000.0 # Maximum RPM input value
+          min_input: 430.0 # Minimum RPM input value (for values < |min_input|) the motors "won't" spin <-> dead-zone
+          min_max_thruster_input: [430.0, 5000.0] # Minimum and maximum RPM values for thrusters
 
           # Model of each thruster is the same as for a regular DC motor (pole+delay)
           pole: 7.2115
-          delay: 0.345 # s
+          delay: 0.345 # 0.345s
           period: 0.01
       sensor:
         gnss: true
         depth_sensor: true
         imu: true
         noise:
-          activate: true
-          position: 
+          activate: false
+          position:
             bias: [0.0, 0.0, 0.0] #Northing, Easting, Depth
             variance: [0.0, 0.0, 0.0] #Northing, Easting, Depth
           body_velocity:
-            bias: [0.0, 0.0, 0.0] # Surge, Sway, Heave
-            variance: [0.0, 0.0, 0.0] # Surge, Sway, Heave
+            bias: [0.0, 0.0, 0.0] # North, East, Down inertial velocity
+            variance: [0.0, 0.0, 0.0] # North, East, Down inertial velocity
+          fluid_velocity:
+            bias: [0.0, 0.0, 0.0] # Surge, Sway, Heave relative to water
+            variance: [0.0, 0.0, 0.0] # Surge, Sway, Heave relative to water
           orientation:
             bias: [0.0, 0.0, 0.0] # Roll, Pitch, Yaw
             variance: [0.0, 0.0, 0.0] # Roll, Pitch, Yaw
           orientation_rate:
             bias: [0.0, 0.0, 0.0] # Roll rate, Pitch rate, Yaw rate
             variance: [0.0, 0.0, 0.0] # Roll rate, Pitch rate, Y
+
+
                 
