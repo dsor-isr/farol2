@@ -38,6 +38,7 @@ ament_export_dependencies(farol2_utils)
 add_library(${PROJECT_NAME}_controllers STATIC
   src/controller_pi.cpp
   src/controller_pid.cpp
+  src/reference_generator.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_controllers PUBLIC

@@ -11,6 +11,7 @@ find_package(Eigen3 REQUIRED)
 
 add_library(${PROJECT_NAME}
   src/low_pass_filter.cpp
+  src/notch_filter.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -20,7 +21,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen)
 
-# enforce at least c++ 17 
+# enforce at least c++ 17
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 install(
@@ -41,10 +42,21 @@ ament_export_include_directories(include)
 ament_export_dependencies(Eigen3)
 
 if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_lint_auto REQUIRED)
   set(ament_cmake_cpplint_FOUND TRUE)
   set(ament_cmake_copyright_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+
+  ament_add_gtest(test_notch_filter
+    test/test_notch_filter.cpp
+  )
+  target_link_libraries(test_notch_filter ${PROJECT_NAME})
+
+  ament_add_gtest(test_low_pass_filter
+    test/test_low_pass_filter.cpp
+  )
+  target_link_libraries(test_low_pass_filter ${PROJECT_NAME})
 endif()
 
 ament_package()

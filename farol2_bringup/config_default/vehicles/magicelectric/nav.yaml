@@ -16,13 +16,20 @@
       node_frequency: 10.0
       neglect_current: false
       course_cf:
+        use: false
         cutoff_frequency: 0.1 # Hz
+      yaw_rate_kf:
+        use: false  
       yaw_rate_lpf:
-        use_yaw_rate_lpf: false
+        use: false
         omega_cutoff: 0.4  # rad/s
         order: 1
         design: "butterworth" # design options ("butterworth", "bessel")
         method: "tustin" # descretization method ("tustin", "zoh", "euler")
+      yaw_rate_notch_filter:
+        use: true
+        f0_hz: 0.318
+        q: 1.0
 
   low_pass:
     ros__parameters:

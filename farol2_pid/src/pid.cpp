@@ -22,6 +22,18 @@ PID::PID() : Node("pid",
     {"pitch_rate", now},
     {"roll_rate", now}
   };
+
+  controller_has_reference_ = {
+    {"surge", false},
+    {"sway", false},
+    {"heave", false},
+    {"yaw", false},
+    {"pitch", false},
+    {"roll", false},
+    {"yaw_rate", false},
+    {"pitch_rate", false},
+    {"roll_rate", false}
+  };
   
   /* Initialise body wrench request forces and torques as 0 */
   resetBodyWrenchRequest();
@@ -177,6 +189,9 @@ void PID::loadParams() {
   }
 
   course_control_ = this->get_parameter("course_control").as_bool();
+  if (!this->get_parameter("use_heading_rate_as_yaw_rate", use_heading_rate_as_yaw_rate_)) {
+    use_heading_rate_as_yaw_rate_ = false;
+  }
   lpf_order_ = this->get_parameter("lpf_order").as_int();
   lpf_method_ = this->get_parameter("lpf_method").as_string();
   lpf_design_ = this->get_parameter("lpf_design").as_string();
@@ -276,22 +291,53 @@ void PID::initialiseTimers() {
 
 void PID::navStateCallback(const farol2_interfaces::msg::NavigationState &msg) {
   nav_state_ = msg;
+  has_nav_state_ = true;
 }
 
 void PID::referenceCallback(const std::string &controller_name, double raw_value) {
+  double ref_value = raw_value;
+
   // Linear channels use incoming values directly; angular channels keep
   // internal references in radians.
-  if (controller_name == "surge") surge_ref_ = raw_value;
-  else if (controller_name == "sway") sway_ref_ = raw_value;
-  else if (controller_name == "heave") heave_ref_ = raw_value;
-  else if (controller_name == "yaw") yaw_ref_ = farol2_utils::deg2rad(raw_value);
-  else if (controller_name == "pitch") pitch_ref_ = farol2_utils::deg2rad(raw_value);
-  else if (controller_name == "roll") roll_ref_ = farol2_utils::deg2rad(raw_value);
-  else if (controller_name == "yaw_rate") yaw_rate_ref_ = farol2_utils::deg2rad(raw_value);
-  else if (controller_name == "pitch_rate") pitch_rate_ref_ = farol2_utils::deg2rad(raw_value);
-  else if (controller_name == "roll_rate") roll_rate_ref_ = farol2_utils::deg2rad(raw_value);
+  if (controller_name == "surge") surge_ref_ = ref_value;
+  else if (controller_name == "sway") sway_ref_ = ref_value;
+  else if (controller_name == "heave") heave_ref_ = ref_value;
+  else if (controller_name == "yaw") {
+    ref_value = farol2_utils::deg2rad(raw_value);
+    yaw_ref_ = ref_value;
+  } else if (controller_name == "pitch") {
+    ref_value = farol2_utils::deg2rad(raw_value);
+    pitch_ref_ = ref_value;
+  } else if (controller_name == "roll") {
+    ref_value = farol2_utils::deg2rad(raw_value);
+    roll_ref_ = ref_value;
+  } else if (controller_name == "yaw_rate") {
+    ref_value = farol2_utils::deg2rad(raw_value);
+    yaw_rate_ref_ = ref_value;
+  } else if (controller_name == "pitch_rate") {
+    ref_value = farol2_utils::deg2rad(raw_value);
+    pitch_rate_ref_ = ref_value;
+  } else if (controller_name == "roll_rate") {
+    ref_value = farol2_utils::deg2rad(raw_value);
+    roll_rate_ref_ = ref_value;
+  }
 
-  controller_last_reference_[controller_name] = clock_->now();
+  const auto now = clock_->now();
+  double dt_ref = 0.0;
+  if (controller_has_reference_[controller_name]) {
+    dt_ref = (now - controller_last_reference_[controller_name]).seconds();
+    if (dt_ref > 2.0 / node_frequency_) {
+      dt_ref = 0.0;
+    }
+  }
+
+  auto rg_it = reference_generators_.find(controller_name);
+  if (rg_it != reference_generators_.end() && rg_it->second) {
+    reference_outputs_[controller_name] = rg_it->second->update(ref_value, dt_ref);
+  }
+
+  controller_has_reference_[controller_name] = true;
+  controller_last_reference_[controller_name] = now;
 }
 
 bool PID::validateControllerParams(const std::string &controller_name,
@@ -334,18 +380,25 @@ void PID::createControllers() {
     const bool use_ref_lpf = controller_parameters_[name].count("use_ref_lpf") ? controller_parameters_[name]["use_ref_lpf"] != 0.0 : true;
     const bool delta_implementation =
       controller_parameters_[name].count("delta_implementation") ? controller_parameters_[name]["delta_implementation"] != 0.0 : true;
-    const bool use_state_lpf =
-      controller_parameters_[name].count("use_state_lpf") ? controller_parameters_[name]["use_state_lpf"] != 0.0 : false;
-    const bool use_state_lpf_for_state_rate =
-      controller_parameters_[name].count("use_state_lpf_for_state_rate") ? controller_parameters_[name]["use_state_lpf_for_state_rate"] != 0.0 : false;
-    const bool use_filtered_state_for_control =
-      controller_parameters_[name].count("use_filtered_state_for_control") ? controller_parameters_[name]["use_filtered_state_for_control"] != 0.0 : false;
     const bool use_filtered_ref_for_control =
       controller_parameters_[name].count("use_filtered_ref_for_control") ? controller_parameters_[name]["use_filtered_ref_for_control"] != 0.0 : false;
     const bool use_rate_limiter =
       controller_parameters_[name].count("use_rate_limiter") ? controller_parameters_[name]["use_rate_limiter"] != 0.0 : false;
     const double rate_limit =
       controller_parameters_[name].count("rate_limit") ? controller_parameters_[name]["rate_limit"] : 0.0;
+
+    reference_generators_[name] = std::make_unique<farol_control::ReferenceGenerator>();
+    reference_generators_[name]->configure(true,
+                                           use_rate_limiter,
+                                           rate_limit,
+                                           use_ref_lpf,
+                                           use_filtered_ref_for_control,
+                                           controller_parameters_[name]["lpf_wc"],
+                                           lpf_order_,
+                                           lpf_design_,
+                                           lpf_method_);
+    reference_outputs_[name] = reference_generators_[name]->output();
+
     controller = std::make_unique<ControllerPID>();
     controller->configure(controller_parameters_[name]["kp"],
                           controller_parameters_[name]["ki"],
@@ -355,19 +408,8 @@ void PID::createControllers() {
                           kffa,
                           controller_parameters_[name]["tau_min"],
                           controller_parameters_[name]["tau_max"],
-                          use_ref_lpf,
-                          controller_parameters_[name]["lpf_wc"],
-                          lpf_order_,
-                          lpf_design_,
-                          lpf_method_,
                           delta_implementation,
-                          true,
-                          use_state_lpf,
-                          use_state_lpf_for_state_rate,
-                          use_filtered_state_for_control,
-                          use_filtered_ref_for_control,
-                          use_rate_limiter,
-                          rate_limit);
+                          true);
   };
 
   if (controller_names_.count("surge") && !validateControllerParams("surge", pi_required)) {
@@ -539,25 +581,33 @@ void PID::initializeControllerConfigs() {
             return farol2_utils::deg2rad(static_cast<double>(nav_state_.orientation.z));
           },
           [this]() { return yaw_ref_; },
-          [this]() { return farol2_utils::deg2rad(nav_state_.orientation_rate.z); },
+          [this]() -> double {
+            if (use_heading_rate_as_yaw_rate_) {
+              return farol2_utils::deg2rad(static_cast<double>(nav_state_.heading_rate));
+            }
+            return farol2_utils::deg2rad(static_cast<double>(nav_state_.orientation_rate.z));
+          },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.z += tau; },
           [this](farol2_pid::msg::PidDebug &debug_msg) {
+            const auto &ref = reference_outputs_["yaw"];
             debug_msg.error = controller_yaw_->getError();
             debug_msg.error_rate = controller_yaw_->error_dot_;
             debug_msg.error_rate_dot = controller_yaw_->error_rate_dot_;
             debug_msg.p_term = controller_yaw_->getProportionalTerm();
             debug_msg.i_term = controller_yaw_->getIntegralTerm();
             debug_msg.d_term = controller_yaw_->getDerivativeTerm();
+            debug_msg.ff_term = controller_yaw_->getFFTerm();
             debug_msg.tau_d = controller_yaw_->getTau_d();
             debug_msg.tau_dot = controller_yaw_->getTauDot();
             debug_msg.tau_sat = controller_yaw_->getTau_sat();
             debug_msg.a_term = controller_yaw_->getAntiWindupTerm();
-            debug_msg.tau = tau_;
+            debug_msg.tau = controller_yaw_->getOutput();
             debug_msg.state = controller_yaw_->state_;
-            debug_msg.ref_raw = farol2_utils::wrapTo2Pi(controller_yaw_->ref_raw_);
-            debug_msg.ref_filt = farol2_utils::wrapTo2Pi(controller_yaw_->ref_);
-            debug_msg.dref_filt = controller_yaw_->dref_;
-            debug_msg.ddref_filt = controller_yaw_->ddref_;
+            debug_msg.state_rate_used = controller_yaw_->state_rate_used_;
+            debug_msg.ref_raw = farol2_utils::wrapTo2Pi(ref.ref_raw);
+            debug_msg.ref_filt = farol2_utils::wrapTo2Pi(ref.ref_filt);
+            debug_msg.dref_filt = ref.dref;
+            debug_msg.ddref_filt = ref.ddref;
           });
         break;
 
@@ -575,11 +625,13 @@ void PID::initializeControllerConfigs() {
             debug_msg.p_term = controller_pitch_->getProportionalTerm();
             debug_msg.i_term = controller_pitch_->getIntegralTerm();
             debug_msg.d_term = controller_pitch_->getDerivativeTerm();
+            debug_msg.ff_term = controller_pitch_->getFFTerm();
             debug_msg.tau_d = controller_pitch_->getTau_d();
             debug_msg.tau_dot = controller_pitch_->getTauDot();
             debug_msg.tau_sat = controller_pitch_->getTau_sat();
             debug_msg.a_term = controller_pitch_->getAntiWindupTerm();
-            debug_msg.tau = tau_;
+            debug_msg.tau = controller_pitch_->getOutput();
+            debug_msg.state_rate_used = controller_pitch_->state_rate_used_;
           });
         break;
 
@@ -597,11 +649,13 @@ void PID::initializeControllerConfigs() {
             debug_msg.p_term = controller_roll_->getProportionalTerm();
             debug_msg.i_term = controller_roll_->getIntegralTerm();
             debug_msg.d_term = controller_roll_->getDerivativeTerm();
+            debug_msg.ff_term = controller_roll_->getFFTerm();
             debug_msg.tau_d = controller_roll_->getTau_d();
             debug_msg.tau_dot = controller_roll_->getTauDot();
             debug_msg.tau_sat = controller_roll_->getTau_sat();
             debug_msg.a_term = controller_roll_->getAntiWindupTerm();
             debug_msg.tau = tau_;
+            debug_msg.state_rate_used = controller_roll_->state_rate_used_;
           });
         break;
 
@@ -697,7 +751,7 @@ void PID::timerCallback() {
   static std::set<std::string>::iterator it;
   for (it = controller_names_.begin(); it != controller_names_.end(); it++) {
     /* If controller is not enabled or hasn't received a reference, skip it publishing */
-    if (!controller_parameters_[*it]["enabled"] || !hasRecentReference(controller_last_reference_[*it], node_frequency_)) {
+    if (!has_nav_state_ || !controller_parameters_[*it]["enabled"] || !controller_has_reference_[*it] || !hasRecentReference(controller_last_reference_[*it], node_frequency_)) {
       continue;
     }
 
@@ -778,7 +832,7 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_pid::srv::ChangePara
     controller_yaw_->ki_ = request->mr*(10*request->xi*request->w0*request->w0*request->w0);
     controller_yaw_->kd_ = request->mr*(12*request->xi*request->w0);
     response->success = true;
-    response->message = "Changed " + request->controller + " controller's params based on w0 and xi";
+    response->message = "Changed " + request->controller + " controller's params based on w0 and xi. New gains are: kp: " + std::to_string(controller_yaw_->kp_) + " ki: " + std::to_string(controller_yaw_->ki_) + " kd: " + std::to_string(controller_yaw_->kd_);
     tau_ = 0.0;
   }
   else{
@@ -786,14 +840,13 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_pid::srv::ChangePara
     controller_yaw_->ki_ = request->ki;
     controller_yaw_->kd_ = request->kd;
     response->success = true;
-    response->message = "Changed " + request->controller + " controller's params to specified (kp, ki, kd)";
+    response->message = "Changed " + request->controller + " controller's params to specified (kp, ki, kd). New gains are: kp=" + std::to_string(controller_yaw_->kp_) + ", ki=" + std::to_string(controller_yaw_->ki_) + ", kd=" + std::to_string(controller_yaw_->kd_);
     tau_ = 0.0;
   }
   
   /* Set additional parameters if provided */
   if (request->lpf_wc > 0) {
-    controller_yaw_->lpf_wc_ = request->lpf_wc;
-    response->message += "; lpf_wc=" + std::to_string(request->lpf_wc);
+    response->message += "; lpf_wc ignored (ref generator owns LPF now)";
   }
   if (request->tau_min > 0) {
     controller_yaw_->tau_min_ = request->tau_min;
@@ -803,7 +856,6 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_pid::srv::ChangePara
     controller_yaw_->tau_max_ = request->tau_max;
     response->message += "; tau_max=" + std::to_string(request->tau_max);
   }
-  
   return;
 }
 
@@ -836,7 +888,7 @@ bool PID::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const
 void PID::callControllers(double dt) {
   for (const auto &name : controller_names_) {
     // Compute only for enabled channels with fresh references.
-    if (!controller_parameters_[name]["enabled"] || !hasRecentReference(controller_last_reference_[name], node_frequency_)) {
+    if (!has_nav_state_ || !controller_parameters_[name]["enabled"] || !controller_has_reference_[name] || !hasRecentReference(controller_last_reference_[name], node_frequency_)) {
       continue;
     }
 
@@ -850,6 +902,11 @@ void PID::callControllers(double dt) {
 }
 
 void PID::executeController(const ControllerConfig &cfg, double dt) {
+  const auto ref_it = reference_outputs_.find(cfg.name);
+  const bool has_ref_out = (ref_it != reference_outputs_.end());
+  const double ref_used = has_ref_out ? ref_it->second.ref_used_for_control : cfg.get_ref();
+  const double dref = has_ref_out ? ref_it->second.dref : 0.0;
+  const double ddref = has_ref_out ? ref_it->second.ddref : 0.0;
 
   // Dispatch by controller type while preserving each channel's PI/PID flavor.
   switch (cfg.type) {
@@ -867,16 +924,15 @@ void PID::executeController(const ControllerConfig &cfg, double dt) {
       break;
     case YAW:
       if (!controller_yaw_) return;
-      // tau_ = controller_yaw_->callController(cfg.get_state(), cfg.get_ref(), cfg.get_rate(), dt);
-      tau_ = controller_yaw_->callController(cfg.get_state(), cfg.get_ref(), 0.0, dt);
+      tau_ = controller_yaw_->callController(cfg.get_state(), ref_used, cfg.get_rate(), dref, ddref, dt);
       break;
     case PITCH:
       if (!controller_pitch_) return;
-      tau_ = controller_pitch_->callController(cfg.get_state(), cfg.get_ref(), cfg.get_rate(), dt);
+      tau_ = controller_pitch_->callController(cfg.get_state(), ref_used, cfg.get_rate(), dref, ddref, dt);
       break;
     case ROLL:
       if (!controller_roll_) return;
-      tau_ = controller_roll_->callController(cfg.get_state(), cfg.get_ref(), cfg.get_rate(), dt);
+      tau_ = controller_roll_->callController(cfg.get_state(), ref_used, cfg.get_rate(), dref, ddref, dt);
       break;
     case YAW_RATE:
       if (!controller_yaw_rate_) return;

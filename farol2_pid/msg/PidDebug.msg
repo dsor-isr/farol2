@@ -12,9 +12,11 @@ float64 tau_dot
 float64 tau_sat
 float64 tau
 float64 state
+float64 state_rate_used
 float64 ref_raw
 float64 ref_filt
 float64 dref_filt
 float64 ddref_filt
+float64 ff_term
 float64 ffv_term
 float64 ffa_term
