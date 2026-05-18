@@ -20,6 +20,7 @@ typedef struct {
    */
   Eigen::Vector3d v1{0.0, 0.0, 0.0};    // Linear velocities in the body frame
   Eigen::Vector3d v2{0.0, 0.0, 0.0};    // Angular velocities in the body frame
+  Eigen::Vector3d vc_inertial{0.0, 0.0, 0.0}; // Estimated current velocity in inertial frame
 
   /**
    * @brief Positions and orientations in inertial frame
@@ -89,6 +90,7 @@ typedef struct {
   double yaw{0.0};
   double psi{0.0};
   double gamma{0.0};
+  std::vector<double> debug_values{};
 
 } PFollowingDebug;
 

@@ -55,6 +55,10 @@ void PathFollowingNode::initialiseServices() {
                                     get_parameter("topics.services.relative_heading_pf").as_string(),
                                     std::bind(&PathFollowingNode::SetRelativeHeadingService, this, std::placeholders::_1, std::placeholders::_2));
 
+  this->pf_ilos_srv_ = create_service<path_following::srv::SetPF>(
+                        get_parameter("topics.services.ilos_pf").as_string(),
+                        std::bind(&PathFollowingNode::SetIlosService, this, std::placeholders::_1, std::placeholders::_2));
+
   
   this->pf_reset_vt_srv_ = create_service<path_following::srv::ResetVT>(
                             get_parameter("topics.services.reset_vt_pf").as_string(),
@@ -650,6 +654,58 @@ void PathFollowingNode::SetSamsonService(const std::shared_ptr<path_following::s
 
   /* Return success */
   RCLCPP_INFO(this->get_logger(), "PF controller switched to Samson. This algorithm uses the path closest point to make the computations");
+  return;
+}
+
+/* Service to switch to the ILOS Path Following method */
+void PathFollowingNode::SetIlosService(const std::shared_ptr<path_following::srv::SetPF::Request> req,
+                                       std::shared_ptr<path_following::srv::SetPF::Response> res) {
+
+  /* Don't change if the algorithm is running */
+  if (!this->timer_->is_canceled()) {
+    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
+    res->success = false;
+    return;
+  }
+
+  /* Clear the memory used by the previous controller */
+  this->deleteCurrentController();
+
+  /* Create the publishers for the node */
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
+                                get_parameter("topics.publishers.surge").as_string(), 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
+                                get_parameter("topics.publishers.yaw").as_string(), 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
+                                get_parameter("topics.publishers.rabbit").as_string(), 1));
+
+  /* Variables to store the gains of the controller */
+  double delta, ki;
+
+  try {
+
+    /* Read the gains for the controller */
+    delta = get_parameter("controller_gains.ilos.delta").as_double();
+    ki    = get_parameter("controller_gains.ilos.ki").as_double();
+
+    /* Assign the new controller */
+    this->pf_algorithm_ = new ILOS(delta, ki,
+                                   this->publishers_[0],
+                                   this->publishers_[1],
+                                   this->publishers_[2],
+                                   this->set_path_mode_client_);
+    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
+                                                get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
+    res->success = true;
+
+  } catch (...) {
+    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
+    res->success = false;
+    return;
+  }
+
+  /* Return success */
+  RCLCPP_INFO(this->get_logger(), "PF controller switched to ILOS. This algorithm uses the path closest point to make the computations");
   return;
 }
 

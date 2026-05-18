@@ -25,8 +25,13 @@
       topics:
         subscribers:
           measurement: "/#vehicle#/measurement"
+          rpm_command: "/#vehicle#/actuation/rpm_command"
         publishers:
           state: "/#vehicle#/nav/sample_and_hold/state"
+          position_raw: "/#vehicle#/nav/sample_and_hold/position_raw"
+          model_velocity: "/#vehicle#/nav/sample_and_hold/model_velocity"
+        services:
+          tune_position_ekf: "/#vehicle#/nav/sample_and_hold/tune_position_ekf"
   low_pass:
     ros__parameters:
       topics:
@@ -190,6 +195,7 @@
           lapierre_pf: "/#vehicle#/control/outer_loop/path_following/SetLapierre"
           pramod_pf: "/#vehicle#/control/outer_loop/path_following/SetPramod"
           samson_pf: "/#vehicle#/control/outer_loop/path_following/SetSamson"
+          ilos_pf: "/#vehicle#/control/outer_loop/path_following/SetIlos"
           # Service names related to the path
           reset_path: "/#vehicle#/ResetPath"
           set_path_mode: "/#vehicle#/SetMode"

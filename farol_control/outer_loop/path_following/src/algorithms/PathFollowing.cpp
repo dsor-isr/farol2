@@ -26,6 +26,7 @@ void PathFollowing::publish() {
   pf_debug.yaw = pfollowing_debug_.yaw;
   pf_debug.psi = pfollowing_debug_.psi;
   pf_debug.gamma = pfollowing_debug_.gamma;
+  pf_debug.debug_values = pfollowing_debug_.debug_values;
  
   pfollowing_debug_pub_->publish(pf_debug);
 }

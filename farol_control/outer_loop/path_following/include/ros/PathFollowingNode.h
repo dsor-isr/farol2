@@ -25,6 +25,7 @@
 #include "Fossen.h"
 #include "Romulo.h"
 #include "Lapierre.h"
+#include "ILOS.h"
 #include "Pramod.h"
 #include "Samson.h"
 #include "PathFollowing.h"
@@ -118,6 +119,7 @@ class PathFollowingNode : public rclcpp::Node {
     rclcpp::Service<path_following::srv::SetPF>::SharedPtr pf_samson_srv_;
     rclcpp::Service<path_following::srv::SetPF>::SharedPtr pf_marcelo_srv_;
     rclcpp::Service<path_following::srv::SetPF>::SharedPtr pf_relative_heading_srv_;
+    rclcpp::Service<path_following::srv::SetPF>::SharedPtr pf_ilos_srv_;
 
     /* Service to reset the virtual target position */
     rclcpp::Service<path_following::srv::ResetVT>::SharedPtr pf_reset_vt_srv_;
@@ -234,6 +236,9 @@ class PathFollowingNode : public rclcpp::Node {
 
     void SetSamsonService(const std::shared_ptr<path_following::srv::SetPF::Request> req,
                           std::shared_ptr<path_following::srv::SetPF::Response> res);
+
+    void SetIlosService(const std::shared_ptr<path_following::srv::SetPF::Request> req,
+                        std::shared_ptr<path_following::srv::SetPF::Response> res);
 
     /**
      * @brief Service to send a waypoint when the path following stops

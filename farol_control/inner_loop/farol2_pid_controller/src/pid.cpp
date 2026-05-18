@@ -326,7 +326,7 @@ void PID::referenceCallback(const std::string &controller_name, double raw_value
   double dt_ref = 0.0;
   if (controller_has_reference_[controller_name]) {
     dt_ref = (now - controller_last_reference_[controller_name]).seconds();
-    if (dt_ref > 2.0 / node_frequency_) {
+    if (dt_ref > 20.0 / node_frequency_) {
       dt_ref = 0.0;
     }
   }
@@ -818,7 +818,7 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_pid_controller::srv:
   /* If required controller does not exist */
   if (controller_names_.find(request->controller) == controller_names_.end()) {
     response->success = false;
-    response->message = "Controller " + request->controller + " does not exist - it's not (correctly?) configured in control.yaml.";
+    response->message = "Controller " + request->controller + " does not exist - it's not (correctly?) configured in inner_loop.yaml.";
     return;
   }
   // /* If any parameter is invalid */
@@ -872,7 +872,7 @@ bool PID::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const
   /*      received less than 0.2s ago.  
                                                                  */
 
-  double threshold = 2.0/(double)node_frequency;
+  double threshold = 20.0/(double)node_frequency;
   static int32_t secs = (int32_t)floor(threshold);
   static uint32_t nanosecs = (uint32_t)((threshold - floor(threshold))*1e9);
   

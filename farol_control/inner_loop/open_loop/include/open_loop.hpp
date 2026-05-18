@@ -42,6 +42,11 @@ class OpenLoop : public rclcpp::Node {
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr surge_ref_sub_;
     rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr mission_status_sub_;
 
+    rclcpp::TimerBase::SharedPtr timer_;
+    void timerCallback();
+    double surge_ref_;
+
+
     /* Callbacks */
     void surgeRefCallback(std_msgs::msg::Float32::SharedPtr msg);
 

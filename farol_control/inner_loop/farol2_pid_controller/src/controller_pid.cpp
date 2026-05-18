@@ -67,12 +67,12 @@ double ControllerPID::callController(double state, double state_ref, double stat
   ////     PID using Delta Implementation   ////
   if(delta_implementation_){
     // Add all PID terms + drag compensation
-    tau_d_ = -ki_ * error_ - kp_ * error_dot_ - kd_ * error_rate_dot_ + kffv_lin_ * state_rate_dot_ + kffv_sq_ * state_rate_dot_ * abs(state_rate_dot_);
+    tau_d_ = -ki_ * error_ - kp_ * error_dot_ - kd_ * error_rate_dot_ + kffv_lin_ * state_rate_dot_ + kffv_sq_ * state_rate_dot_ * abs(state_rate_dot_) + kffa_*ddref_dot_;
 
     // for debug only
     p_term_ = -kp_ * error_dot_*dt;
     i_term_ = -ki_ * error_*dt;
-    d_term_ = -kd_ * error_rate_dot_ + kffv_lin_ * state_rate_dot_ + kffv_sq_ * state_rate_dot_ * abs(state_rate_dot_)*dt;
+    d_term_ = -kd_ * error_rate_dot_;// + kffv_lin_ * state_rate_dot_ + kffv_sq_ * state_rate_dot_ * abs(state_rate_dot_)*dt;
 
     // Anti-windup 
     Ka_ = 1.0 / dt;
@@ -87,7 +87,6 @@ double ControllerPID::callController(double state, double state_ref, double stat
   }
   ////    Traditional PID with integral anti-windup   ////
   else{
-    ff_term_ = 0.0;
     // integral term with anti-windup
     tau_d_ = -ki_*error_;
     Ka_ = 1.0/dt;

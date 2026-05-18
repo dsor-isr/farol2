@@ -69,3 +69,6 @@
           p_sat: [1.0, 1.0] #x, y
         breivik:
           delta_h: 2.0 #20.0 magicelectric
+        ilos:
+          delta: 10.0  # lookahead distance (metres)
+          ki: 0.01     # integral gain
