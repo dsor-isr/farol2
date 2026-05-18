@@ -42,47 +42,47 @@
     ros__parameters:
       topics:
         subscribers:
-          thruster_force: "/#vehicle#/actuation/thruster_force"
+          thruster_force: "/#vehicle#/allocation/thruster_force"
           nav_state: "/#vehicle#/nav/filter/state"
         publishers:
-          rpm_command: "/#vehicle#/actuation/rpm_command"
+          rpm_command: "/#vehicle#/allocation/rpm_command"
   throttle_conversion:
     ros__parameters:
       topics:
         subscribers:
-          rpm_command: "/#vehicle#/actuation/rpm_command"
+          rpm_command: "/#vehicle#/allocation/rpm_command"
         publishers:
           throttle_command: "/#vehicle#/throttle_command"
   static_thruster_allocation:
     ros__parameters:
       topics:
         subscribers:
-          body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
+          body_wrench_request: "/#vehicle#/allocation/body_wrench_request"
         publishers:
-          thruster_force: "/#vehicle#/actuation/thruster_force"
+          thruster_force: "/#vehicle#/allocation/thruster_force"
   thruster_rudder_allocation:
     ros__parameters:
       topics:
         subscribers:
-          body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
+          body_wrench_request: "/#vehicle#/allocation/body_wrench_request"
           nav_state: "/#vehicle#/nav/filter/state"
           mission_status: "/#vehicle#/mission_status"
         publishers:
-          thruster_force: "/#vehicle#/actuation/thruster_force"
-          rudder_angle_ref: "/#vehicle#/actuation/rudder_angle_ref"
+          thruster_force: "/#vehicle#/allocation/thruster_force"
+          rudder_angle_ref: "/#vehicle#/control/ref/rudder_angle"
 
   wrench_manager:
     ros__parameters:
       topics:
         subscribers:
-          thrust_x: "/#vehicle#/actuation/thrust_x"
-          thrust_y: "/#vehicle#/actuation/thrust_y"
-          thrust_z: "/#vehicle#/actuation/thrust_z"
-          torque_x: "/#vehicle#/actuation/torque_x"
-          torque_y: "/#vehicle#/actuation/torque_y"
-          torque_z: "/#vehicle#/actuation/torque_z"
+          thrust_x: "/#vehicle#/allocation/thrust_x"
+          thrust_y: "/#vehicle#/allocation/thrust_y"
+          thrust_z: "/#vehicle#/allocation/thrust_z"
+          torque_x: "/#vehicle#/allocation/torque_x"
+          torque_y: "/#vehicle#/allocation/torque_y"
+          torque_z: "/#vehicle#/allocation/torque_z"
         publishers:
-          body_wrench_request: "/#vehicle#/actuation/body_wrench_request"
+          body_wrench_request: "/#vehicle#/allocation/body_wrench_request"
 
 ########################
 # ---  Inner-Loop  --- #
@@ -102,13 +102,14 @@
           pitch_rate_ref: "/#vehicle#/control/ref/pitch_rate"
           roll_rate_ref: "/#vehicle#/control/ref/roll_rate"
         publishers:
-          thrust_x: "/#vehicle#/actuation/thrust_x"
-          thrust_y: "/#vehicle#/actuation/thrust_y"
-          thrust_z: "/#vehicle#/actuation/thrust_z"
-          torque_x: "/#vehicle#/actuation/torque_x"
-          torque_y: "/#vehicle#/actuation/torque_y"
-          torque_z: "/#vehicle#/actuation/torque_z"
+          thrust_x: "/#vehicle#/allocation/thrust_x"
+          thrust_y: "/#vehicle#/allocation/thrust_y"
+          thrust_z: "/#vehicle#/allocation/thrust_z"
+          torque_x: "/#vehicle#/allocation/torque_x"
+          torque_y: "/#vehicle#/allocation/torque_y"
+          torque_z: "/#vehicle#/allocation/torque_z"
           debug:
+            surge: "/#vehicle#/control/inner_loop/pid/surge/debug"
             yaw: "/#vehicle#/control/inner_loop/pid/yaw/debug"
         services:
           change_params: "/#vehicle#/control/pid/change_params"
@@ -120,12 +121,22 @@
           surge_ref: "/#vehicle#/control/ref/surge"
           mission_status: "/#vehicle#/mission_status"
         publishers:
-          rpm_command: "/#vehicle#/actuation/rpm_command"
-          # thrust_y: "/#vehicle#/actuation/thrust_y"
-          # thrust_z: "/#vehicle#/actuation/thrust_z"
-          # torque_x: "/#vehicle#/actuation/torque_x"
-          # torque_y: "/#vehicle#/actuation/torque_y"
-          # torque_z: "/#vehicle#/actuation/torque_z"
+          rpm_command: "/#vehicle#/allocation/rpm_command"
+          # thrust_y: "/#vehicle#/allocation/thrust_y"
+          # thrust_z: "/#vehicle#/allocation/thrust_z"
+          # torque_x: "/#vehicle#/allocation/torque_x"
+          # torque_y: "/#vehicle#/allocation/torque_y"
+          # torque_z: "/#vehicle#/allocation/torque_z"
+
+  rudder:
+    ros__parameters:
+        topics:
+          subscribers:
+            rudder_angle_ref: "/#vehicle#/allocation/rudder_angle_ref"
+            rudder_angle: "/#vehicle#/drivers/can_instrumentation/rudder_angle"
+          publishers:
+            rudder_command: "/#vehicle#/rudder_command"
+
 
 ########################
 # ---  Outer-Loop  --- #
@@ -144,17 +155,17 @@
           v_ref: "/#vehicle#/control/ref/sway"
           mission_status: "/#vehicle#/mission_status"
         services:
-          wp_standard: "/#vehicle#/control/outer_loop/send_wp_standard"
-          wp_loose: "/#vehicle#/control/outer_loop/send_wp_loose"
-          wp_heading: "/#vehicle#/control/outer_loop/send_wp_heading"
+          wp_standard: "/#vehicle#/control/waypoint/send_wp_standard"
+          wp_loose: "/#vehicle#/control/waypoint/send_wp_loose"
+          wp_heading: "/#vehicle#/control/waypoint/send_wp_heading"
   path_following:
     ros__parameters:
       topics:
         subscribers:
           mission_status: "/#vehicle#/mission_status"
           state: "/#vehicle#/nav/filter/state"
-          path_data: "/#vehicle#/control/outer_loop/path_data"
-          vc: "/#vehicle#/control/outer_loop/path_following/vc"
+          path_data: "/#vehicle#/control/path_following/path_data"
+          vc: "/#vehicle#/control/path_following/vc"
         publishers:
           mission_status: "/#vehicle#/mission_status"
           surge: "/#vehicle#/control/ref/surge"
@@ -167,34 +178,34 @@
           yaw: "/#vehicle#/control/ref/yaw"
           yaw_rate: "/#vehicle#/control/ref/yaw_rate"
           # Publishers for the virtual target
-          rabbit: "/#vehicle#/control/outer_loop/gamma"
+          rabbit: "/#vehicle#/control/path_following/gamma"
           # Observer for the currents
           observer:
             x: "/#vehicle#/current/x"
             y: "/#vehicle#/current/y"
           # Publish info for plots
-          pfollowing_debug: "/#vehicle#/control/outer_loop/path_following/debug"
+          pfollowing_debug: "/#vehicle#/control/path_following/debug"
         services:
           # Service names to start and stop the path following algorithm
-          start_pf: "/#vehicle#/control/outer_loop/path_following/Start"
-          stop_pf: "/#vehicle#/control/outer_loop/path_following/Stop"
-          updates_gains_pf: "/#vehicle#/control/outer_loop/path_following/UpdateGains"
+          start_pf: "/#vehicle#/control/path_following/Start"
+          stop_pf: "/#vehicle#/control/path_following/Stop"
+          updates_gains_pf: "/#vehicle#/control/path_following/UpdateGains"
           reset_vt_pf: "/#vehicle#/ResetVT"
           # Service names to switch the path following algorithm
-          relative_heading_pf: "/#vehicle#/control/outer_loop/path_following/SetRelativeHeading"
-          marcelo_pf: "/#vehicle#/control/outer_loop/path_following/SetMarcelo"
-          aguiar_pf: "/#vehicle#/control/outer_loop/path_following/SetAguiar"
-          breivik_pf: "/#vehicle#/control/outer_loop/path_following/SetBreivik"
-          fossen_pf: "/#vehicle#/control/outer_loop/path_following/SetFossen"
-          romulo_pf: "/#vehicle#/control/outer_loop/path_following/SetRomulo"
-          lapierre_pf: "/#vehicle#/control/outer_loop/path_following/SetLapierre"
-          pramod_pf: "/#vehicle#/control/outer_loop/path_following/SetPramod"
-          samson_pf: "/#vehicle#/control/outer_loop/path_following/SetSamson"
+          relative_heading_pf: "/#vehicle#/control/path_following/SetRelativeHeading"
+          marcelo_pf: "/#vehicle#/control/path_following/SetMarcelo"
+          aguiar_pf: "/#vehicle#/control/path_following/SetAguiar"
+          breivik_pf: "/#vehicle#/control/path_following/SetBreivik"
+          fossen_pf: "/#vehicle#/control/path_following/SetFossen"
+          romulo_pf: "/#vehicle#/control/path_following/SetRomulo"
+          lapierre_pf: "/#vehicle#/control/path_following/SetLapierre"
+          pramod_pf: "/#vehicle#/control/path_following/SetPramod"
+          samson_pf: "/#vehicle#/control/path_following/SetSamson"
           # Service names related to the path
           reset_path: "/#vehicle#/ResetPath"
           set_path_mode: "/#vehicle#/SetMode"
           # Service names related to the waypoint
-          wp_standard: "/#vehicle#/control/outer_loop/send_wp_standard"
+          wp_standard: "/#vehicle#/control/path_following/send_wp_standard"
           # Service for resetting Dead Reckoning in filter
           reset_dr: "/#vehicle#/nav/filter/reset_dead_reckoning"
 
@@ -205,11 +216,11 @@
     ros__parameters:
       topics:
         subscribers:
-          gamma: "/#vehicle#/control/outer_loop/gamma"
+          gamma: "/#vehicle#/control/path_following/gamma"
           vehicle_state: "/#vehicle#/nav/filter/state"
         publishers:
-          path_data: "/#vehicle#/control/outer_loop/path_data"
-          virtual_target_state: "/#vehicle#/control/outer_loop/virtual_state"
+          path_data: "/#vehicle#/control/path_following/path_data"
+          virtual_target_state: "/#vehicle#/control/path_following/virtual_state"
         services: # Services for constructing a path
           reset_path: "/#vehicle#/ResetPath"
           set_mode: "/#vehicle#/SetMode"
@@ -243,17 +254,17 @@
           reset_path: "/#vehicle#/ResetPath"
           arc2d_path: "/#vehicle#/SpawnArc2DPath"
           line_path: "/#vehicle#/SpawnLinePath"
-          pf_start: "/#vehicle#/control/outer_loop/path_following/Start"
-          pf_stop: "/#vehicle#/control/outer_loop/path_following/Stop"
+          pf_start: "/#vehicle#/control/path_following/Start"
+          pf_stop: "/#vehicle#/control/path_following/Stop"
           set_speed: "/#vehicle#/SetConstVdVehicle"
   console_server:
     ros__parameters:
       topics:
         services:
-          wp_standard: "/#vehicle#/control/outer_loop/send_wp_standard"
-          wp_loose: "/#vehicle#/control/outer_loop/send_wp_loose"
-          wp_heading: "/#vehicle#/control/outer_loop/send_wp_heading"
-        console:
+          wp_standard: "/#vehicle#/control/waypoint/send_wp_standard"
+          wp_loose: "/#vehicle#/control/waypoint/send_wp_loose"
+          wp_heading: "/#vehicle#/control/waypoint/send_wp_heading"
+        addons:
           waypoint: "wp_standard"
   nav2console_state:
     ros__parameters:
@@ -270,7 +281,7 @@
     ros__parameters:
       topics:
         subscribers:
-          rpm_command: "/#vehicle#/actuation/rpm_command"
+          rpm_command: "/#vehicle#/allocation/rpm_command"
         publishers:
           position: "/#vehicle#/sim/position"
           orientation: "/#vehicle#/sim/orientation"
@@ -286,7 +297,7 @@
     ros__parameters:
       topics:
         subscribers:
-          rpm_command: "/#vehicle#/actuation/rpm_command"
+          rpm_command: "/#vehicle#/allocation/rpm_command"
           rudder_cmd: "/#vehicle#/rudder_command"
           rudder_ref: "/#vehicle#/control/ref/rudder_angle"
         publishers:

@@ -11,7 +11,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/parameter.hpp"
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
-#include "farol2_paths/srv/set_mode.hpp"
+#include "farol2_planning/srv/set_mode.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "farol2_interfaces/msg/pf_debug.hpp"
 #include <farol2_utils/angles.hpp>

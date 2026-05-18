@@ -35,7 +35,7 @@ class Pramod : public PathFollowing {
            rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surge_pub, 
            rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_pub, 
            rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr gamma_pub, 
-           rclcpp::Client<farol2_paths::srv::SetMode>::SharedPtr mode_client);
+           rclcpp::Client<farol2_planning::srv::SetMode>::SharedPtr mode_client);
     
     /**
      * @brief  Method that given an array of doubles, updates the gains of the controller
@@ -102,6 +102,6 @@ class Pramod : public PathFollowing {
     /**
      * @brief ROS service to use the closest point to the path 
      */
-    rclcpp::Client<farol2_paths::srv::SetMode>::SharedPtr mode_client_;
+    rclcpp::Client<farol2_planning::srv::SetMode>::SharedPtr mode_client_;
 
 };

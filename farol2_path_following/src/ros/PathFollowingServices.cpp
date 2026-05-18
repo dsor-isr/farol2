@@ -69,10 +69,10 @@ void PathFollowingNode::initialiseServices() {
                             get_parameter("topics.services.reset_dr").as_string());
   
   /* Reset the path we are following and set the mode of operation */
-  this->reset_path_client_ = create_client<farol2_paths::srv::ResetPath>(
+  this->reset_path_client_ = create_client<farol2_planning::srv::ResetPath>(
                               get_parameter("topics.services.reset_path").as_string());
 
-  this->set_path_mode_client_ = create_client<farol2_paths::srv::SetMode>(
+  this->set_path_mode_client_ = create_client<farol2_planning::srv::SetMode>(
                                   get_parameter("topics.services.set_path_mode").as_string());
 
 }

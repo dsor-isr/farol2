@@ -15,7 +15,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(farol2_waypoint REQUIRED)
-find_package(farol2_paths REQUIRED)
+find_package(farol2_planning REQUIRED)
 find_package(farol2_utils REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 # uncomment the following section in order to fill in
@@ -62,7 +62,7 @@ ament_target_dependencies(
   Eigen3
   eigen3_cmake_module
   farol2_waypoint
-  farol2_paths
+  farol2_planning
   farol2_utils
 )
 
@@ -80,6 +80,10 @@ target_compile_features(path_following_node PUBLIC c_std_99 cxx_std_17)  # Requi
 install(TARGETS
   path_following_node
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)

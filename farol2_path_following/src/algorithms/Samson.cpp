@@ -4,7 +4,7 @@
 Samson::Samson(double k1, double k2, double k3, double theta, double k_delta, 
                rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surge_pub, 
                rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_rate_pub, 
-               rclcpp::Client<farol2_paths::srv::SetMode>::SharedPtr mode_client) : 
+               rclcpp::Client<farol2_planning::srv::SetMode>::SharedPtr mode_client) : 
   surge_pub_(surge_pub), 
   yaw_rate_pub_(yaw_rate_pub),
   mode_client_(mode_client) {
@@ -135,7 +135,7 @@ void Samson::start() {
   /* Samson does not used this start needs to use the closest point to the path
    * and NOT the default gamma <-> data communication, therefore we should
    * inform the path to be used in closest point mode */
-  std::shared_ptr<farol2_paths::srv::SetMode::Request> req = std::make_shared<farol2_paths::srv::SetMode::Request>();
+  std::shared_ptr<farol2_planning::srv::SetMode::Request> req = std::make_shared<farol2_planning::srv::SetMode::Request>();
   req->closest_point_mode = true;
   this->mode_client_->async_send_request(req);
 }

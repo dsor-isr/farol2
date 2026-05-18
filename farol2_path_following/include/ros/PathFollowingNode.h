@@ -14,7 +14,7 @@
 
 /* Messages used to receive data from the vehicle and from the path */
 #include "farol2_interfaces/msg/navigation_state.hpp"
-#include "farol2_paths/msg/path_data.hpp"
+#include "farol2_planning/msg/path_data.hpp"
 #include "farol2_interfaces/msg/pf_debug.hpp"
 
 /* Include the Control libraries */
@@ -45,8 +45,8 @@
  * Include the service to set the path mode to closest point (needed for
  * some algorithms)
  */
-#include "farol2_paths/srv/reset_path.hpp"
-#include "farol2_paths/srv/set_mode.hpp"
+#include "farol2_planning/srv/reset_path.hpp"
+#include "farol2_planning/srv/set_mode.hpp"
 
 /* Define Constants used when starting and stoping the path following */
 #define WP_FINISH -3
@@ -125,9 +125,9 @@ class PathFollowingNode : public rclcpp::Node {
     /**
      * @brief ROS Services auxiliary to the path following 
      */
-    rclcpp::Client<farol2_paths::srv::SetMode>::SharedPtr set_path_mode_client_;
+    rclcpp::Client<farol2_planning::srv::SetMode>::SharedPtr set_path_mode_client_;
     rclcpp::Client<farol2_waypoint::srv::SendWpType1>::SharedPtr wp_standard_client_;
-    rclcpp::Client<farol2_paths::srv::ResetPath>::SharedPtr reset_path_client_;
+    rclcpp::Client<farol2_planning::srv::ResetPath>::SharedPtr reset_path_client_;
     rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr dr_reset_client_;         
 
     /**
@@ -140,7 +140,7 @@ class PathFollowingNode : public rclcpp::Node {
      * @brief ROS subscribers attributes
      */
     rclcpp::Subscription<farol2_interfaces::msg::NavigationState>::SharedPtr state_sub_;
-    rclcpp::Subscription<farol2_paths::msg::PathData>::SharedPtr path_data_sub_;
+    rclcpp::Subscription<farol2_planning::msg::PathData>::SharedPtr path_data_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr vc_sub_;
     rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr mission_status_sub_;
 
@@ -187,7 +187,7 @@ class PathFollowingNode : public rclcpp::Node {
      * @brief Callbacks
      */
     void vcCallback(const std_msgs::msg::Float32 &msg);
-    void pathStateCallback(const farol2_paths::msg::PathData &msg);
+    void pathStateCallback(const farol2_planning::msg::PathData &msg);
     void vehicleStateCallback(const farol2_interfaces::msg::NavigationState &msg);
     void missionStatusCallback(const std_msgs::msg::Int8 &msg);
 

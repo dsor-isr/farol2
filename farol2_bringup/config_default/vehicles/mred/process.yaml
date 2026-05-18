@@ -15,114 +15,93 @@ processes:
     dependencies:
       []
 
-  - name: 'vehicle_sim'
+  - name: 'sim'
     launch_on_startup: true
     delay_before_start: 0.2
-<<<<<<< HEAD:farol_bringup/config_default/vehicles/mred/process.yaml
-    cmd: 'ros2 launch vehicle_sim vehicle_sim.launch.py'
-=======
-    cmd: 'ros2 launch farol2_bringup nav.launch.py'
->>>>>>> dev:farol2_bringup/config_default/vehicles/mred/process.yaml
+    cmd: 'ros2 launch farol2_sim farol2_sim.launch.py'
     args:
       - magic_electric_sim:=false
       - auv_sim:=true
     dependencies:
       []
 
+
   - name: 'navigation'
     launch_on_startup: true
     delay_before_start: 0.3
-<<<<<<< HEAD:farol_bringup/config_default/vehicles/mred/process.yaml
-    cmd: 'ros2 launch farol_bringup nav.launch.py'
-=======
-    cmd: 'ros2 launch farol2_bringup addons.launch.py'
->>>>>>> dev:farol2_bringup/config_default/vehicles/mred/process.yaml
+    cmd: 'ros2 launch farol2_nav farol2_nav.launch.py'
     args:
       - sample_and_hold:=true
       - low_pass:=false
     dependencies:
       []
 
-  - name: 'actuation'
+  - name: 'allocation'
     launch_on_startup: true
-<<<<<<< HEAD:farol_bringup/config_default/vehicles/mred/process.yaml
     delay_before_start: 0.4
-    cmd: 'ros2 launch farol_bringup actuation.launch.py'
-=======
-    delay_before_start: 0.3
-    cmd: 'ros2 launch farol2_bringup actuation.launch.py'
->>>>>>> dev:farol2_bringup/config_default/vehicles/mred/process.yaml
+    cmd: 'ros2 launch farol2_allocation farol2_allocation.launch.py'
     args:
       - static_thruster_allocation:=true
       - thruster_rudder_allocation:=false
+      - throttle_conversion:=false
     dependencies:
       - navigation
 
   - name: "inner_loop"
     launch_on_startup: true
     delay_before_start: 0.5
-<<<<<<< HEAD:farol_bringup/config_default/vehicles/mred/process.yaml
-    cmd: 'ros2 launch farol_bringup inner_loop.launch.py'
+    cmd: 'ros2 launch farol2_pid farol2_pid.launch.py'
     args:
       - pid:=true
-      - open_loop:=false
-      - rudder:=true
     dependencies:
       - navigation
-      - actuation
+      - allocation
 
-  - name: "outer_loop"
+  - name: "waypoint"
     launch_on_startup: true
     delay_before_start: 0.6
-    cmd: 'ros2 launch farol_bringup outer_loop.launch.py'
+    cmd: 'ros2 launch farol2_waypoint farol2_waypoint.launch.py'
     args:
-      - waypoint:=true
-      - path_following:=true
+      []
     dependencies:
       - navigation
-      - actuation
+      - allocation
+      - inner_loop
+
+  - name: "path_following"
+    launch_on_startup: true
+    delay_before_start: 0.65
+    cmd: 'ros2 launch farol2_path_following farol2_path_following.launch.py'
+    args:
+      []
+    dependencies:
+      - navigation
+      - allocation
       - inner_loop
 
   - name: "planning"
     launch_on_startup: true
     delay_before_start: 0.7
-    cmd: 'ros2 launch farol_bringup planning.launch.py'
-=======
-    cmd: 'ros2 launch farol2_bringup control.launch.py'
->>>>>>> dev:farol2_bringup/config_default/vehicles/mred/process.yaml
+    cmd: 'ros2 launch farol2_planning farol2_planning.launch.py'
     args:
       []
     dependencies:
       - navigation
-      - actuation
+      - allocation
       - inner_loop
-      - outer_loop
+      - waypoint
+      - path_following
 
-<<<<<<< HEAD:farol_bringup/config_default/vehicles/mred/process.yaml
   - name: 'addons'
     launch_on_startup: true
     delay_before_start: 0.8
-    cmd: 'ros2 launch farol_bringup addons.launch.py'
-=======
-  - name: "planning"
-    launch_on_startup: false
-    delay_before_start: 0.6
-    cmd: 'ros2 launch farol2_bringup planning.launch.py'
-    args:
-      []
-    dependencies:
-      - control
-      
-  - name: 'sim'
-    launch_on_startup: true
-    delay_before_start: 0.7
-    cmd: 'ros2 launch farol2_bringup sim.launch.py'
->>>>>>> dev:farol2_bringup/config_default/vehicles/mred/process.yaml
+    cmd: 'ros2 launch farol2_console farol2_console.launch.py'
     args:
       []
     dependencies:
       - navigation
-      - actuation
+      - allocation
       - inner_loop
-      - outer_loop
+      - waypoint
+      - path_following
       - planning
