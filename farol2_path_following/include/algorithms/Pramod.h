@@ -91,6 +91,9 @@ class Pramod : public PathFollowing {
      */
     double desired_surge_{0.0};
     double desired_yaw_{0.0};
+    double sigma_{0.0};
+    bool first_ = true;
+    double vc_hat_ = 0.0;
 
     /**
      * @brief ROS publishers

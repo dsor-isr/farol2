@@ -1,4 +1,4 @@
-#include "farol2_pid/reference_generator.hpp"
+#include "farol2_inner_loop/reference_generator.hpp"
 
 #include <algorithm>
 #include <cmath>

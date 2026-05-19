@@ -47,6 +47,12 @@ def generate_launch_description():
     description='Boolean to determine if "pid" node is launched.'
   )
 
+  launch_openloop_arg = DeclareLaunchArgument(
+  'open_loop',
+  default_value='true',
+  description='Boolean to determine if "open_loop" node is launched.'
+  )
+
   ###################################
   # Define parameters for all nodes #
   ###################################
@@ -78,7 +84,7 @@ def generate_launch_description():
               'config_default',
               'vehicles',
               LaunchConfiguration('vehicle_name'),
-              'pid.yaml'
+              'inner_loop.yaml'
             ]),
             
             # override with personal PID configs
@@ -87,7 +93,7 @@ def generate_launch_description():
               'config_personal',
               'vehicles',
               LaunchConfiguration('vehicle_name'),
-              'pid.yaml'
+              'inner_loop.yaml'
             ]),
           ]
 
@@ -96,12 +102,22 @@ def generate_launch_description():
   # Nodes to launch #
   ###################
   pid_node = Node(
-    package='farol2_pid',
+    package='farol2_inner_loop',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'inner_loop']),
     executable='pid_control',
     name='pid',
     output='screen',
     condition=IfCondition(LaunchConfiguration('pid')),
+    parameters=params
+  )
+
+  open_loop_node = Node(
+    package='farol2_inner_loop',
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'inner_loop']),
+    executable='open_loop',
+    name='open_loop',
+    output='screen',
+    condition=IfCondition(LaunchConfiguration('open_loop')),
     parameters=params
   )
 
@@ -116,6 +132,8 @@ def generate_launch_description():
     config_package_path_share_arg,
     config_package_path_real_arg,
     launch_pid_arg,
+    launch_openloop_arg,
     # nodes
     pid_node,
+    open_loop_node
   ])

@@ -30,6 +30,28 @@
         use: true
         f0_hz: 0.318
         q: 1.0
+      position_ekf:
+        use: true
+        gps_timeout_s: 3.0
+        rpm_timeout_s: 0.2
+        process_noise_pos: 0.1  
+        process_noise_current: 0.01
+        measurement_noise_pos: 1.0
+        init_cov_pos: 25.0
+        init_cov_current: 1.0
+        rpm_min: -2000.0
+        rpm_max: 2000.0
+        rpm_rate_limit: 200.0 #  = 10 %/s
+        rho: 1025.0
+        prop_pitch: 0.381
+        prop_diameter: 0.4318
+        k_t_bp: 0.061461915
+        m_u: 3100.0
+        x_u: 0.0
+        x_uu: -96.2270
+        override_velocity: 1.71  # m/s at override_rpms (0.0 = disabled)
+        override_rpms: 600.0    # RPM setpoint for calibration
+        override_timeout_s: 5.0  # Time to stay in ±1% band before applying override
 
   low_pass:
     ros__parameters:

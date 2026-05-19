@@ -13,6 +13,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(farol2_interfaces REQUIRED)
+find_package(farol2_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(farol2_utils REQUIRED)
@@ -52,6 +53,7 @@ ament_target_dependencies(sample_and_hold
   rclcpp
   std_msgs
   farol2_interfaces
+  farol2_allocation
   farol2_utils
 )
 

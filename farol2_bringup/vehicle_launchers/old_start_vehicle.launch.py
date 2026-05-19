@@ -1,6 +1,3 @@
-### Put this file in your personal bringup package ###
-
-
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -26,27 +23,15 @@ def generate_launch_description():
 
   config_package_arg = DeclareLaunchArgument(
     'config_package',
-    default_value='personal_bringup',
+    default_value='magicelectric_bringup',
     description='Package where the configuration files are.'
-  )
-
-  use_sim_time_arg = DeclareLaunchArgument(
-    'use_sim_time',
-    default_value='false',
-    description='Use simulation time (passed to sim nodes via farol2_bringup).'
   )
 
   # Resolve the path to the config package in the install folder
   config_package_path_share = FindPackageShare(LaunchConfiguration('config_package'))
 
-  # Resolve the path to farol2_bringup package in the install folder
+  # Resolve the path to farol_bringup package in the install folder
   farol_bringup_package_path_share = FindPackageShare('farol2_bringup')
-
-  sim_time_config = PathJoinSubstitution([
-    config_package_path_share,
-    'config_personal',
-    'ros.yaml'
-  ])
 
   ###################
   # Nodes to launch #
@@ -55,11 +40,9 @@ def generate_launch_description():
     package='farol2_bringup',
     namespace=[LaunchConfiguration('name'), LaunchConfiguration('id')],
     executable='farol_bringup_node',
-    name='farol2_bringup',
+    name='farol_bringup',
     output='screen',
-    parameters=[
-      sim_time_config,
-      {
+    parameters=[{
       'name': LaunchConfiguration('name'),
       'id': LaunchConfiguration('id'),
       'config_package_path_share': config_package_path_share,
@@ -71,12 +54,9 @@ def generate_launch_description():
                         'config_personal',
                         'vehicles',
                         LaunchConfiguration('name'),
-                        'process.yaml',
+                        'process.yaml'
                         ])
-    },
-    # Override use_sim_time last so it wins over ros.yaml
-    {'use_sim_time': LaunchConfiguration('use_sim_time')},
-    ]
+    }]
   )
 
   ######################################################
@@ -87,7 +67,6 @@ def generate_launch_description():
     name_arg,
     id_arg,
     config_package_arg,
-    use_sim_time_arg,
     # nodes
     farol_bringup_node,
   ])

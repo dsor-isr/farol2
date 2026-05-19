@@ -15,3 +15,5 @@ float64 yaw
 float64 psi
 # Actual gamma
 float64 gamma
+# Optional algorithm-specific debug values. Consumers must know the order.
+float64[] debug_values

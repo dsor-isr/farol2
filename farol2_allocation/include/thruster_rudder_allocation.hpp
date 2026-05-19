@@ -57,7 +57,7 @@ class ThrusterRudderAllocation : public rclcpp::Node {
 
     /* Declare publishers, subscribers, services, etc. */
     rclcpp::Publisher<farol2_allocation::msg::ThrusterForce>::SharedPtr thruster_force_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_angle_ref_pub_, debug1_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_command_pub_, debug1_pub_;
     rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr body_wrench_request_sub_;
     rclcpp::Subscription<farol2_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
     rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr mission_status_sub_;
@@ -75,7 +75,7 @@ class ThrusterRudderAllocation : public rclcpp::Node {
     rclcpp::Clock::SharedPtr clock_;
     farol2_allocation::msg::ThrusterForce thruster_force_msg_;
 
-    std_msgs::msg::Float32 rudder_angle_ref_msg_, debug1_msg_;
+    std_msgs::msg::Float32 rudder_command_msg_, debug1_msg_;
     int mission_status_ = 0;
 
     std::vector<std::map<std::string, std::variant<std::string, std::vector<double>>>> thruster_configuration_;

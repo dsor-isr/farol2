@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(farol2_pid)
+project(farol2_inner_loop)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -55,6 +55,26 @@ target_compile_features(${PROJECT_NAME}_controllers PUBLIC cxx_std_17)
 # Node executable
 add_executable(pid_control src/pid.cpp)
 
+# Open Loop node executable
+add_executable(open_loop src/open_loop.cpp)
+
+ament_target_dependencies(
+  open_loop
+  rclcpp
+  std_msgs
+  std_srvs
+  farol2_interfaces
+  farol2_allocation
+  farol2_utils
+)
+
+target_include_directories(open_loop PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp>
+  $<INSTALL_INTERFACE:include>)
+  
+target_compile_features(open_loop PUBLIC c_std_99 cxx_std_17)
+
 ament_target_dependencies(
   pid_control
   rclcpp
@@ -99,6 +119,11 @@ install(TARGETS
 # Install executable
 install(TARGETS
   pid_control
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(TARGETS
+  open_loop
   DESTINATION lib/${PROJECT_NAME}
 )
 

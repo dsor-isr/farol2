@@ -90,8 +90,8 @@ void ThrusterRudderAllocation::initialisePublishers() {
     declare_parameter<std::string>("topics.publishers.thruster_force"),
     rclcpp::QoS(1));
 
-  rudder_angle_ref_pub_ = create_publisher<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.publishers.rudder_angle_ref"),
+  rudder_command_pub_ = create_publisher<std_msgs::msg::Float32>(
+    declare_parameter<std::string>("topics.publishers.rudder_command"),
     rclcpp::QoS(1));
 }
 
@@ -136,8 +136,8 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(geometry_msgs::msg::Wre
   }
 
   /* Create message to publish rudder angle reference */
-  rudder_angle_ref_msg_.data = farol2_utils::rad2deg(rudder_angle_);
-  rudder_angle_ref_pub_->publish(rudder_angle_ref_msg_);
+  rudder_command_msg_.data = farol2_utils::rad2deg(rudder_angle_);
+  rudder_command_pub_->publish(rudder_command_msg_);
 }
 
 void ThrusterRudderAllocation::computeRudderAngle(double tau_r) 

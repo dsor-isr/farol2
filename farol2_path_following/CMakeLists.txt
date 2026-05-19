@@ -51,6 +51,7 @@ add_executable(path_following_node
   src/algorithms/Fossen.cpp
   src/algorithms/Marcelo.cpp
   src/algorithms/RelativeHeading.cpp
+  src/algorithms/ILOS.cpp
 )
 
 ament_target_dependencies(

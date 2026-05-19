@@ -2,7 +2,7 @@
 
 ## Description
 
-As the name suggests, the *control_allocation* package includes control allocation algorithms for marine vessels, i.e., computing the forces vector $\boldsymbol{f} \in \mathbb{R}^r$ for thrusters and/or the angles vector $\boldsymbol{\alpha} \in \mathbb{R}^q$ for rudders/fins, which together produce certain requested forces and torques $\boldsymbol{\tau} \in \mathbb{R}^n$ (wrench) to be applied on the body frame of the vehicle, considering $n$ degrees of freedom (DOFs).
+As the name suggests, the *farol2_allocation* package includes control allocation algorithms for marine vessels, i.e., computing the forces vector $\boldsymbol{f} \in \mathbb{R}^r$ for thrusters and/or the angles vector $\boldsymbol{\alpha} \in \mathbb{R}^q$ for rudders/fins, which together produce certain requested forces and torques $\boldsymbol{\tau} \in \mathbb{R}^n$ (wrench) to be applied on the body frame of the vehicle, considering $n$ degrees of freedom (DOFs).
 
 Also, both thruster forces and rudder angle are saturated by minimum and maximum values. The former is saturated at the RPMConversion level by RPM values, while the latter is saturated at the algorithm level.
 

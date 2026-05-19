@@ -249,7 +249,7 @@ void PID::initialisePublishers() {
     if (!dbg) continue;
     const auto topic =
         get_parameter("topics.publishers.debug." + name).as_string();
-    debug_publishers_[name] = create_publisher<farol2_pid::msg::PidDebug>(topic, 1);
+    debug_publishers_[name] = create_publisher<farol2_inner_loop::msg::PidDebug>(topic, 1);
   }          
 }
 
@@ -259,7 +259,7 @@ void PID::initialisePublishers() {
 void PID::initialiseServices() {
   /* Service servers */
   /* Service to change controllers' parameters */
-  change_params_srv_ = create_service<farol2_pid::srv::ChangeParams>(
+  change_params_srv_ = create_service<farol2_inner_loop::srv::ChangeParams>(
                         get_parameter("topics.services.change_params").as_string(),
                         std::bind(&PID::changeParamsCallback, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -326,7 +326,7 @@ void PID::referenceCallback(const std::string &controller_name, double raw_value
   double dt_ref = 0.0;
   if (controller_has_reference_[controller_name]) {
     dt_ref = (now - controller_last_reference_[controller_name]).seconds();
-    if (dt_ref > 2.0 / node_frequency_) {
+    if (dt_ref > 20.0 / node_frequency_) {
       dt_ref = 0.0;
     }
   }
@@ -486,7 +486,7 @@ void PID::initializeControllerConfigs() {
                                      const std::function<double()> &get_state,
                                      const std::function<double()> &get_ref,
                                      const std::function<void(double)> &accumulate_output,
-                                     const std::function<void(farol2_pid::msg::PidDebug &)> &fill_debug) {
+                                     const std::function<void(farol2_inner_loop::msg::PidDebug &)> &fill_debug) {
     return ControllerConfig{name, type, false, required_params, get_state, get_ref, []() { return 0.0; }, accumulate_output, fill_debug};
   };
 
@@ -497,7 +497,7 @@ void PID::initializeControllerConfigs() {
                                       const std::function<double()> &get_ref,
                                       const std::function<double()> &get_rate,
                                       const std::function<void(double)> &accumulate_output,
-                                      const std::function<void(farol2_pid::msg::PidDebug &)> &fill_debug) {
+                                      const std::function<void(farol2_inner_loop::msg::PidDebug &)> &fill_debug) {
     return ControllerConfig{name, type, true, required_params, get_state, get_ref, get_rate, accumulate_output, fill_debug};
   };
 
@@ -517,7 +517,7 @@ void PID::initializeControllerConfigs() {
           [this]() { return nav_state_.body_velocity_fluid.x; },
           [this]() { return surge_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.x += tau; },
-          [this](farol2_pid::msg::PidDebug &debug_msg) {
+          [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             debug_msg.error = controller_surge_->getError();
             debug_msg.p_term = controller_surge_->getProportionalTerm();
             debug_msg.i_term = controller_surge_->getIntegralTerm();
@@ -537,7 +537,7 @@ void PID::initializeControllerConfigs() {
           [this]() { return nav_state_.body_velocity_fluid.y; },
           [this]() { return sway_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.y += tau; },
-          [this](farol2_pid::msg::PidDebug &debug_msg) {
+          [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             debug_msg.error = controller_sway_->getError();
             debug_msg.p_term = controller_sway_->getProportionalTerm();
             debug_msg.i_term = controller_sway_->getIntegralTerm();
@@ -557,7 +557,7 @@ void PID::initializeControllerConfigs() {
           [this]() { return nav_state_.body_velocity_fluid.z; },
           [this]() { return heave_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.z += tau; },
-          [this](farol2_pid::msg::PidDebug &debug_msg) {
+          [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             debug_msg.error = controller_heave_->getError();
             debug_msg.p_term = controller_heave_->getProportionalTerm();
             debug_msg.i_term = controller_heave_->getIntegralTerm();
@@ -588,7 +588,7 @@ void PID::initializeControllerConfigs() {
             return farol2_utils::deg2rad(static_cast<double>(nav_state_.orientation_rate.z));
           },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.z += tau; },
-          [this](farol2_pid::msg::PidDebug &debug_msg) {
+          [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             const auto &ref = reference_outputs_["yaw"];
             debug_msg.error = controller_yaw_->getError();
             debug_msg.error_rate = controller_yaw_->error_dot_;
@@ -620,7 +620,7 @@ void PID::initializeControllerConfigs() {
           [this]() { return pitch_ref_; },
           [this]() { return farol2_utils::deg2rad(nav_state_.orientation_rate.y); },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.y += tau; },
-          [this](farol2_pid::msg::PidDebug &debug_msg) {
+          [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             debug_msg.error = controller_pitch_->getError();
             debug_msg.p_term = controller_pitch_->getProportionalTerm();
             debug_msg.i_term = controller_pitch_->getIntegralTerm();
@@ -644,7 +644,7 @@ void PID::initializeControllerConfigs() {
           [this]() { return roll_ref_; },
           [this]() { return farol2_utils::deg2rad(nav_state_.orientation_rate.x); },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.x += tau; },
-          [this](farol2_pid::msg::PidDebug &debug_msg) {
+          [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             debug_msg.error = controller_roll_->getError();
             debug_msg.p_term = controller_roll_->getProportionalTerm();
             debug_msg.i_term = controller_roll_->getIntegralTerm();
@@ -667,7 +667,7 @@ void PID::initializeControllerConfigs() {
           [this]() { return farol2_utils::deg2rad(nav_state_.orientation_rate.z); },
           [this]() { return yaw_rate_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.z += tau; },
-          [this](farol2_pid::msg::PidDebug &debug_msg) {
+          [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             debug_msg.error = controller_yaw_rate_->getError();
             debug_msg.p_term = controller_yaw_rate_->getProportionalTerm();
             debug_msg.i_term = controller_yaw_rate_->getIntegralTerm();
@@ -687,7 +687,7 @@ void PID::initializeControllerConfigs() {
           [this]() { return farol2_utils::deg2rad(nav_state_.orientation_rate.y); },
           [this]() { return pitch_rate_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.y += tau; },
-          [this](farol2_pid::msg::PidDebug &debug_msg) {
+          [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             debug_msg.error = controller_pitch_rate_->getError();
             debug_msg.p_term = controller_pitch_rate_->getProportionalTerm();
             debug_msg.i_term = controller_pitch_rate_->getIntegralTerm();
@@ -707,7 +707,7 @@ void PID::initializeControllerConfigs() {
           [this]() { return farol2_utils::deg2rad(nav_state_.orientation_rate.x); },
           [this]() { return roll_rate_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.x += tau; },
-          [this](farol2_pid::msg::PidDebug &debug_msg) {
+          [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             debug_msg.error = controller_roll_rate_->getError();
             debug_msg.p_term = controller_roll_rate_->getProportionalTerm();
             debug_msg.i_term = controller_roll_rate_->getIntegralTerm();
@@ -806,8 +806,8 @@ void PID::timerCallback() {
 /**
  * @brief Change controllers' parameters callback.
  */
-void PID::changeParamsCallback(const std::shared_ptr<farol2_pid::srv::ChangeParams::Request> request,
-                               std::shared_ptr<farol2_pid::srv::ChangeParams::Response> response) {
+void PID::changeParamsCallback(const std::shared_ptr<farol2_inner_loop::srv::ChangeParams::Request> request,
+                               std::shared_ptr<farol2_inner_loop::srv::ChangeParams::Response> response) {
   if (!controller_yaw_) {
     response->success = false;
     response->message = "Yaw controller is not enabled.";
@@ -818,7 +818,7 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_pid::srv::ChangePara
   /* If required controller does not exist */
   if (controller_names_.find(request->controller) == controller_names_.end()) {
     response->success = false;
-    response->message = "Controller " + request->controller + " does not exist - it's not (correctly?) configured in control.yaml.";
+    response->message = "Controller " + request->controller + " does not exist - it's not (correctly?) configured in inner_loop.yaml.";
     return;
   }
   // /* If any parameter is invalid */
@@ -872,7 +872,7 @@ bool PID::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const
   /*      received less than 0.2s ago.  
                                                                  */
 
-  double threshold = 2.0/(double)node_frequency;
+  double threshold = 20.0/(double)node_frequency;
   static int32_t secs = (int32_t)floor(threshold);
   static uint32_t nanosecs = (uint32_t)((threshold - floor(threshold))*1e9);
   
@@ -948,7 +948,7 @@ void PID::executeController(const ControllerConfig &cfg, double dt) {
       break;
   }
 
-  farol2_pid::msg::PidDebug debug_msg;
+  farol2_inner_loop::msg::PidDebug debug_msg;
   debug_msg.header.stamp = clock_->now();
   cfg.fill_debug(debug_msg);
 

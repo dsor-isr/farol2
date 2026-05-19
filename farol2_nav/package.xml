@@ -14,6 +14,7 @@
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
   <depend>farol2_interfaces</depend>
+  <depend>farol2_allocation</depend>
   <depend>farol2_utils</depend>
   <depend>sensor_msgs</depend>
 

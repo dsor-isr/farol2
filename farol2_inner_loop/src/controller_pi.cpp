@@ -1,4 +1,4 @@
-#include "farol2_pid/controller_pi.hpp"
+#include "farol2_inner_loop/controller_pi.hpp"
 
 #include <algorithm>
 #include <cmath>
