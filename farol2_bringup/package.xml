@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>farol2_bringup</name>
+  <version>0.0.0</version>
+  <description>farol2_bringup: configuration files and shared launch files for the Farol2 stack</description>
+  <maintainer email="eduardo.m.a.cunha@tecnico.ulisboa.pt">Eduardo Cunha</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <test_depend>ament_copyright</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

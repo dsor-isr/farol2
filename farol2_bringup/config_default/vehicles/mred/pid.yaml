@@ -1,0 +1,117 @@
+################################
+#   Default Parameters
+################################
+/**:
+  pid:
+    ros__parameters:
+      node_frequency: 10.0
+      course_control: false   # set to true to control course angle instead of yaw
+      use_heading_rate_as_yaw_rate: false # set to true to use heading_rate instead of orientation_rate.z for yaw PID rate input
+      lpf_order: 3
+      lpf_method: "tustin"
+      lpf_design: "bessel"
+      # Speeds (surge, sway, heave)
+      surge:
+        debug: true
+        enabled: true
+        delta_implementation: false
+        kp: 16.8
+        ki: 7.0
+        use_ref_lpf: false
+        lpf_wc: 31.4 # rad/s
+        tau_min: -30.0 # N
+        tau_max: 30.0 # N
+      sway:
+        enabled: false
+        delta_implementation: true
+        kp: 1.0
+        ki: 1.0
+        use_ref_lpf: true
+        lpf_wc: 31.4 # rad/s
+        tau_min: -20.0 # N
+        tau_max: 20.0 # N
+      heave:
+        enabled: false
+        delta_implementation: true
+        kp: 1.0
+        ki: 1.0
+        use_ref_lpf: true
+        lpf_wc: 31.4 # rad/s
+        tau_min: -20.0 # N
+        tau_max: 20.0 # N
+      # Angles (yaw, pitch, roll)
+      yaw:
+        debug: true
+        enabled: true
+        delta_implementation: false
+        # Following Gains are for:
+        #   m_r = 88.0; N_r = 14.0; N_rr = 260.0; xi = 0.7; additional pole @ 10*xi*wn
+        # wc = 0.2
+        kp: 54.0
+        ki: 17.5
+        kd: 40.0
+        kffv_lin: 0.0
+        kffv_sq: 0.0
+        kffa: 0.0
+        use_ref_lpf: true
+        lpf_wc: 1.0 # rad/s (2hz about the maximum possible given that sampling is 10hz)
+        # lpf_wc: 12.5664 # rad/s (2hz about the maximum possible given that sampling is 10hz)
+        tau_min: -1.0  # N.m (actual in simulation is 5.93)
+        tau_max: 1.0 # N.m
+      pitch:
+        enabled: false
+        delta_implementation: true
+        kp: 1.0
+        ki: 1.0
+        kd: 1.0
+        use_ref_lpf: true
+        lpf_wc: 3.1416 # rad/s
+        tau_min: -10.0 # N.m
+        tau_max: 10.0 # N.m
+      roll:
+        enabled: false
+        delta_implementation: true
+        kp: 1.0
+        ki: 1.0
+        kd: 1.0
+        use_ref_lpf: true
+        lpf_wc: 3.1416 # rad/s
+        tau_min: -10.0 # N.m
+        tau_max: 10.0 # N.m
+      # Angle rates (yaw rate, pitch rate, roll rate)
+      yaw_rate:
+        enabled: false
+        delta_implementation: true
+        kp: 1.0
+        ki: 1.0
+        use_ref_lpf: true
+        lpf_wc: 31.4 # rad/s
+        tau_min: -10.0 # N.m
+        tau_max: 10.0 # N.m
+      pitch_rate:
+        enabled: false
+        delta_implementation: true
+        kp: 1.0
+        ki: 1.0
+        use_ref_lpf: true
+        lpf_wc: 31.4 # rad/s
+        tau_min: -10.0 # N.m
+        tau_max: 10.0 # N.m
+      roll_rate:
+        enabled: false
+        delta_implementation: true
+        kp: 1.0
+        ki: 1.0
+        use_ref_lpf: true
+        lpf_wc: 31.4 # rad/s
+        tau_min: -10.0 # N
+        tau_max: 10.0 # N-m
+      # Full attitude (yaw, pitch and roll)
+      attitude:
+        enabled: false
+        gain: 2000.0
+
+  rudder:
+    ros__parameters:
+      node_frequency: 10.0
+      deadzone: 4.0  # degrees

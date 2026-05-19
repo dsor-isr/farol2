@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+	<name>farol2_console</name>
+	<version>0.0.0</version>
+	<description>Console parser, server and nav-to-console bridge for FAROL2.</description>
+	<maintainer email="eduardo.m.a.cunha@tecnico.ulisboa.pt">Eduardo Cunha</maintainer>
+	<license>MIT</license>
+
+	<buildtool_depend>ament_cmake</buildtool_depend>
+
+	<depend>rclcpp</depend>
+	<depend>rclpy</depend>
+	<depend>std_msgs</depend>
+	<depend>geometry_msgs</depend>
+	<depend>farol2_interfaces</depend>
+	<depend>farol2_path_following</depend>
+	<depend>farol2_waypoint</depend>
+	<depend>farol2_planning</depend>
+	<depend>farol2_utils</depend>
+	<depend>Eigen3</depend>
+	<depend>eigen3_cmake_module</depend>
+
+	<exec_depend>ros2launch</exec_depend>
+
+	<test_depend>ament_lint_auto</test_depend>
+	<test_depend>ament_lint_common</test_depend>
+
+	<export>
+		<build_type>ament_cmake</build_type>
+	</export>
+</package>

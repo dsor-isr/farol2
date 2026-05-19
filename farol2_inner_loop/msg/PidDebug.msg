@@ -1,0 +1,22 @@
+std_msgs/Header header
+
+float64 error
+float64 error_rate
+float64 error_rate_dot
+float64 p_term
+float64 i_term
+float64 d_term
+float64 a_term
+float64 tau_d
+float64 tau_dot
+float64 tau_sat
+float64 tau
+float64 state
+float64 state_rate_used
+float64 ref_raw
+float64 ref_filt
+float64 dref_filt
+float64 ddref_filt
+float64 ff_term
+float64 ffv_term
+float64 ffa_term

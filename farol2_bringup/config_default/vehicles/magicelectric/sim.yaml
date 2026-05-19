@@ -1,0 +1,86 @@
+################################
+#
+#   TODO: Description
+#
+################################
+
+/**/sim/**:
+  ros__parameters:
+    node_frequency: 10.0
+    speedup: 1.0
+    initial_state:
+      position: [38.690323, -9.211736, 0.0] # (lat, lon, depth) from expo   
+      body_velocity: [1.78, 0.0, 0.0]
+      orientation: [0.0, 0.0, 0.0]
+      orientation_rate: [0.0, 0.0, 0.0]
+    environment:
+      fluid_density: 1025.0 # (kg/m³)
+      current: [0.0 , 90.0] #[velocity angle]
+    vehicle:
+      mass: 3100.0 # (kg)
+      zg: 0.0 # center of gravity in body axis (m)
+      m_u: 3100.0
+      X_u: 0.0
+      X_uu:  -96.2270                       
+      m_uv: -2.967651
+      N_r: -14.334052
+      N_rr: -260.675031
+      K_L: 1.398093
+      K_D0: 0.000575
+      K_D1: 0.520834
+      m_r: 88.478840
+      Y_v: -500.0 #Not estimated ye
+      Y_vv: -1500.0 #Not estimated yet
+      allocation:
+        rudder:
+        #If false, the rudder angle is directly set to the reference of the controller. If true, the rudder angle is simulated
+          sim_rudder: false
+          max_angle_deg: 35.0
+          min_angle_deg: -35.0
+          ang_vel: 10.0 #deg/s
+        propulsion:
+        #False means that it is subscribed to a topic, true means that it is fixed to the value defined in rpm
+          fixed_rpm: true 
+          fixed_rpm_value: 660.0 
+          max_rpm: 2000.0
+          min_rpm: -2000.0
+          K_T_BP: 0.061461915
+          prop_pitch: 0.381
+          D: 0.4318
+          l_: 4.0
+          deadzone_pos: 0.0
+          deadzone_neg: 0.0
+
+    sensor:
+      gnss: true
+      depth_sensor: false
+      imu: true
+      noise:
+        activate: false
+        position: 
+          bias: [0.0, 0.0, 0.0] #Northing, Easting, Depth
+          variance: [0.0, 0.0, 0.0] #Northing, Easting, Depth
+        body_velocity:
+          bias: [0.0, 0.0, 0.0] # Surge, Sway, Heave
+          variance: [0.0, 0.0, 0.0] # Surge, Sway, Heave
+        orientation:
+          bias: [0.0, 0.0, 0.0] # Roll, Pitch, Yaw
+          variance: [0.0, 0.0, 0.0] # Roll, Pitch, Yaw
+        orientation_rate:
+          bias: [0.0, 0.0, 0.0] # Roll rate, Pitch rate, Yaw rate
+          variance: [0.0, 0.0, 0.0] # Roll rate, Pitch rate, Y
+
+/**:
+  auv_sim:
+    ros__parameters:
+      node_frequency: 10.0
+
+  magic_electric_sim:
+    ros__parameters:
+      node_frequency: 10.0
+  
+  sim_measurements:
+    ros__parameters:
+      node_frequency: 10.0
+
+              

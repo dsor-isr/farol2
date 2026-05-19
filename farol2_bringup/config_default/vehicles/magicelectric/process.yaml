@@ -1,0 +1,106 @@
+########################################################
+# This process.yaml is just an example to be copied to #
+# the personal bringup under the newly created colcon  #
+# workspace.                                           #
+########################################################
+
+processes:
+  - name: 'bag_record'
+    launch_on_startup: false
+    delay_before_start: 0.0
+    cmd: 'ros2 launch farol2_bringup bag_record.launch.py'
+    args:
+      - compression:=false
+      # - prefix:=something_you_want # default prefix is the vehicle's namespace
+    dependencies:
+      []
+
+  - name: 'sim'
+    launch_on_startup: true
+    delay_before_start: 0.2
+    cmd: 'ros2 launch farol2_sim farol2_sim.launch.py'
+    args:
+      - magic_electric_sim:=true
+      - auv_sim:=false
+    dependencies:
+      []
+
+
+  - name: 'navigation'
+    launch_on_startup: true
+    delay_before_start: 0.3
+    cmd: 'ros2 launch farol2_nav farol2_nav.launch.py'
+    args:
+      - sample_and_hold:=true
+      - low_pass:=false
+    dependencies:
+      []
+
+  - name: 'allocation'
+    launch_on_startup: true
+    delay_before_start: 0.4
+    cmd: 'ros2 launch farol2_allocation farol2_allocation.launch.py'
+    args:
+      - static_thruster_allocation:=false
+      - thruster_rudder_allocation:=true
+    dependencies:
+      - navigation
+
+  - name: "inner_loop"
+    launch_on_startup: true
+    delay_before_start: 0.5
+    cmd: 'ros2 launch farol2_inner_loop farol2_inner_loop.launch.py'
+    args:
+      - pid:=true
+    dependencies:
+      - navigation
+      - allocation
+
+  - name: "waypoint"
+    launch_on_startup: true
+    delay_before_start: 0.6
+    cmd: 'ros2 launch farol2_waypoint farol2_waypoint.launch.py'
+    args:
+      []
+    dependencies:
+      - navigation
+      - allocation
+      - inner_loop
+
+  - name: "path_following"
+    launch_on_startup: true
+    delay_before_start: 0.65
+    cmd: 'ros2 launch farol2_path_following farol2_path_following.launch.py'
+    args:
+      []
+    dependencies:
+      - navigation
+      - allocation
+      - inner_loop
+
+  - name: "planning"
+    launch_on_startup: true
+    delay_before_start: 0.7
+    cmd: 'ros2 launch farol2_planning farol2_planning.launch.py'
+    args:
+      []
+    dependencies:
+      - navigation
+      - allocation
+      - inner_loop
+      - waypoint
+      - path_following
+
+  - name: 'addons'
+    launch_on_startup: true
+    delay_before_start: 0.8
+    cmd: 'ros2 launch farol2_console farol2_console.launch.py'
+    args:
+      []
+    dependencies:
+      - navigation
+      - allocation
+      - inner_loop
+      - waypoint
+      - path_following
+      - planning
