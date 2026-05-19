@@ -55,7 +55,7 @@ void PathFollowingNode::initialiseServices() {
                                     get_parameter("topics.services.relative_heading_pf").as_string(),
                                     std::bind(&PathFollowingNode::SetRelativeHeadingService, this, std::placeholders::_1, std::placeholders::_2));
 
-  this->pf_ilos_srv_ = create_service<path_following::srv::SetPF>(
+  this->pf_ilos_srv_ = create_service<farol2_path_following::srv::SetPF>(
                         get_parameter("topics.services.ilos_pf").as_string(),
                         std::bind(&PathFollowingNode::SetIlosService, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -658,8 +658,8 @@ void PathFollowingNode::SetSamsonService(const std::shared_ptr<farol2_path_follo
 }
 
 /* Service to switch to the ILOS Path Following method */
-void PathFollowingNode::SetIlosService(const std::shared_ptr<path_following::srv::SetPF::Request> req,
-                                       std::shared_ptr<path_following::srv::SetPF::Response> res) {
+void PathFollowingNode::SetIlosService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
+                                       std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
 
   /* Don't change if the algorithm is running */
   if (!this->timer_->is_canceled()) {

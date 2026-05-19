@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>farol2_pid</name>
+  <name>farol2_inner_loop</name>
   <version>0.0.0</version>
   <description>Farol2 PID controller package</description>
-  <maintainer email="eduardo.m.a.cunha@tecnico.ulisboa.pt">Eduardo Cunha</maintainer>
+  <maintainer email="ravi.regalo@tecnico.ulisboa.pt">Ravi Regalo</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

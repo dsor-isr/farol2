@@ -18,16 +18,16 @@
 
 #include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "farol2_interfaces/msg/navigation_state.hpp"
-#include "farol2_pid/srv/change_params.hpp"
-#include "farol2_pid/msg/pid_debug.hpp"
+#include "farol2_inner_loop/srv/change_params.hpp"
+#include "farol2_inner_loop/msg/pid_debug.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 
 #include <farol2_utils/filters/low_pass_filter.hpp>
 #include <farol2_utils/angles.hpp>
 
-#include "farol2_pid/controller_pi.hpp"
-#include "farol2_pid/controller_pid.hpp"
-#include "farol2_pid/reference_generator.hpp"
+#include "farol2_inner_loop/controller_pi.hpp"
+#include "farol2_inner_loop/controller_pid.hpp"
+#include "farol2_inner_loop/reference_generator.hpp"
 
 enum ControllerType {
   SURGE = 0,
@@ -70,7 +70,7 @@ struct ControllerConfig {
   /** Adds this channel's output to the wrench accumulator. */
   std::function<void(double)> accumulate_output;
   /** Fills debug message fields from controller internals. */
-    std::function<void(farol2_pid::msg::PidDebug &)> fill_debug;
+    std::function<void(farol2_inner_loop::msg::PidDebug &)> fill_debug;
 };
 
 /**
@@ -144,7 +144,7 @@ class PID : public rclcpp::Node {
     rclcpp::Subscription<farol2_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
     std::map<std::string, rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr> reference_subscribers_;
 
-    rclcpp::Service<farol2_pid::srv::ChangeParams>::SharedPtr change_params_srv_;
+    rclcpp::Service<farol2_inner_loop::srv::ChangeParams>::SharedPtr change_params_srv_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr course_control_srv_;
 
     /** @brief Store latest navigation state sample. */
@@ -160,8 +160,8 @@ class PID : public rclcpp::Node {
     /**
      * @brief Service callback to update yaw-controller gains online.
      */
-    void changeParamsCallback(const std::shared_ptr<farol2_pid::srv::ChangeParams::Request> request,
-                              std::shared_ptr<farol2_pid::srv::ChangeParams::Response> response);
+    void changeParamsCallback(const std::shared_ptr<farol2_inner_loop::srv::ChangeParams::Request> request,
+                              std::shared_ptr<farol2_inner_loop::srv::ChangeParams::Response> response);
 
     /**
      * @brief Service callback to select yaw-angle or course-angle control.
@@ -231,7 +231,7 @@ class PID : public rclcpp::Node {
     std::map<std::string, ControllerConfig> controller_configs_;
 
         /** Optional per-controller debug publishers. */
-    std::map<std::string, rclcpp::Publisher<farol2_pid::msg::PidDebug>::SharedPtr> debug_publishers_;
+    std::map<std::string, rclcpp::Publisher<farol2_inner_loop::msg::PidDebug>::SharedPtr> debug_publishers_;
 
         /** Latest references for all channels (internally stored in SI units). */
     double surge_ref_ = 0.0, sway_ref_ = 0.0, heave_ref_ = 0.0,

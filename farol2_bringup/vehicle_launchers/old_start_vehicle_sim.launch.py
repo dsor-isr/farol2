@@ -27,7 +27,7 @@ def generate_launch_description():
 
   config_package_arg = DeclareLaunchArgument(
     'config_package',
-    default_value='personal_bringup',
+    default_value='magicelectric_bringup',
     description='Package where the configuration files are.'
   )
 
@@ -36,7 +36,7 @@ def generate_launch_description():
   ###############################################################
   farol_stack = IncludeLaunchDescription(
     PythonLaunchDescriptionSource([
-      PathJoinSubstitution([FindPackageShare('personal_bringup'), 'launch', 'start_vehicle.launch.py'])
+      PathJoinSubstitution([FindPackageShare('magicelectric_bringup'), 'launch', 'old_start_vehicle.launch.py'])
     ]),
     launch_arguments={
       'name': LaunchConfiguration('name'),

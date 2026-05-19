@@ -8,7 +8,7 @@ ILOS::ILOS(double delta,
            rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surge_pub,
            rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_pub,
            rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr gamma_pub,
-           rclcpp::Client<paths::srv::SetMode>::SharedPtr mode_client) :
+           rclcpp::Client<farol2_planning::srv::SetMode>::SharedPtr mode_client) :
   surge_pub_(surge_pub),
   yaw_pub_(yaw_pub),
   gamma_pub_(gamma_pub),
@@ -109,8 +109,8 @@ void ILOS::publish_private() {
 void ILOS::start() {
   /* Request closest-point path mode — ILOS uses the nearest point on the
    * path rather than the virtual-target gamma integration */
-  std::shared_ptr<paths::srv::SetMode::Request> req =
-    std::make_shared<paths::srv::SetMode::Request>();
+  std::shared_ptr<farol2_planning::srv::SetMode::Request> req =
+    std::make_shared<farol2_planning::srv::SetMode::Request>();
   req->closest_point_mode = true;
   this->mode_client_->async_send_request(req);
 }

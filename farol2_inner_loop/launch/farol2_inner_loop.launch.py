@@ -84,7 +84,7 @@ def generate_launch_description():
               'config_default',
               'vehicles',
               LaunchConfiguration('vehicle_name'),
-              'pid.yaml'
+              'inner_loop.yaml'
             ]),
             
             # override with personal PID configs
@@ -93,7 +93,7 @@ def generate_launch_description():
               'config_personal',
               'vehicles',
               LaunchConfiguration('vehicle_name'),
-              'pid.yaml'
+              'inner_loop.yaml'
             ]),
           ]
 
@@ -102,7 +102,7 @@ def generate_launch_description():
   # Nodes to launch #
   ###################
   pid_node = Node(
-    package='farol2_pid',
+    package='farol2_inner_loop',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'inner_loop']),
     executable='pid_control',
     name='pid',
@@ -112,7 +112,7 @@ def generate_launch_description():
   )
 
   open_loop_node = Node(
-    package='farol2_pid',
+    package='farol2_inner_loop',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'inner_loop']),
     executable='open_loop',
     name='open_loop',

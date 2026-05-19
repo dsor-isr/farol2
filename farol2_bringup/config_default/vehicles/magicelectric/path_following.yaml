@@ -51,4 +51,4 @@
             delta_h: 10.0
           ilos:
             delta: 10.0  # lookahead distance (metres)
-          	ki: 0.01     # integral gain
+            ki: 0.01     # integral gain

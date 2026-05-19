@@ -50,7 +50,7 @@ processes:
   - name: "inner_loop"
     launch_on_startup: true
     delay_before_start: 0.5
-    cmd: 'ros2 launch farol2_pid farol2_pid.launch.py'
+    cmd: 'ros2 launch farol2_inner_loop farol2_inner_loop.launch.py'
     args:
       - pid:=true
     dependencies:

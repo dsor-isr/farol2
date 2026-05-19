@@ -74,7 +74,7 @@
           mission_status: "/#vehicle#/mission_status"
         publishers:
           thruster_force: "/#vehicle#/allocation/thruster_force"
-          rudder_angle_ref: "/#vehicle#/control/ref/rudder_angle"
+          rudder_command: "/#vehicle#/allocation/rudder_command"
 
   wrench_manager:
     ros__parameters:
@@ -127,20 +127,6 @@
           mission_status: "/#vehicle#/mission_status"
         publishers:
           rpm_command: "/#vehicle#/allocation/rpm_command"
-          # thrust_y: "/#vehicle#/allocation/thrust_y"
-          # thrust_z: "/#vehicle#/allocation/thrust_z"
-          # torque_x: "/#vehicle#/allocation/torque_x"
-          # torque_y: "/#vehicle#/allocation/torque_y"
-          # torque_z: "/#vehicle#/allocation/torque_z"
-
-  rudder:
-    ros__parameters:
-        topics:
-          subscribers:
-            rudder_angle_ref: "/#vehicle#/allocation/rudder_angle_ref"
-            rudder_angle: "/#vehicle#/drivers/can_instrumentation/rudder_angle"
-          publishers:
-            rudder_command: "/#vehicle#/rudder_command"
 
 
 ########################
@@ -304,8 +290,7 @@
       topics:
         subscribers:
           rpm_command: "/#vehicle#/allocation/rpm_command"
-          rudder_cmd: "/#vehicle#/rudder_command"
-          rudder_ref: "/#vehicle#/control/ref/rudder_angle"
+          rudder_cmd: "/#vehicle#/allocation/rudder_command"
         publishers:
           position: "/#vehicle#/sim/position"
           orientation: "/#vehicle#/sim/orientation"

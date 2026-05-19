@@ -11,7 +11,7 @@
 #include "farol2_interfaces/msg/navigation_state.hpp"
 #include "farol2_interfaces/msg/measurement.hpp"
 #include "farol2_allocation/msg/thruster_rpm.hpp"
-#include "nav_filters/srv/tune_position_ekf.hpp"
+#include "farol2_nav/srv/tune_position_ekf.hpp"
 #include "farol2_utils/angles.hpp"
 #include "farol2_utils/filters/low_pass_filter.hpp"
 #include "farol2_utils/filters/notch_filter.hpp"
@@ -63,14 +63,14 @@ class SampleAndHold : public rclcpp::Node {
     rclcpp::Subscription<farol2_interfaces::msg::Measurement>::SharedPtr measurement_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rudder_sub_;
     rclcpp::Subscription<farol2_allocation::msg::ThrusterRPM>::SharedPtr rpm_command_sub_;
-    rclcpp::Service<nav_filters::srv::TunePositionEkf>::SharedPtr tune_position_ekf_srv_;
+    rclcpp::Service<farol2_nav::srv::TunePositionEkf>::SharedPtr tune_position_ekf_srv_;
 
     /* Callbacks */
     void measurement_callback(farol2_interfaces::msg::Measurement::ConstSharedPtr msg);
     void rpm_command_callback(farol2_allocation::msg::ThrusterRPM::ConstSharedPtr msg);
     void tune_position_ekf_callback(
-      const std::shared_ptr<nav_filters::srv::TunePositionEkf::Request> request,
-      std::shared_ptr<nav_filters::srv::TunePositionEkf::Response> response);
+      const std::shared_ptr<farol2_nav::srv::TunePositionEkf::Request> request,
+      std::shared_ptr<farol2_nav::srv::TunePositionEkf::Response> response);
 
     void predict_position_ekf(double dt);
     void update_position_ekf(double northing, double easting);

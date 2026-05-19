@@ -15,7 +15,7 @@
  * action on the cross-track error to achieve offset-free path following in the
  * presence of constant environmental disturbances (e.g. ocean currents).
  *
- * Reference: Caharija et al., "Integral LOS Path Following for Curved Paths
+ * Reference: Caharija et al., "Integral LOS Path Following for Curved farol2_planning
  * Based on a Monotone Cubic Hermite Spline Parametrization", IEEE Trans. on
  * Control Systems Technology, 2016.
  *
@@ -51,7 +51,7 @@ class ILOS : public PathFollowing {
          rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surge_pub,
          rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_pub,
          rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr gamma_pub,
-         rclcpp::Client<paths::srv::SetMode>::SharedPtr mode_client);
+         rclcpp::Client<farol2_planning::srv::SetMode>::SharedPtr mode_client);
 
     /**
      * @brief Set / update controller gains at runtime
@@ -107,5 +107,5 @@ class ILOS : public PathFollowing {
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr gamma_pub_;
 
     /* ROS service client to enable closest-point path mode */
-    rclcpp::Client<paths::srv::SetMode>::SharedPtr mode_client_;
+    rclcpp::Client<farol2_planning::srv::SetMode>::SharedPtr mode_client_;
 };

@@ -159,17 +159,17 @@ void SampleAndHold::initialisePublishers() {
  * @brief Initialise Services
  */
 void SampleAndHold::initialiseServices() {
-  tune_position_ekf_srv_ = create_service<nav_filters::srv::TunePositionEkf>(
+  tune_position_ekf_srv_ = create_service<farol2_nav::srv::TunePositionEkf>(
     declare_parameter<std::string>("topics.services.tune_position_ekf", "/magicelectric0/nav/sample_and_hold/tune_position_ekf"),
-    [this](const std::shared_ptr<nav_filters::srv::TunePositionEkf::Request> request,
-           std::shared_ptr<nav_filters::srv::TunePositionEkf::Response> response) {
+    [this](const std::shared_ptr<farol2_nav::srv::TunePositionEkf::Request> request,
+           std::shared_ptr<farol2_nav::srv::TunePositionEkf::Response> response) {
       tune_position_ekf_callback(request, response);
     });
 }
 
 void SampleAndHold::tune_position_ekf_callback(
-  const std::shared_ptr<nav_filters::srv::TunePositionEkf::Request> request,
-  std::shared_ptr<nav_filters::srv::TunePositionEkf::Response> response) {
+  const std::shared_ptr<farol2_nav::srv::TunePositionEkf::Request> request,
+  std::shared_ptr<farol2_nav::srv::TunePositionEkf::Response> response) {
   if (request->process_noise_pos < 0.0 || request->process_noise_current < 0.0 ||
       request->measurement_noise_pos <= 0.0) {
     response->success = false;
@@ -498,7 +498,7 @@ double SampleAndHold::rpm_to_body_speed_mps(double dt) {
       tau_u = -tau_u;
     }
   }
-  std::cout << "tau_u = " << tau_u << std::endl;
+  // std::cout << "tau_u = " << tau_u << std::endl;
 
   const double m_u_safe = (std::abs(m_u_) < 1e-6) ? 1e-6 : m_u_;
   const double u_dot = (1.0 / m_u_safe) * (tau_u + x_u_ * u + x_uu_ * std::abs(u) * u);
