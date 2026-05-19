@@ -36,12 +36,12 @@ void PathNode::loadParams() {
  */
 void PathNode::initializeSubscribers() {  
   this->gamma_sub_ = create_subscription<std_msgs::msg::Float32>(
-		declare_parameter<std::string>("topics.subscribers.gamma"),
+    TOPIC_SUB_GAMMA,
 		rclcpp::QoS(1),
 		[this](std_msgs::msg::Float32::SharedPtr msg){this->gamma_ = msg->data;});
 	
 	this->vehicle_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
-		declare_parameter<std::string>("topics.subscribers.vehicle_state"),
+    TOPIC_SUB_VEHICLE_STATE,
 		rclcpp::QoS(1),
 		[this](farol2_interfaces::msg::NavigationState::SharedPtr msg){
 			this->vehicle_pos_ <<  msg->utm_position.northing, msg->utm_position.easting, msg->altimeter;});
@@ -53,11 +53,11 @@ void PathNode::initializeSubscribers() {
  */
 void PathNode::initializePublishers() {	  
   this->path_pub_ = create_publisher<farol2_planning::msg::PathData>(
-                      declare_parameter<std::string>("topics.publishers.path_data"),
+                      TOPIC_PUB_PATH_DATA,
 											rclcpp::QoS(1));
 
   this->virtual_target_pub_ = create_publisher<farol2_interfaces::msg::StateConsole>(
-											declare_parameter<std::string>("topics.publishers.virtual_target_state"),
+                      TOPIC_PUB_VIRTUAL_TARGET_STATE,
 											rclcpp::QoS(1));
 }
 

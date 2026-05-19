@@ -46,24 +46,7 @@ def generate_launch_description():
   params = [
             # vehicle namespace
             {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
-
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
-
-            # load default ROS configurations (from tmp files)
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_real'),
-              'config_personal',
-              '.ros_tmp',
-              PythonExpression(["'default_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-            ]),
-
-            # override default with personal ROS configurations (from tmp files)
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_real'),
-              'config_personal',
-              '.ros_tmp',
-              PythonExpression(["'personal_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-            ]),
 
             # load default planning configs
             PathJoinSubstitution([
@@ -94,7 +77,24 @@ def generate_launch_description():
     executable='path_node',
     name='paths',
     output='screen',
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('gamma', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/path_following/gamma')]),
+      ('vehicle_state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      # Publishers
+      ('path_data', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/path_following/path_data')]),
+      ('virtual_target_state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/path_following/virtual_state')]),
+      # Services
+      ('reset_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/ResetPath')]),
+      ('set_mode', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SetMode')]),
+      ('arc2d_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SpawnArc2DPath')]),
+      ('bernoulli_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SpawnBernoulliPath')]),
+      ('circle2d_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SpawnCircle2DPath')]),
+      ('line_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SpawnLinePath')]),
+      ('speed_const_rabbit_speed', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SetConstVdRabbit')]),
+      ('speed_const_vehicle_speed', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SetConstVdVehicle')]),
+    ]
   )
 
   ######################################################

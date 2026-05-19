@@ -66,24 +66,7 @@ def generate_launch_description():
   params = [
             # vehicle namespace
             {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
-
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
-
-            # load default ROS configurations (from tmp files)
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_real'),
-              'config_personal',
-              '.ros_tmp',
-              PythonExpression(["'default_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-            ]),
-
-            # override default with personal ROS configurations (from tmp files)
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_real'),
-              'config_personal',
-              '.ros_tmp',
-              PythonExpression(["'personal_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-            ]),
 
             # load default allocation configs
             PathJoinSubstitution([
@@ -108,6 +91,7 @@ def generate_launch_description():
   ###################
   # Nodes to launch #
   ###################
+  
   static_thruster_allocation_node = Node(
     package='farol2_allocation',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'allocation']),
@@ -115,7 +99,13 @@ def generate_launch_description():
     name='static_thruster_allocation',
     output='screen',
     condition=IfCondition(LaunchConfiguration('static_thruster_allocation')),
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('body_wrench_request', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/body_wrench_request')]),
+      # Publishers
+      ('thruster_force', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thruster_force')]),
+    ]
   )
 
   thruster_rudder_allocation_node = Node(
@@ -125,7 +115,16 @@ def generate_launch_description():
     name='thruster_rudder_allocation',
     output='screen',
     condition=IfCondition(LaunchConfiguration('thruster_rudder_allocation')),
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('body_wrench_request', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/body_wrench_request')]),
+      ('nav_state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      ('mission_status', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/mission_status')]),
+      # Publishers
+      ('thruster_force', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thruster_force')]),
+      ('rudder_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rudder_command')]),
+    ]
   )
 
   rpm_conversion_node = Node(
@@ -134,7 +133,14 @@ def generate_launch_description():
     executable='rpm_conversion',
     name='rpm_conversion',
     output='screen',
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('thruster_force', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thruster_force')]),
+      ('nav_state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      # Publishers
+      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
+    ]
   )
 
   throttle_conversion_node = Node(
@@ -144,7 +150,13 @@ def generate_launch_description():
     name='throttle_conversion',
     output='screen',
     condition=IfCondition(LaunchConfiguration('throttle_conversion')),
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
+      # Publishers
+      ('throttle_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/throttle_command')]),
+    ]
   )
 
   wrench_manager_node = Node(
@@ -153,7 +165,18 @@ def generate_launch_description():
     executable='wrench_manager',
     name='wrench_manager',
     output='screen',
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('thrust_x', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thrust_x')]),
+      ('thrust_y', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thrust_y')]),
+      ('thrust_z', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thrust_z')]),
+      ('torque_x', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/torque_x')]),
+      ('torque_y', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/torque_y')]),
+      ('torque_z', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/torque_z')]),
+      # Publishers
+      ('body_wrench_request', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/body_wrench_request')]),
+    ]
   )
 
   ######################################################

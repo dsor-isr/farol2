@@ -54,17 +54,17 @@ void FilterHandler::loadParams()
 void FilterHandler::initialisePublishers()
 {
   state_pub_ = create_publisher<farol2_interfaces::msg::NavigationState>(
-      declare_parameter<std::string>("topics.publishers.state"),
+      TOPIC_PUB_STATE,
       rclcpp::QoS(1));
   nav_sat_fix_pub_ = create_publisher<sensor_msgs::msg::NavSatFix>(
-      declare_parameter<std::string>("topics.publishers.nav_sat_fix"),
+      TOPIC_PUB_NAV_SAT_FIX,
       rclcpp::QoS(1));  
 }
 
 void FilterHandler::initialiseServices()
 {
   change_filter_srv_ = create_service<farol2_nav::srv::ChangeFilter>(
-      declare_parameter<std::string>("topics.services.change_filter"),
+      SERVICE_CHANGE_FILTER,
       [this](const std::shared_ptr<farol2_nav::srv::ChangeFilter::Request> request,
              std::shared_ptr<farol2_nav::srv::ChangeFilter::Response> response)
       {

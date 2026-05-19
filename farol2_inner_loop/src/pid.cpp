@@ -1,5 +1,33 @@
 #include "pid.hpp"
 
+namespace {
+const char *referenceTopicForController(const std::string &name) {
+  if (name == "surge") return TOPIC_SUB_SURGE_REF;
+  if (name == "sway") return TOPIC_SUB_SWAY_REF;
+  if (name == "heave") return TOPIC_SUB_HEAVE_REF;
+  if (name == "yaw") return TOPIC_SUB_YAW_REF;
+  if (name == "pitch") return TOPIC_SUB_PITCH_REF;
+  if (name == "roll") return TOPIC_SUB_ROLL_REF;
+  if (name == "yaw_rate") return TOPIC_SUB_YAW_RATE_REF;
+  if (name == "pitch_rate") return TOPIC_SUB_PITCH_RATE_REF;
+  if (name == "roll_rate") return TOPIC_SUB_ROLL_RATE_REF;
+  return nullptr;
+}
+
+const char *debugTopicForController(const std::string &name) {
+  if (name == "surge") return TOPIC_PUB_DEBUG_SURGE;
+  if (name == "sway") return TOPIC_PUB_DEBUG_SWAY;
+  if (name == "heave") return TOPIC_PUB_DEBUG_HEAVE;
+  if (name == "yaw") return TOPIC_PUB_DEBUG_YAW;
+  if (name == "pitch") return TOPIC_PUB_DEBUG_PITCH;
+  if (name == "roll") return TOPIC_PUB_DEBUG_ROLL;
+  if (name == "yaw_rate") return TOPIC_PUB_DEBUG_YAW_RATE;
+  if (name == "pitch_rate") return TOPIC_PUB_DEBUG_PITCH_RATE;
+  if (name == "roll_rate") return TOPIC_PUB_DEBUG_ROLL_RATE;
+  return nullptr;
+}
+}  // namespace
+
 /* Constructor */
 PID::PID() : Node("pid", 
                   rclcpp::NodeOptions()
@@ -202,7 +230,7 @@ void PID::loadParams() {
  */
 void PID::initialiseSubscribers() {
   nav_state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
-                    get_parameter("topics.subscribers.nav_state").as_string(), 
+                    TOPIC_SUB_NAV_STATE,
                     1, std::bind(&PID::navStateCallback, this, std::placeholders::_1));
 
   for (const auto &name : controller_names_) {
@@ -210,8 +238,13 @@ void PID::initialiseSubscribers() {
       continue;
     }
 
+    const char *topic = referenceTopicForController(name);
+    if (topic == nullptr) {
+      RCLCPP_WARN(get_logger(), "Missing reference topic mapping for controller '%s'.", name.c_str());
+      continue;
+    }
     reference_subscribers_[name] = create_subscription<std_msgs::msg::Float32>(
-      get_parameter("topics.subscribers." + name + "_ref").as_string(),
+      topic,
       1,
       [this, name](const std_msgs::msg::Float32 &msg) {
         this->referenceCallback(name, msg.data);
@@ -224,31 +257,34 @@ void PID::initialiseSubscribers() {
  */
 void PID::initialisePublishers() {
   thrust_x_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("topics.publishers.thrust_x").as_string(), 1);
+                    TOPIC_PUB_THRUST_X, 1);
 
   thrust_y_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("topics.publishers.thrust_y").as_string(), 1);
+                    TOPIC_PUB_THRUST_Y, 1);
 
   thrust_z_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("topics.publishers.thrust_z").as_string(), 1);
+                    TOPIC_PUB_THRUST_Z, 1);
 
   torque_x_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("topics.publishers.torque_x").as_string(), 1);
+                    TOPIC_PUB_TORQUE_X, 1);
 
   torque_y_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("topics.publishers.torque_y").as_string(), 1);
+                    TOPIC_PUB_TORQUE_Y, 1);
 
   torque_z_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("topics.publishers.torque_z").as_string(), 1);
+                    TOPIC_PUB_TORQUE_Z, 1);
   /*
   body_wrench_request_pub_ = create_publisher<farol2_allocation::msg::BodyWrenchRequest>(
-                    get_parameter("topics.publishers.body_wrench_request").as_string(), 1);
+                    "body_wrench_request", 1);
   
   */
   for (const auto& [name, dbg] : controller_debug_) {
     if (!dbg) continue;
-    const auto topic =
-        get_parameter("topics.publishers.debug." + name).as_string();
+    const char *topic = debugTopicForController(name);
+    if (topic == nullptr) {
+      RCLCPP_WARN(get_logger(), "Missing debug topic mapping for controller '%s'.", name.c_str());
+      continue;
+    }
     debug_publishers_[name] = create_publisher<farol2_inner_loop::msg::PidDebug>(topic, 1);
   }          
 }
@@ -260,12 +296,12 @@ void PID::initialiseServices() {
   /* Service servers */
   /* Service to change controllers' parameters */
   change_params_srv_ = create_service<farol2_inner_loop::srv::ChangeParams>(
-                        get_parameter("topics.services.change_params").as_string(),
+                        SERVICE_CHANGE_PARAMS,
                         std::bind(&PID::changeParamsCallback, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Service to set course control flag */
   course_control_srv_ = create_service<std_srvs::srv::SetBool>(
-                        get_parameter("topics.services.course_control").as_string(),
+                        SERVICE_COURSE_CONTROL,
                         std::bind(&PID::courseControlCallback, this, std::placeholders::_1, std::placeholders::_2));
 
   /* service clients */

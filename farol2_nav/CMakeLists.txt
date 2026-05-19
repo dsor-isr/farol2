@@ -40,7 +40,6 @@ ament_export_dependencies(rosidl_default_runtime)
 # --------------------
 add_executable(filter_handler src/filter_handler.cpp)
 add_executable(sample_and_hold src/sample_and_hold.cpp)
-add_executable(low_pass src/low_pass.cpp)
 
 ament_target_dependencies(filter_handler
   rclcpp
@@ -57,12 +56,6 @@ ament_target_dependencies(sample_and_hold
   farol2_utils
 )
 
-ament_target_dependencies(low_pass
-  rclcpp
-  std_msgs
-  farol2_interfaces
-  farol2_utils
-)
 
 # Include dirs
 target_include_directories(filter_handler PUBLIC
@@ -75,15 +68,10 @@ target_include_directories(sample_and_hold PUBLIC
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
 )
 
-target_include_directories(low_pass PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
-)
 
 # C/C++ standard
 target_compile_features(filter_handler PUBLIC c_std_99 cxx_std_17)
 target_compile_features(sample_and_hold PUBLIC c_std_99 cxx_std_17)
-target_compile_features(low_pass PUBLIC c_std_99 cxx_std_17)
 
 # --------------------
 # Link libs (plain signature to match ament)
@@ -92,11 +80,9 @@ target_compile_features(low_pass PUBLIC c_std_99 cxx_std_17)
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
 target_link_libraries(filter_handler "${cpp_typesupport_target}")
 target_link_libraries(sample_and_hold "${cpp_typesupport_target}" ${GEOGRAPHIC_LIB})
-target_link_libraries(low_pass "${cpp_typesupport_target}")
 
 # Eigen
 target_link_libraries(sample_and_hold Eigen3::Eigen)
-target_link_libraries(low_pass Eigen3::Eigen)
 
 # --------------------
 # Install
@@ -104,7 +90,6 @@ target_link_libraries(low_pass Eigen3::Eigen)
 install(TARGETS
   filter_handler
   sample_and_hold
-  low_pass
   DESTINATION lib/${PROJECT_NAME}
 )
 

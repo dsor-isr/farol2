@@ -29,12 +29,12 @@ void OpenLoop::loadParams() {
  */
 void OpenLoop::initialiseSubscribers() {
   surge_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.subscribers.surge_ref"),
+    TOPIC_SUB_SURGE_REF,
     rclcpp::QoS(1),
     [this](std_msgs::msg::Float32::SharedPtr msg){ surge_ref_ = msg->data;});
     
   mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
-    declare_parameter<std::string>("topics.subscribers.mission_status"),
+    TOPIC_SUB_MISSION_STATUS,
     rclcpp::QoS(1),
     [this](std_msgs::msg::Int8::SharedPtr msg){mission_status_ = msg->data;});
 }
@@ -44,7 +44,7 @@ void OpenLoop::initialiseSubscribers() {
  */
 void OpenLoop::initialisePublishers() {
   rpm_command_pub_ = create_publisher<farol2_allocation::msg::ThrusterRPM>(
-  declare_parameter<std::string>("topics.publishers.rpm_command"),
+  TOPIC_PUB_RPM_COMMAND,
   rclcpp::QoS(1));
 }
 

@@ -48,11 +48,7 @@ def generate_launch_description():
     description='Boolean to determine if "sample_and_hold" node is launched.'
   )
 
-  launch_low_pass_arg = DeclareLaunchArgument(
-    'low_pass',
-    default_value='false',
-    description='Boolean to determine if "low_pass" node is launched.'
-  )
+
 
   ###################################
   # Define parameters for all nodes #
@@ -60,24 +56,7 @@ def generate_launch_description():
   params = [
             # vehicle namespace
             {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
-
-            {'use_sim_time': True},
-
-            # load default ROS configurations (from tmp files)
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_real'),
-              'config_personal',
-              '.ros_tmp',
-              PythonExpression(["'default_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-            ]),
-
-            # override default with personal ROS configurations (from tmp files)
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_real'),
-              'config_personal',
-              '.ros_tmp',
-              PythonExpression(["'personal_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-            ]),
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
 
             # load default nav configs
             PathJoinSubstitution([
@@ -102,13 +81,21 @@ def generate_launch_description():
   ###################
   # Nodes to launch #
   ###################
+  
   filter_handler_node = Node(
     package='farol2_nav',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'nav']),
     executable='filter_handler',
     name='filter_handler',
     output='screen',
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Publishers
+      ('state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      ('nav_sat_fix', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/nav_sat_fix')]),
+      # Services
+      ('change_filter', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/change_filter')]),
+    ]
   )
 
   sample_and_hold_filter_node = Node(
@@ -118,17 +105,21 @@ def generate_launch_description():
     name='sample_and_hold',
     output='screen',
     condition=IfCondition(LaunchConfiguration('sample_and_hold')),
-    parameters=params
-  )
-
-  low_pass_filter_node = Node(
-    package='farol2_nav',
-    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'nav']),
-    executable='low_pass',
-    name='low_pass',
-    output='screen',
-    condition=IfCondition(LaunchConfiguration('low_pass')),
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('measurement', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement')]),
+      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
+      ('rudder_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rudder_command')]),
+      # Publishers
+      ('state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      ('position_raw', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/position_raw')]),
+      ('model_velocity', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/model_velocity')]),
+      ('course_meas_debug1', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/course_meas_debug1')]),
+      ('course_meas_debug2', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/course_meas_debug2')]),
+      # Services
+      ('tune_position_ekf', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/tune_position_ekf')]),
+    ]
   )
 
 
@@ -143,11 +134,9 @@ def generate_launch_description():
     config_package_path_share_arg,
     config_package_path_real_arg,
     launch_sample_and_hold_arg,
-    launch_low_pass_arg,
     # ...
     # nodes
-    filter_handler_node,
+    # filter_handler_node,
     sample_and_hold_filter_node,
-    low_pass_filter_node,
     # ... 
   ])

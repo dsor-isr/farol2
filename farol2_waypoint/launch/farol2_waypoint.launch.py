@@ -1,6 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -48,20 +48,6 @@ def generate_launch_description():
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
 
             PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_real'),
-              'config_personal',
-              '.ros_tmp',
-              PythonExpression(["'default_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-            ]),
-
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_real'),
-              'config_personal',
-              '.ros_tmp',
-              PythonExpression(["'personal_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-            ]),
-
-            PathJoinSubstitution([
               FindPackageShare('farol2_bringup'),
               'config_default',
               'vehicles',
@@ -82,13 +68,29 @@ def generate_launch_description():
   ###################
   # Nodes to launch #
   ###################
+  
   waypoint_node = Node(
     package='farol2_waypoint',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'control', 'waypoint']),
     executable='waypoint_node',
     name='waypoint',
     output='screen',
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('mission_status', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/mission_status')]),
+      ('state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      # Publishers
+      ('turn_radius_flag', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/turn_radius_flag')]),
+      ('yaw_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/yaw')]),
+      ('yaw_rate_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/yaw_rate')]),
+      ('u_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/surge')]),
+      ('v_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/sway')]),
+      # Services
+      ('wp_standard', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/waypoint/send_wp_standard')]),
+      ('wp_loose', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/waypoint/send_wp_loose')]),
+      ('wp_heading', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/waypoint/send_wp_heading')]),
+    ]
   )
 
   ######################################################

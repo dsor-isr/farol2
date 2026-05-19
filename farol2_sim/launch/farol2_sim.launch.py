@@ -1,6 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.conditions import IfCondition
@@ -53,22 +53,6 @@ def generate_launch_description():
   params = [
     {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
 
-    # default ROS config (from .ros_tmp)
-    PathJoinSubstitution([
-      LaunchConfiguration('config_package_path_real'),
-      'config_personal',
-      '.ros_tmp',
-      PythonExpression(["'default_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-    ]),
-
-    # personal ROS config override (from .ros_tmp)
-    PathJoinSubstitution([
-      LaunchConfiguration('config_package_path_real'),
-      'config_personal',
-      '.ros_tmp',
-      PythonExpression(["'personal_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-    ]),
-
     # default sim config
     PathJoinSubstitution([
       FindPackageShare('farol2_bringup'),
@@ -94,6 +78,7 @@ def generate_launch_description():
   ###################
   # Nodes to launch #
   ###################
+  
   magic_electric_sim_node = Node(
     package='farol2_sim',
     namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
@@ -101,7 +86,21 @@ def generate_launch_description():
     name='magic_electric_sim',
     output='screen',
     condition=IfCondition(LaunchConfiguration('magic_electric_sim')),
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
+      ('rudder_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rudder_command')]),
+      # Publishers
+      ('position', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/position')]),
+      ('body_velocity', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/body_velocity')]),
+      ('orientation', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/orientation')]),
+      ('orientation_rate', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/orientation_rate')]),
+      ('body_acceleration', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/body_acceleration')]),
+      ('angular_acceleration', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/angular_acceleration')]),
+      ('rudder_angle', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/rudder_angle')]),
+      ('measurement', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement')]),
+    ]
   )
 
   auv_sim_node = Node(
@@ -111,7 +110,19 @@ def generate_launch_description():
     name='auv_sim',
     output='screen',
     condition=IfCondition(LaunchConfiguration('auv_sim')),
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
+      # Publishers
+      ('position', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/position')]),
+      ('body_velocity', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/body_velocity')]),
+      ('orientation', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/orientation')]),
+      ('orientation_rate', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/orientation_rate')]),
+      ('body_acceleration', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/body_acceleration')]),
+      ('angular_acceleration', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/angular_acceleration')]),
+      ('measurement', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement')]),
+    ]
   )
 
   ######################################################

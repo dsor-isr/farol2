@@ -9,6 +9,10 @@
 #include "farol2_interfaces/msg/navigation_state.hpp"
 #include "farol2_interfaces/msg/state_console.hpp"
 
+// Topic names (short form, remapped in launch file)
+#define TOPIC_SUB_NAV_STATE "nav_state"
+#define TOPIC_PUB_CONSOLE_STATE "console_state"
+
 /**
  * @brief   Nav State To Console State
  * @author  Eduardo Cunha

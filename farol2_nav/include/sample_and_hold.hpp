@@ -18,6 +18,16 @@
 #include "geometry_msgs/msg/vector3.hpp"
 #include <GeographicLib/UTMUPS.hpp>
 
+// Topic/service names (short form, remapped in launch file)
+#define TOPIC_SUB_MEASUREMENT "measurement"
+#define TOPIC_SUB_RPM_COMMAND "rpm_command"
+#define TOPIC_PUB_STATE "state"
+#define TOPIC_PUB_POSITION_RAW "position_raw"
+#define TOPIC_PUB_MODEL_VELOCITY "model_velocity"
+#define TOPIC_PUB_COURSE_MEAS_DEBUG2 "course_meas_debug2"
+#define TOPIC_PUB_COURSE_MEAS_DEBUG1 "course_meas_debug1"
+#define SERVICE_TUNE_POSITION_EKF "tune_position_ekf"
+
 /**
  * @brief   Sample and Hold navigation filter
  * @author  Eduardo Cunha

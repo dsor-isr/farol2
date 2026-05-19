@@ -17,7 +17,7 @@ StaticThrusterAllocation::~StaticThrusterAllocation() = default;
  */
 void StaticThrusterAllocation::initialiseSubscribers() {
   body_wrench_request_sub_ = create_subscription<geometry_msgs::msg::WrenchStamped>(
-    declare_parameter<std::string>("topics.subscribers.body_wrench_request"),
+    TOPIC_SUB_BODY_WRENCH_REQUEST,
     rclcpp::QoS(1),
     [this](geometry_msgs::msg::WrenchStamped::SharedPtr msg){bodyWrenchRequestCallback(msg);});
 }
@@ -63,7 +63,7 @@ void StaticThrusterAllocation::loadParams() {
  */
 void StaticThrusterAllocation::initialisePublishers() {
   thruster_force_pub_ = create_publisher<farol2_allocation::msg::ThrusterForce>(
-    declare_parameter<std::string>("topics.publishers.thruster_force"),
+    TOPIC_PUB_THRUSTER_FORCE,
     rclcpp::QoS(1));
 }
 
