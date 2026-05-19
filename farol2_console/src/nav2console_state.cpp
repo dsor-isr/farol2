@@ -26,7 +26,7 @@ void Nav2ConsoleState::loadParams() {
  */
 void Nav2ConsoleState::initialiseSubscribers() {
   nav_state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
-                get_parameter("topics.subscribers.nav_state").as_string(), 
+                TOPIC_SUB_NAV_STATE,
                 1, std::bind(&Nav2ConsoleState::nav_state_callback, this, std::placeholders::_1));
 
   return;
@@ -37,7 +37,7 @@ void Nav2ConsoleState::initialiseSubscribers() {
  */
 void Nav2ConsoleState::initialisePublishers() {
   console_state_pub_ = create_publisher<farol2_interfaces::msg::StateConsole>(
-                        get_parameter("topics.publishers.console_state").as_string(), 1);
+                        TOPIC_PUB_CONSOLE_STATE, 1);
 }
 
 void Nav2ConsoleState::nav_state_callback(const farol2_interfaces::msg::NavigationState &msg) {

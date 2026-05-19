@@ -157,19 +157,19 @@ void MagicElectricSim::initialiseSubscribers()
 {
 
   rpm_sub_ = create_subscription<farol2_allocation::msg::ThrusterRPM>(
-      declare_parameter<std::string>("topics.subscribers.rpm_command"),
+      TOPIC_SUB_RPM_COMMAND,
       1, std::bind(&MagicElectricSim::rpmCallback, this, std::placeholders::_1));
 
   if (rudder_actuation_sim_)
   {
     rudder_angle_sub_ = create_subscription<std_msgs::msg::Float32>(
-        declare_parameter<std::string>("topics.subscribers.rudder_cmd"),
+        TOPIC_SUB_RUDDER_CMD,
         1, std::bind(&MagicElectricSim::rudderAngleCallback, this, std::placeholders::_1));
   }
   else
   {
     rudder_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-        declare_parameter<std::string>("topics.subscribers.rudder_ref"),
+        TOPIC_SUB_RUDDER_REF,
         1, std::bind(&MagicElectricSim::rudderAngleCallback, this, std::placeholders::_1));
   }
 
@@ -184,26 +184,26 @@ void MagicElectricSim::initialisePublishers()
   auto clock_qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local();
   clock_pub_ = create_publisher<rosgraph_msgs::msg::Clock>("/clock", clock_qos);
   position_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.position"), 1);
+      TOPIC_PUB_POSITION, 1);
   velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.body_velocity"), 1);
+      TOPIC_PUB_BODY_VELOCITY, 1);
   orientation_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.orientation"), 1);
+      TOPIC_PUB_ORIENTATION, 1);
   oreintation_rate_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.orientation_rate"), 1);
+      TOPIC_PUB_ORIENTATION_RATE, 1);
   body_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.body_acceleration"), 1);
+      TOPIC_PUB_BODY_ACCELERATION, 1);
   angular_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-      declare_parameter<std::string>("topics.publishers.angular_acceleration"), 1);
+      TOPIC_PUB_ANGULAR_ACCELERATION, 1);
 
   if (rudder_actuation_sim_)
   {
     rudder_pub_ = create_publisher<std_msgs::msg::Float32>(
-        declare_parameter<std::string>("topics.publishers.rudder_angle"), 1);
+        TOPIC_PUB_RUDDER_ANGLE, 1);
   }
 
   meas_pub_ = create_publisher<farol2_interfaces::msg::Measurement>(
-      declare_parameter<std::string>("topics.publishers.measurement"), 1);
+      TOPIC_PUB_MEASUREMENT, 1);
 
   return;
 }

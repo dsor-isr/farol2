@@ -29,6 +29,35 @@
 #include "farol2_inner_loop/controller_pid.hpp"
 #include "farol2_inner_loop/reference_generator.hpp"
 
+// Topic/service names (short form, remapped in launch file)
+#define TOPIC_SUB_NAV_STATE "nav_state"
+#define TOPIC_SUB_SURGE_REF "surge_ref"
+#define TOPIC_SUB_SWAY_REF "sway_ref"
+#define TOPIC_SUB_HEAVE_REF "heave_ref"
+#define TOPIC_SUB_YAW_REF "yaw_ref"
+#define TOPIC_SUB_PITCH_REF "pitch_ref"
+#define TOPIC_SUB_ROLL_REF "roll_ref"
+#define TOPIC_SUB_YAW_RATE_REF "yaw_rate_ref"
+#define TOPIC_SUB_PITCH_RATE_REF "pitch_rate_ref"
+#define TOPIC_SUB_ROLL_RATE_REF "roll_rate_ref"
+#define TOPIC_PUB_THRUST_X "thrust_x"
+#define TOPIC_PUB_THRUST_Y "thrust_y"
+#define TOPIC_PUB_THRUST_Z "thrust_z"
+#define TOPIC_PUB_TORQUE_X "torque_x"
+#define TOPIC_PUB_TORQUE_Y "torque_y"
+#define TOPIC_PUB_TORQUE_Z "torque_z"
+#define TOPIC_PUB_DEBUG_SURGE "debug_surge"
+#define TOPIC_PUB_DEBUG_SWAY "debug_sway"
+#define TOPIC_PUB_DEBUG_HEAVE "debug_heave"
+#define TOPIC_PUB_DEBUG_YAW "debug_yaw"
+#define TOPIC_PUB_DEBUG_PITCH "debug_pitch"
+#define TOPIC_PUB_DEBUG_ROLL "debug_roll"
+#define TOPIC_PUB_DEBUG_YAW_RATE "debug_yaw_rate"
+#define TOPIC_PUB_DEBUG_PITCH_RATE "debug_pitch_rate"
+#define TOPIC_PUB_DEBUG_ROLL_RATE "debug_roll_rate"
+#define SERVICE_CHANGE_PARAMS "change_params"
+#define SERVICE_COURSE_CONTROL "course_control"
+
 enum ControllerType {
   SURGE = 0,
   SWAY = 1,

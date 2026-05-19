@@ -25,42 +25,42 @@ void WrenchManager::loadParams() {
 void WrenchManager::initialiseSubscribers() {
   // Subscribe to each topic and provide directly a lambda function to save data
   thrust_x_sub_ = create_subscription<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.subscribers.thrust_x"),
+    TOPIC_SUB_THRUST_X,
     rclcpp::QoS(1),
     [this](std_msgs::msg::Float32::SharedPtr msg){
       wrench_[0] = msg->data;
       last_received_[0] = clock_.now();
     });
   thrust_y_sub_ = create_subscription<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.subscribers.thrust_y"),
+    TOPIC_SUB_THRUST_Y,
     rclcpp::QoS(1),
     [this](std_msgs::msg::Float32::SharedPtr msg){
       wrench_[1] = msg->data;
       last_received_[1] = clock_.now();
     });
   thrust_z_sub_ = create_subscription<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.subscribers.thrust_z"),
+    TOPIC_SUB_THRUST_Z,
     rclcpp::QoS(1),
     [this](std_msgs::msg::Float32::SharedPtr msg){
       wrench_[2] = msg->data;
       last_received_[2] = clock_.now();
     });
   torque_x_sub_ = create_subscription<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.subscribers.torque_x"),
+    TOPIC_SUB_TORQUE_X,
     rclcpp::QoS(1),
     [this](std_msgs::msg::Float32::SharedPtr msg){
       wrench_[3] = msg->data;
       last_received_[3] = clock_.now();
     });
   torque_y_sub_ = create_subscription<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.subscribers.torque_y"),
+    TOPIC_SUB_TORQUE_Y,
     rclcpp::QoS(1),
     [this](std_msgs::msg::Float32::SharedPtr msg){
       wrench_[4] = msg->data;
       last_received_[4] = clock_.now();
     });
   torque_z_sub_ = create_subscription<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.subscribers.torque_z"),
+    TOPIC_SUB_TORQUE_Z,
     rclcpp::QoS(1),
     [this](std_msgs::msg::Float32::SharedPtr msg){
       wrench_[5] = msg->data;
@@ -73,7 +73,7 @@ void WrenchManager::initialiseSubscribers() {
  */
 void WrenchManager::initialisePublishers() {
   body_wrench_request_pub_ = create_publisher<geometry_msgs::msg::WrenchStamped>(
-    declare_parameter<std::string>("topics.publishers.body_wrench_request"),
+    TOPIC_PUB_BODY_WRENCH_REQUEST,
     rclcpp::QoS(1));
 }
 

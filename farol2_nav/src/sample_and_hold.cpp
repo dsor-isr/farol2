@@ -38,6 +38,7 @@ SampleAndHold::SampleAndHold() : Node("sample_and_hold") {
   Q_pos_.diagonal() << ekf_q_pos_, ekf_q_pos_, ekf_q_current_, ekf_q_current_;
   R_pos_.setIdentity();
   R_pos_ *= ekf_r_pos_;
+
 }
 
 /* Destructor */
@@ -109,7 +110,7 @@ void SampleAndHold::loadParams() {
  */
 void SampleAndHold::initialiseSubscribers() {
   measurement_sub_ = create_subscription<farol2_interfaces::msg::Measurement>(
-    declare_parameter<std::string>("topics.subscribers.measurement"),
+    TOPIC_SUB_MEASUREMENT,
     rclcpp::QoS(10),
     [this](farol2_interfaces::msg::Measurement::SharedPtr msg){measurement_callback(msg);});
 
@@ -119,7 +120,7 @@ void SampleAndHold::initialiseSubscribers() {
     [this](std_msgs::msg::Float32::SharedPtr msg) { rudder_angle_ = farol2_utils::deg2rad(msg->data); });
 
   rpm_command_sub_ = create_subscription<farol2_allocation::msg::ThrusterRPM>(
-    declare_parameter<std::string>("topics.subscribers.rpm_command", "/magicelectric0/actuation/rpm_command"),
+    TOPIC_SUB_RPM_COMMAND,
     rclcpp::QoS(1),
     [this](farol2_allocation::msg::ThrusterRPM::ConstSharedPtr msg) { rpm_command_callback(msg); });
  
@@ -139,19 +140,19 @@ void SampleAndHold::rpm_command_callback(farol2_allocation::msg::ThrusterRPM::Co
  */
 void SampleAndHold::initialisePublishers() {
   state_pub_ = create_publisher<farol2_interfaces::msg::NavigationState>(
-    declare_parameter<std::string>("topics.publishers.state"),
+    TOPIC_PUB_STATE,
     rclcpp::QoS(1));
   position_raw_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-    declare_parameter<std::string>("topics.publishers.position_raw", "/magicelectric0/nav/sample_and_hold/position_raw"),
+    TOPIC_PUB_POSITION_RAW,
     rclcpp::QoS(1));
   model_velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
-    declare_parameter<std::string>("topics.publishers.model_velocity", "/magicelectric0/nav/sample_and_hold/model_velocity"),
+    TOPIC_PUB_MODEL_VELOCITY,
     rclcpp::QoS(1));
   debug_pub2_ = create_publisher<std_msgs::msg::Float64>(
-    declare_parameter<std::string>("topics.publishers.course_meas_debug2", "dummy2"),
+    TOPIC_PUB_COURSE_MEAS_DEBUG2,
     rclcpp::QoS(1));
   debug_pub1_ = create_publisher<std_msgs::msg::Float64>(
-    declare_parameter<std::string>("topics.publishers.course_meas_debug1", "dummy1"),
+    TOPIC_PUB_COURSE_MEAS_DEBUG1,
     rclcpp::QoS(1));
 }
 
@@ -160,13 +161,22 @@ void SampleAndHold::initialisePublishers() {
  */
 void SampleAndHold::initialiseServices() {
   tune_position_ekf_srv_ = create_service<farol2_nav::srv::TunePositionEkf>(
-    declare_parameter<std::string>("topics.services.tune_position_ekf", "/magicelectric0/nav/sample_and_hold/tune_position_ekf"),
+    SERVICE_TUNE_POSITION_EKF,
     [this](const std::shared_ptr<farol2_nav::srv::TunePositionEkf::Request> request,
            std::shared_ptr<farol2_nav::srv::TunePositionEkf::Response> response) {
       tune_position_ekf_callback(request, response);
     });
-}
+  }
 
+/**
+ * @brief Initialise Timers
+ */
+  void SampleAndHold::initialiseTimers() {
+    auto period = std::chrono::nanoseconds( static_cast<int64_t>(1e9 / node_frequency_));
+    timer_ = create_timer(period, [this]() {timerCallback();});
+    return;
+  }
+  
 void SampleAndHold::tune_position_ekf_callback(
   const std::shared_ptr<farol2_nav::srv::TunePositionEkf::Request> request,
   std::shared_ptr<farol2_nav::srv::TunePositionEkf::Response> response) {
@@ -190,14 +200,6 @@ void SampleAndHold::tune_position_ekf_callback(
   response->message = "Position EKF gains updated.";
 }
 
-/**
- * @brief Initialise Timers
- */
-void SampleAndHold::initialiseTimers() {
-  auto period = std::chrono::nanoseconds( static_cast<int64_t>(1e9 / node_frequency_));
-  timer_ = create_timer(period, [this]() {timerCallback();});
-  return;
-}
 
 void SampleAndHold::measurement_callback(farol2_interfaces::msg::Measurement::ConstSharedPtr msg) {
   // Update filter state depending on measurement type 
@@ -237,11 +239,9 @@ void SampleAndHold::measurement_callback(farol2_interfaces::msg::Measurement::Co
       position_raw_pub_->publish(raw_utm_msg);
 
       latest_utm_zone_ = static_cast<int>(msg->value[2]);
-      // std::cout << "Received GPS measurement: northing = " << msg->value[0] << ", easting = " << msg->value[1] << ", zone = " << msg->value[2] << std::endl;
 
       if (use_position_ekf_) {
         if (!position_ekf_initialized_) {
-          // std::cout << "Initializing position EKF with first GPS measurement." << std::endl;
           x_pos_.setZero();
           x_pos_(0) = msg->value[0];
           x_pos_(1) = msg->value[1];
@@ -252,12 +252,10 @@ void SampleAndHold::measurement_callback(farol2_interfaces::msg::Measurement::Co
           P_pos_(3, 3) = ekf_p0_current_;
           position_ekf_initialized_ = true;
         } else {
-          // std::cout << "Updating position EKF with GPS measurement." << std::endl;
           update_position_ekf(msg->value[0], msg->value[1]);
         }
         last_gps_update_time_s_ = clock_->now().seconds();
       } else {
-        // std::cout << "Not using position EKF, directly setting position from GPS measurement." << std::endl;
         filter_state_msg_.utm_position.northing = msg->value[0];
         filter_state_msg_.utm_position.easting = msg->value[1];
         filter_state_msg_.utm_position.utm_zone = msg->value[2];
@@ -354,6 +352,7 @@ void SampleAndHold::measurement_callback(farol2_interfaces::msg::Measurement::Co
  *        Where the algorithms will constantly run.
  */
 void SampleAndHold::timerCallback() {
+
   double dt = 1.0 / node_frequency_;
   // Fill header 
   filter_state_msg_.header.stamp = clock_->now();
@@ -498,7 +497,6 @@ double SampleAndHold::rpm_to_body_speed_mps(double dt) {
       tau_u = -tau_u;
     }
   }
-  // std::cout << "tau_u = " << tau_u << std::endl;
 
   const double m_u_safe = (std::abs(m_u_) < 1e-6) ? 1e-6 : m_u_;
   const double u_dot = (1.0 / m_u_safe) * (tau_u + x_u_ * u + x_uu_ * std::abs(u) * u);
@@ -507,7 +505,6 @@ double SampleAndHold::rpm_to_body_speed_mps(double dt) {
 }
 
 void SampleAndHold::predict_position_ekf(double dt) {
-  // std::cout << "EKF position predict: x_pos = [" << x_pos_.transpose() << "], P_pos = [" << P_pos_ << "]" << std::endl;
   const double psi = farol2_utils::deg2rad(filter_state_msg_.orientation.z);
   const double vm_body = rpm_to_body_speed_mps(dt);
   const double vn_m = vm_body * std::cos(psi);
@@ -535,7 +532,6 @@ void SampleAndHold::update_position_ekf(double northing, double easting) {
   z << northing, easting;
 
   const Eigen::Vector2d y = z - H_pos_ * x_pos_;
-  // std::cout << "EKF position update: innovation y = [" << y.transpose() << "]" << std::endl;
   const Eigen::Matrix2d S = H_pos_ * P_pos_ * H_pos_.transpose() + R_pos_;
   const Eigen::Matrix<double, 4, 2> K = P_pos_ * H_pos_.transpose() * S.inverse();
 

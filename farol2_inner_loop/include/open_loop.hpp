@@ -10,6 +10,11 @@
 #include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "farol2_allocation/msg/thruster_rpm.hpp"
 
+// Topic/service names (short form, remapped in launch file)
+#define TOPIC_SUB_SURGE_REF "surge_ref"
+#define TOPIC_SUB_MISSION_STATUS "mission_status"
+#define TOPIC_PUB_RPM_COMMAND "rpm_command"
+
 /**
  * @brief   Open Loop Control
  * @author  Eduardo Cunha

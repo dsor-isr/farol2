@@ -21,6 +21,13 @@
 #include <actuation_utils.hpp>
 #include <farol2_utils/angles.hpp>
 
+// Topic names (short form, remapped in launch file)
+#define TOPIC_SUB_BODY_WRENCH_REQUEST "body_wrench_request"
+#define TOPIC_SUB_NAV_STATE "nav_state"
+#define TOPIC_SUB_MISSION_STATUS "mission_status"
+#define TOPIC_PUB_THRUSTER_FORCE "thruster_force"
+#define TOPIC_PUB_RUDDER_COMMAND "rudder_command"
+
 /**
  * @brief   Thruster Rudder Allocation
  * @author  Eduardo Cunha

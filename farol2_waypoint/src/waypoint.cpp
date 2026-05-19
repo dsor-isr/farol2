@@ -36,17 +36,17 @@ void Waypoint::loadParams() {
  */
 void Waypoint::initialiseSubscribers() {
   mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
-    declare_parameter<std::string>("topics.subscribers.mission_status"),
+    TOPIC_SUB_MISSION_STATUS,
     rclcpp::QoS(1),
     [this](std_msgs::msg::Int8::SharedPtr msg){missionStatusCallback(msg);});
   
   state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
-    declare_parameter<std::string>("topics.subscribers.state"),
+    TOPIC_SUB_STATE,
     rclcpp::QoS(1),
     [this](farol2_interfaces::msg::NavigationState::SharedPtr msg){stateCallback(msg);});
 
   turn_radius_flag_sub_ = create_subscription<std_msgs::msg::Bool>(
-    declare_parameter<std::string>("topics.subscribers.turn_radius_flag"),
+    TOPIC_SUB_TURN_RADIUS_FLAG,
     rclcpp::QoS(1),
     [this](std_msgs::msg::Bool::SharedPtr msg){turnRadiusFlagCallback(msg);});
 }
@@ -56,19 +56,19 @@ void Waypoint::initialiseSubscribers() {
  */
 void Waypoint::initialisePublishers() {
   yaw_ref_pub_ = create_publisher<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.publishers.yaw_ref"),
+    TOPIC_PUB_YAW_REF,
     rclcpp::QoS(1));
   yaw_rate_ref_pub_ = create_publisher<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.publishers.yaw_rate_ref"),
+    TOPIC_PUB_YAW_RATE_REF,
     rclcpp::QoS(1));
   u_ref_pub_ = create_publisher<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.publishers.u_ref"),
+    TOPIC_PUB_U_REF,
     rclcpp::QoS(1));
   v_ref_pub_ = create_publisher<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.publishers.v_ref"),
+    TOPIC_PUB_V_REF,
     rclcpp::QoS(1));
   mission_status_pub_ = create_publisher<std_msgs::msg::Int8>(
-    declare_parameter<std::string>("topics.publishers.mission_status"),
+    TOPIC_PUB_MISSION_STATUS,
     rclcpp::QoS(1));
 }
 
@@ -78,21 +78,21 @@ void Waypoint::initialisePublishers() {
 void Waypoint::initialiseServices() {
   /* Service servers */
   wp_standard_srv_ = create_service<farol2_waypoint::srv::SendWpType1>(
-    declare_parameter<std::string>("topics.services.wp_standard"),
+    SERVICE_WP_STANDARD,
     [this](const std::shared_ptr<farol2_waypoint::srv::SendWpType1::Request> request,
       std::shared_ptr<farol2_waypoint::srv::SendWpType1::Response> response){
       this->sendWpStandardService(request, response);
     });
 
   wp_loose_srv_ = create_service<farol2_waypoint::srv::SendWpType1>(
-    declare_parameter<std::string>("topics.services.wp_loose"),
+    SERVICE_WP_LOOSE,
     [this](const std::shared_ptr<farol2_waypoint::srv::SendWpType1::Request> request,
       std::shared_ptr<farol2_waypoint::srv::SendWpType1::Response> response){
       this->sendWpLooseService(request, response);
     });
   
   wp_heading_srv_ = create_service<farol2_waypoint::srv::SendWpType1>(
-    declare_parameter<std::string>("topics.services.wp_heading"),
+    SERVICE_WP_HEADING,
     [this](const std::shared_ptr<farol2_waypoint::srv::SendWpType1::Request> request,
       std::shared_ptr<farol2_waypoint::srv::SendWpType1::Response> response){
       this->sendWpHeadingService(request, response);

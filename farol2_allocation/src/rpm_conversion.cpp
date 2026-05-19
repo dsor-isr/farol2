@@ -16,12 +16,12 @@ RPMConversion::~RPMConversion() = default;
  */
 void RPMConversion::initialiseSubscribers() {
   thruster_force_sub_ = create_subscription<farol2_allocation::msg::ThrusterForce>(
-    declare_parameter<std::string>("topics.subscribers.thruster_force"),
+    TOPIC_SUB_THRUSTER_FORCE,
     rclcpp::QoS(1),
     [this](farol2_allocation::msg::ThrusterForce::SharedPtr msg){thrusterForceCallback(msg);});
 
   nav_state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
-    declare_parameter<std::string>("topics.subscribers.nav_state"),
+    TOPIC_SUB_NAV_STATE,
     rclcpp::QoS(1),
     [this](farol2_interfaces::msg::NavigationState::SharedPtr msg){surge_ = msg->body_velocity_fluid.x;});
 }
@@ -85,7 +85,7 @@ void RPMConversion::loadParams() {
  */
 void RPMConversion::initialisePublishers() {
   rpm_command_pub_ = create_publisher<farol2_allocation::msg::ThrusterRPM>(
-    declare_parameter<std::string>("topics.publishers.rpm_command"),
+    TOPIC_PUB_RPM_COMMAND,
     rclcpp::QoS(1));
 }
 

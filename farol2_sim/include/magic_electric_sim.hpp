@@ -20,6 +20,19 @@
 
 
 
+// Topic names (short form, remapped in launch file)
+#define TOPIC_SUB_RPM_COMMAND "rpm_command"
+#define TOPIC_SUB_RUDDER_CMD "rudder_cmd"
+#define TOPIC_SUB_RUDDER_REF "rudder_ref"
+#define TOPIC_PUB_POSITION "position"
+#define TOPIC_PUB_BODY_VELOCITY "body_velocity"
+#define TOPIC_PUB_ORIENTATION "orientation"
+#define TOPIC_PUB_ORIENTATION_RATE "orientation_rate"
+#define TOPIC_PUB_BODY_ACCELERATION "body_acceleration"
+#define TOPIC_PUB_ANGULAR_ACCELERATION "angular_acceleration"
+#define TOPIC_PUB_RUDDER_ANGLE "rudder_angle"
+#define TOPIC_PUB_MEASUREMENT "measurement"
+
 /**
  * @brief   Magic Electric Simulation
  * @author  André Carvalho

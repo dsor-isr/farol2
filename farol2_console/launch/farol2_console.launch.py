@@ -45,27 +45,8 @@ def generate_launch_description():
   params = [
             # vehicle namespace
             {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
-
-
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
             
-
-            # load default ROS configurations (from tmp files)
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_real'),
-              'config_personal',
-              '.ros_tmp',
-              PythonExpression(["'default_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-            ]),
-
-            # override default with personal ROS configurations (from tmp files)
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_real'),
-              'config_personal',
-              '.ros_tmp',
-              PythonExpression(["'personal_ros_' + '", LaunchConfiguration('vehicle_ns'), "' + '.yaml'"])
-            ]),
-
             # load default console configs
             PathJoinSubstitution([
               FindPackageShare('farol2_bringup'),
@@ -89,13 +70,35 @@ def generate_launch_description():
   ###################
   # Nodes to launch #
   ###################
+
   console_parser_node = Node(
     package='farol2_console',
     namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'addons']),
     executable='console_parser_node',
     name='console_parser',
     output='screen',
-    parameters=params
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('Mission_String', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/addons/Mission_String')]),
+      ('state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      ('mission_status', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/mission_status')]),
+      # Publishers
+      ('Path_Section', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/addons/path_section')]),
+      ('Formation', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/addons/formation')]),
+      ('biased_formation', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/addons/biased_formation')]),
+      ('WPRef', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/addons/WPRef')]),
+      ('DepthRef', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/depth')]),
+      ('AltRef', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/altitude')]),
+      ('FullMission', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/addons/full_mission')]),
+      # Services
+      ('reset_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/ResetPath')]),
+      ('arc2d_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SpawnArc2DPath')]),
+      ('line_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SpawnLinePath')]),
+      ('set_speed', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SetConstVdVehicle')]),
+      ('pf_start', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/path_following/Start')]),
+      ('pf_stop', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/path_following/Stop')]),
+    ]
   )
 
   console_server_node = Node(
@@ -105,6 +108,10 @@ def generate_launch_description():
     name='console_server',
     output='screen',
     parameters=params,
+    remappings=[
+      # Services
+      ('wp_standard', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/waypoint/send_wp_standard')]),
+    ],
   )
 
   nav2console_state_node = Node(
@@ -114,6 +121,12 @@ def generate_launch_description():
     name='nav2console_state',
     output='screen',
     parameters=params,
+    remappings=[
+      # Subscribers
+      ('nav_state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      # Publishers
+      ('console_state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/State')]),
+    ]
   )
 
   ######################################################

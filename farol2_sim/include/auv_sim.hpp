@@ -19,7 +19,16 @@
 #include "std_msgs/msg/float32.hpp"
 #include <GeographicLib/UTMUPS.hpp>
 
-
+// Topic names (short form, remapped in launch file)
+#define TOPIC_SUB_RPM_COMMAND "rpm_command"
+#define TOPIC_PUB_UTM "utm"
+#define TOPIC_PUB_POSITION "position"
+#define TOPIC_PUB_BODY_VELOCITY "body_velocity"
+#define TOPIC_PUB_ORIENTATION "orientation"
+#define TOPIC_PUB_ORIENTATION_RATE "orientation_rate"
+#define TOPIC_PUB_BODY_ACCELERATION "body_acceleration"
+#define TOPIC_PUB_ANGULAR_ACCELERATION "angular_acceleration"
+#define TOPIC_PUB_MEASUREMENT "measurement"
 
 /**
  * @brief   Sim

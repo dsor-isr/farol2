@@ -10,6 +10,11 @@
 #include <vector>
 #include <unordered_map>
 
+// Topic/service names (short form, remapped in launch file)
+#define TOPIC_PUB_STATE "state"
+#define TOPIC_PUB_NAV_SAT_FIX "nav_sat_fix"
+#define SERVICE_CHANGE_FILTER "change_filter"
+
 class FilterHandler : public rclcpp::Node
 {
 public:

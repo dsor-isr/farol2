@@ -17,17 +17,17 @@ ThrusterRudderAllocation::~ThrusterRudderAllocation() = default;
  */
 void ThrusterRudderAllocation::initialiseSubscribers() {
   body_wrench_request_sub_ = create_subscription<geometry_msgs::msg::WrenchStamped>(
-    declare_parameter<std::string>("topics.subscribers.body_wrench_request"),
+    TOPIC_SUB_BODY_WRENCH_REQUEST,
     rclcpp::QoS(1),
     [this](geometry_msgs::msg::WrenchStamped::SharedPtr msg){bodyWrenchRequestCallback(msg);});
 
   nav_state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
-    declare_parameter<std::string>("topics.subscribers.nav_state"),
+    TOPIC_SUB_NAV_STATE,
     rclcpp::QoS(1),
     [this](farol2_interfaces::msg::NavigationState::SharedPtr msg){nav_state_ = *msg;});
   
   mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
-    declare_parameter<std::string>("topics.subscribers.mission_status"),
+    TOPIC_SUB_MISSION_STATUS,
     rclcpp::QoS(1),
     [this](std_msgs::msg::Int8::SharedPtr msg){mission_status_ = msg->data;});
 }
@@ -87,11 +87,11 @@ void ThrusterRudderAllocation::loadParams() {
  */
 void ThrusterRudderAllocation::initialisePublishers() {
   thruster_force_pub_ = create_publisher<farol2_allocation::msg::ThrusterForce>(
-    declare_parameter<std::string>("topics.publishers.thruster_force"),
+    TOPIC_PUB_THRUSTER_FORCE,
     rclcpp::QoS(1));
 
   rudder_command_pub_ = create_publisher<std_msgs::msg::Float32>(
-    declare_parameter<std::string>("topics.publishers.rudder_command"),
+    TOPIC_PUB_RUDDER_COMMAND,
     rclcpp::QoS(1));
 }
 

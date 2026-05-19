@@ -17,7 +17,7 @@ ThrottleConversion::~ThrottleConversion() = default;
  */
 void ThrottleConversion::initialiseSubscribers() {
   rpm_command_sub_ = create_subscription<farol2_allocation::msg::ThrusterRPM>(
-  declare_parameter<std::string>("topics.subscribers.rpm_command"),
+  TOPIC_SUB_RPM_COMMAND,
   rclcpp::QoS(1),
   [this](farol2_allocation::msg::ThrusterRPM::SharedPtr msg){rpmCommandCallback(msg);});
 }
@@ -34,7 +34,7 @@ void ThrottleConversion::loadParams() {
  */
 void ThrottleConversion::initialisePublishers() {
   throttle_command_pub_ = create_publisher<farol2_interfaces::msg::Thruster>(
-  declare_parameter<std::string>("topics.publishers.throttle_command"),
+  TOPIC_PUB_THROTTLE_COMMAND,
   rclcpp::QoS(1));
 }
 

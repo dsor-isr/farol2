@@ -18,7 +18,7 @@ PathFollowingNode::PathFollowingNode() : Node("path_following",
   /* Set PF Debug publisher */
   pf_algorithm_->setPFollowingDebugPublisher(
     create_publisher<farol2_interfaces::msg::PFDebug>(
-      get_parameter("topics.publishers.pfollowing_debug").as_string(), 1)
+      TOPIC_PUB_PFOLLOWING_DEBUG, 1)
   );
 }
 
@@ -42,13 +42,13 @@ PathFollowingNode::~PathFollowingNode() {
 PathFollowing *PathFollowingNode::getDefaultControllerLapierre() {
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.yaw_rate").as_string(), 1));
+                                TOPIC_PUB_YAW_RATE, 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.rabbit").as_string(), 1));
+                                TOPIC_PUB_RABBIT, 1));
 
   /* Read the gains for the controller */
   double k1, k2, k3, theta, k_delta;
@@ -70,13 +70,13 @@ PathFollowing *PathFollowingNode::getDefaultControllerLapierre() {
 PathFollowing *PathFollowingNode::getDefaultControllerBreivik() {
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.yaw").as_string(), 1));
+                                TOPIC_PUB_YAW, 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.rabbit").as_string(), 1));
+                                TOPIC_PUB_RABBIT, 1));
 
   /* Read the gains for the controller */
   double delta_h;
@@ -90,13 +90,13 @@ PathFollowing *PathFollowingNode::getDefaultControllerBreivik() {
 PathFollowing *PathFollowingNode::getDefaultControllerAguiar() {
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.yaw_rate").as_string(), 1));
+                                TOPIC_PUB_YAW_RATE, 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.rabbit").as_string(), 1));
+                                TOPIC_PUB_RABBIT, 1));
 
   double delta, kz;
   double kk[2];
@@ -137,19 +137,19 @@ void PathFollowingNode::deleteCurrentController() {
 void PathFollowingNode::initialiseSubscribers() {
 
   this->state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
-                      get_parameter("topics.subscribers.state").as_string(), 
+                      TOPIC_SUB_STATE,
                       1, std::bind(&PathFollowingNode::vehicleStateCallback, this, std::placeholders::_1));
 
   this->path_data_sub_ = create_subscription<farol2_planning::msg::PathData>(
-                          get_parameter("topics.subscribers.path_data").as_string(), 
+                          TOPIC_SUB_PATH_DATA,
                           1, std::bind(&PathFollowingNode::pathStateCallback, this, std::placeholders::_1));
 
   this->vc_sub_ = create_subscription<std_msgs::msg::Float32>(
-                    get_parameter("topics.subscribers.vc").as_string(), 
+                    TOPIC_SUB_VC,
                     1, std::bind(&PathFollowingNode::vcCallback, this, std::placeholders::_1));
 
   this->mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
-                                get_parameter("topics.subscribers.mission_status").as_string(), 
+                                TOPIC_SUB_MISSION_STATUS,
                                 1, std::bind(&PathFollowingNode::missionStatusCallback, this, std::placeholders::_1));
 }
 
@@ -159,7 +159,7 @@ void PathFollowingNode::initialiseSubscribers() {
 void PathFollowingNode::initialisePublishers() {
 
   this->mission_status_pub_ = create_publisher<std_msgs::msg::Int8>(
-                                get_parameter("topics.publishers.mission_status").as_string(), 1);
+                                TOPIC_PUB_MISSION_STATUS, 1);
 }
 
 /**

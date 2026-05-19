@@ -7,77 +7,77 @@
 void PathFollowingNode::initialiseServices() {
   /* Advertise the services */
   this->pf_start_srv_ = create_service<farol2_path_following::srv::StartPF>(
-                          get_parameter("topics.services.start_pf").as_string(),
+                          SERVICE_START_PF,
                           std::bind(&PathFollowingNode::StartPFService, this, std::placeholders::_1, std::placeholders::_2));
 
   this->pf_stop_srv_ = create_service<farol2_path_following::srv::StopPF>(
-                        get_parameter("topics.services.stop_pf").as_string(),
+                        SERVICE_STOP_PF,
                         std::bind(&PathFollowingNode::StopPFService, this, std::placeholders::_1, std::placeholders::_2));
 
   this->pf_update_gains_srv_ = create_service<farol2_path_following::srv::UpdateGainsPF>(
-                                get_parameter("topics.services.updates_gains_pf").as_string(),
+                                SERVICE_UPDATE_GAINS_PF,
                                 std::bind(&PathFollowingNode::UpdateGainsPFService, this, std::placeholders::_1, std::placeholders::_2));
 
   
   this->pf_marcelo_srv_ = create_service<farol2_path_following::srv::SetPF>(
-                            get_parameter("topics.services.marcelo_pf").as_string(),
+                            SERVICE_MARCELO_PF,
                             std::bind(&PathFollowingNode::SetMarceloService, this, std::placeholders::_1, std::placeholders::_2));
 
   this->pf_aguiar_srv_ = create_service<farol2_path_following::srv::SetPF>(
-                          get_parameter("topics.services.aguiar_pf").as_string(),
+                          SERVICE_AGUIAR_PF,
                           std::bind(&PathFollowingNode::SetAguiarService, this, std::placeholders::_1, std::placeholders::_2));
 
   this->pf_breivik_srv_ = create_service<farol2_path_following::srv::SetPF>(
-                            get_parameter("topics.services.breivik_pf").as_string(),
+                            SERVICE_BREIVIK_PF,
                             std::bind(&PathFollowingNode::SetBreivikService, this, std::placeholders::_1, std::placeholders::_2));
 
   this->pf_fossen_srv_ = create_service<farol2_path_following::srv::SetPF>(
-                          get_parameter("topics.services.fossen_pf").as_string(),
+                          SERVICE_FOSSEN_PF,
                           std::bind(&PathFollowingNode::SetFossenService, this, std::placeholders::_1, std::placeholders::_2));
 
   this->pf_romulo_srv_ = create_service<farol2_path_following::srv::SetPF>(
-                          get_parameter("topics.services.romulo_pf").as_string(),
+                          SERVICE_ROMULO_PF,
                           std::bind(&PathFollowingNode::SetRomuloService, this, std::placeholders::_1, std::placeholders::_2));
 
   this->pf_lapierre_srv_ = create_service<farol2_path_following::srv::SetPF>(
-                            get_parameter("topics.services.lapierre_pf").as_string(),
+                            SERVICE_LAPIERRE_PF,
                             std::bind(&PathFollowingNode::SetLapierreService, this, std::placeholders::_1, std::placeholders::_2));
 
   this->pf_pramod_srv_ = create_service<farol2_path_following::srv::SetPF>(
-                          get_parameter("topics.services.pramod_pf").as_string(),
+                          SERVICE_PRAMOD_PF,
                           std::bind(&PathFollowingNode::SetPramodService, this, std::placeholders::_1, std::placeholders::_2));
 
   this->pf_samson_srv_ = create_service<farol2_path_following::srv::SetPF>(
-                          get_parameter("topics.services.samson_pf").as_string(),
+                          SERVICE_SAMSON_PF,
                           std::bind(&PathFollowingNode::SetSamsonService, this, std::placeholders::_1, std::placeholders::_2));
 
   this->pf_relative_heading_srv_ = create_service<farol2_path_following::srv::SetPF>(
-                                    get_parameter("topics.services.relative_heading_pf").as_string(),
+                                    SERVICE_RELATIVE_HEADING_PF,
                                     std::bind(&PathFollowingNode::SetRelativeHeadingService, this, std::placeholders::_1, std::placeholders::_2));
 
   this->pf_ilos_srv_ = create_service<farol2_path_following::srv::SetPF>(
-                        get_parameter("topics.services.ilos_pf").as_string(),
+                        SERVICE_ILOS_PF,
                         std::bind(&PathFollowingNode::SetIlosService, this, std::placeholders::_1, std::placeholders::_2));
 
   
   this->pf_reset_vt_srv_ = create_service<farol2_path_following::srv::ResetVT>(
-                            get_parameter("topics.services.reset_vt_pf").as_string(),
+                            SERVICE_RESET_VT_PF,
                             std::bind(&PathFollowingNode::ResetVirtualTargetService, this, std::placeholders::_1, std::placeholders::_2));
   
   /* Setup the waypoint client needed when mission finishes */
   this->wp_standard_client_ = create_client<farol2_waypoint::srv::SendWpType1>(
-                                get_parameter("topics.services.wp_standard").as_string());
+                                SERVICE_WP_STANDARD);
   
   /* Setup the reset DeadReckoning client needed when mission finishes */
   this->dr_reset_client_ = create_client<std_srvs::srv::Trigger>(
-                            get_parameter("topics.services.reset_dr").as_string());
+                            SERVICE_RESET_DR);
   
   /* Reset the path we are following and set the mode of operation */
   this->reset_path_client_ = create_client<farol2_planning::srv::ResetPath>(
-                              get_parameter("topics.services.reset_path").as_string());
+                  SERVICE_RESET_PATH);
 
   this->set_path_mode_client_ = create_client<farol2_planning::srv::SetMode>(
-                                  get_parameter("topics.services.set_path_mode").as_string());
+                    SERVICE_SET_PATH_MODE);
 
 }
 
@@ -199,13 +199,13 @@ void PathFollowingNode::SetRelativeHeadingService(const std::shared_ptr<farol2_p
 
     /* Create the publishers for the node */
     this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                  get_parameter("topics.publishers.surge").as_string(), 1));
+                                  TOPIC_PUB_SURGE, 1));
     this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                  get_parameter("topics.publishers.sway").as_string(), 1));
+                                  TOPIC_PUB_SWAY, 1));
     this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                  get_parameter("topics.publishers.yaw").as_string(), 1));
+                                  TOPIC_PUB_YAW, 1));
     this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                  get_parameter("topics.publishers.rabbit").as_string(), 1));
+                                  TOPIC_PUB_RABBIT, 1));
 
     /* Read the control gains from the parameter server */
     double kx, ky, kz, yaw_offset;
@@ -225,7 +225,7 @@ void PathFollowingNode::SetRelativeHeadingService(const std::shared_ptr<farol2_p
 
         /* Path the debug variables publisher to the class*/
         pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                    get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
+                                                    TOPIC_PUB_PFOLLOWING_DEBUG, 1));
 
         /* Return success */
         res->success = true;
@@ -257,16 +257,16 @@ void PathFollowingNode::SetMarceloService(const std::shared_ptr<farol2_path_foll
 
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.yaw_rate").as_string(), 1));
+                                TOPIC_PUB_YAW_RATE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.rabbit").as_string(), 1));
+                                TOPIC_PUB_RABBIT, 1));
 
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.observer.x").as_string(), 1));
+                                TOPIC_PUB_OBSERVER_X, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.observer.y").as_string(), 1));
+                                TOPIC_PUB_OBSERVER_Y, 1));
 
   double delta, kz;
   double kk[2];
@@ -293,7 +293,7 @@ void PathFollowingNode::SetMarceloService(const std::shared_ptr<farol2_path_foll
           this->publishers_[1], this->publishers_[2], this->publishers_[3], this->publishers_[4]);
 
     pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
+                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
     
     res->success = true;
 
@@ -324,11 +324,11 @@ void PathFollowingNode::SetAguiarService(const std::shared_ptr<farol2_path_follo
 
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.yaw_rate").as_string(), 1));
+                                TOPIC_PUB_YAW_RATE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.rabbit").as_string(), 1));
+                                TOPIC_PUB_RABBIT, 1));
 
   double delta, kz;
   double kk[2];
@@ -351,7 +351,7 @@ void PathFollowingNode::SetAguiarService(const std::shared_ptr<farol2_path_follo
           this->publishers_[1], this->publishers_[2]);
 
     pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
+                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
     
     res->success = true;
 
@@ -382,11 +382,11 @@ void PathFollowingNode::SetBreivikService(const std::shared_ptr<farol2_path_foll
 
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.yaw").as_string(), 1));
+                                TOPIC_PUB_YAW, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.rabbit").as_string(), 1));
+                                TOPIC_PUB_RABBIT, 1));
   
   /* Read the gains for the controller */
   double delta_h;
@@ -399,7 +399,7 @@ void PathFollowingNode::SetBreivikService(const std::shared_ptr<farol2_path_foll
         this->publishers_[1], this->publishers_[2], delta_h);
     res->success = true;
     pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
+                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
 
   } catch (...) {
     RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
@@ -428,9 +428,9 @@ void PathFollowingNode::SetFossenService(const std::shared_ptr<farol2_path_follo
 
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.yaw").as_string(), 1));
+                                TOPIC_PUB_YAW, 1));
    
   try {
 
@@ -438,7 +438,7 @@ void PathFollowingNode::SetFossenService(const std::shared_ptr<farol2_path_follo
     this->pf_algorithm_ = new Fossen(this->publishers_[0], this->publishers_[1], this->set_path_mode_client_);
     res->success = true;
     pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
+                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
 
   } catch (...) {
     RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
@@ -467,11 +467,11 @@ void PathFollowingNode::SetRomuloService(const std::shared_ptr<farol2_path_follo
 
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.sway").as_string(), 1));
+                                TOPIC_PUB_SWAY, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.rabbit").as_string(), 1));
+                                TOPIC_PUB_RABBIT, 1));
 
   /* Variables to store the gains of the controller */
   std::vector<double> controller_gains;
@@ -491,7 +491,7 @@ void PathFollowingNode::SetRomuloService(const std::shared_ptr<farol2_path_follo
           this->publishers_[1], this->publishers_[2]);
     res->success = true;
     pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
+                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
 
   } catch (...) {
     RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
@@ -520,11 +520,11 @@ void PathFollowingNode::SetLapierreService(const std::shared_ptr<farol2_path_fol
 
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.yaw_rate").as_string(), 1));
+                                TOPIC_PUB_YAW_RATE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.rabbit").as_string(), 1));
+                                TOPIC_PUB_RABBIT, 1));
 
   /* Variables to store the gains of the controller */
   double k1, k2, k3, theta, k_delta;
@@ -541,7 +541,7 @@ void PathFollowingNode::SetLapierreService(const std::shared_ptr<farol2_path_fol
     /* Assign the new controller */
     this->pf_algorithm_ = new Lapierre(k1, k2, k3, theta, k_delta, this->publishers_[0], this->publishers_[1], this->publishers_[2]);
     pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
+                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
     res->success = true;
 
   } catch (...) {
@@ -571,11 +571,11 @@ void PathFollowingNode::SetPramodService(const std::shared_ptr<farol2_path_follo
 
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.yaw").as_string(), 1));
+                                TOPIC_PUB_YAW, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.rabbit").as_string(), 1));
+                                TOPIC_PUB_RABBIT, 1));
 
   /* Variables to store the gains of the controller */
   double kp, ki;
@@ -594,7 +594,7 @@ void PathFollowingNode::SetPramodService(const std::shared_ptr<farol2_path_follo
     this->pf_algorithm_ = new Pramod(controller_gains, this->publishers_[0],
         this->publishers_[1], this->publishers_[2], this->set_path_mode_client_);
     pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
+                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
     res->success = true;
 
   } catch (...) {
@@ -624,9 +624,9 @@ void PathFollowingNode::SetSamsonService(const std::shared_ptr<farol2_path_follo
 
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.yaw_rate").as_string(), 1));
+                                TOPIC_PUB_YAW_RATE, 1));
 
   /* Variables to store the gains of the controller */
   double k1, k2, k3, theta, k_delta;
@@ -643,7 +643,7 @@ void PathFollowingNode::SetSamsonService(const std::shared_ptr<farol2_path_follo
     /* Assign the new controller */
     this->pf_algorithm_ = new Samson(k1, k2, k3, theta, k_delta, this->publishers_[0], this->publishers_[1], this->set_path_mode_client_ );
     pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
+                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
     res->success = true;
 
   } catch (...) {
@@ -673,11 +673,11 @@ void PathFollowingNode::SetIlosService(const std::shared_ptr<farol2_path_followi
 
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.surge").as_string(), 1));
+                                TOPIC_PUB_SURGE, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.yaw").as_string(), 1));
+                                TOPIC_PUB_YAW, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                get_parameter("topics.publishers.rabbit").as_string(), 1));
+                                TOPIC_PUB_RABBIT, 1));
 
   /* Variables to store the gains of the controller */
   double delta, ki;
@@ -695,7 +695,7 @@ void PathFollowingNode::SetIlosService(const std::shared_ptr<farol2_path_followi
                                    this->publishers_[2],
                                    this->set_path_mode_client_);
     pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                get_parameter("topics.publishers.pfollowing_debug").as_string(), 1));
+                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
     res->success = true;
 
   } catch (...) {

@@ -28,15 +28,15 @@ ConsoleParser::~ConsoleParser() {
  */
 void ConsoleParser::initializeSubscribers() {
   missionstring_sub_ = create_subscription<std_msgs::msg::String>(
-                        get_parameter("topics.subscribers.Mission_String").as_string(), 
+                        TOPIC_SUB_MISSION_STRING,
                         1, std::bind(&ConsoleParser::missionStringCallback, this, std::placeholders::_1));
   
   state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
-                get_parameter("topics.subscribers.state").as_string(), 
+                TOPIC_SUB_STATE,
                 1, std::bind(&ConsoleParser::stateCallback, this, std::placeholders::_1));
 
   mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
-                          get_parameter("topics.subscribers.mission_status").as_string(), 
+                          TOPIC_SUB_MISSION_STATUS,
                           1, std::bind(&ConsoleParser::missionStatusCallback, this, std::placeholders::_1));
 }
 
@@ -46,25 +46,25 @@ void ConsoleParser::initializeSubscribers() {
  */
 void ConsoleParser::initializePublishers() {
   section_pub_ = create_publisher<farol2_interfaces::msg::Section>(
-                  get_parameter("topics.publishers.Path_Section").as_string(), 1);
+                  TOPIC_PUB_PATH_SECTION, 1);
 
   formation_pub_ = create_publisher<farol2_interfaces::msg::Formation>(
-                    get_parameter("topics.publishers.Formation").as_string(), 1);
+                    TOPIC_PUB_FORMATION, 1);
 
   biased_formation_pub_ = create_publisher<farol2_interfaces::msg::Formation>(
-                            get_parameter("topics.publishers.biased_formation").as_string(), 1);
+                            TOPIC_PUB_BIASED_FORMATION, 1);
 
   wpref_pub_ = create_publisher<geometry_msgs::msg::PointStamped>(
-                get_parameter("topics.publishers.WPRef").as_string(), 1);
+                TOPIC_PUB_WP_REF, 1);
 
   altitude_pub_ = create_publisher<std_msgs::msg::Float32>(
-                    get_parameter("topics.publishers.DepthRef").as_string(), 1);
+                    TOPIC_PUB_DEPTH_REF, 1);
 
   depth_pub_ = create_publisher<std_msgs::msg::Float32>(
-                get_parameter("topics.publishers.AltRef").as_string(), 1);
+                TOPIC_PUB_ALT_REF, 1);
 
   fullpath_pub_ = create_publisher<farol2_interfaces::msg::MultiSection>(
-                    get_parameter("topics.publishers.FullMission").as_string(), 1);
+                    TOPIC_PUB_FULL_MISSION, 1);
 }
 
 /**
@@ -73,22 +73,22 @@ void ConsoleParser::initializePublishers() {
 void ConsoleParser::initializeServices() {
   /* Service clients */
   reset_path_client_ = create_client<farol2_planning::srv::ResetPath>(
-                        get_parameter("topics.services.reset_path").as_string());
+                        SERVICE_RESET_PATH);
 
   spawn_arc_client_ = create_client<farol2_planning::srv::SpawnArc2D>(
-                        get_parameter("topics.services.arc2d_path").as_string());
+                        SERVICE_ARC2D_PATH);
 
   spawn_line_client_ = create_client<farol2_planning::srv::SpawnLine>(
-                        get_parameter("topics.services.line_path").as_string());
+                        SERVICE_LINE_PATH);
 
   set_path_speed_client_ = create_client<farol2_planning::srv::SetConstSpeed>(
-                            get_parameter("topics.services.set_speed").as_string());
+                            SERVICE_SET_SPEED);
 
   start_pf_client_ = create_client<farol2_path_following::srv::StartPF>(
-                      get_parameter("topics.services.pf_start").as_string());
+                      SERVICE_PF_START);
 
   stop_pf_client_ = create_client<farol2_path_following::srv::StopPF>(
-                      get_parameter("topics.services.pf_stop").as_string());
+                      SERVICE_PF_STOP);
 }
 
 /**

@@ -54,6 +54,39 @@
 #define FLAG_IDLE 0
 #define FLAG_PF 6
 
+// Topic/service names (short form, remapped in launch file)
+#define TOPIC_SUB_STATE "state"
+#define TOPIC_SUB_PATH_DATA "path_data"
+#define TOPIC_SUB_VC "vc"
+#define TOPIC_SUB_MISSION_STATUS "mission_status"
+#define TOPIC_PUB_MISSION_STATUS "mission_status"
+#define TOPIC_PUB_PFOLLOWING_DEBUG "pfollowing_debug"
+#define TOPIC_PUB_SURGE "surge"
+#define TOPIC_PUB_SWAY "sway"
+#define TOPIC_PUB_YAW "yaw"
+#define TOPIC_PUB_YAW_RATE "yaw_rate"
+#define TOPIC_PUB_RABBIT "rabbit"
+#define TOPIC_PUB_OBSERVER_X "observer_x"
+#define TOPIC_PUB_OBSERVER_Y "observer_y"
+#define SERVICE_START_PF "start_pf"
+#define SERVICE_STOP_PF "stop_pf"
+#define SERVICE_UPDATE_GAINS_PF "update_gains_pf"
+#define SERVICE_MARCELO_PF "marcelo_pf"
+#define SERVICE_AGUIAR_PF "aguiar_pf"
+#define SERVICE_BREIVIK_PF "breivik_pf"
+#define SERVICE_FOSSEN_PF "fossen_pf"
+#define SERVICE_ROMULO_PF "romulo_pf"
+#define SERVICE_LAPIERRE_PF "lapierre_pf"
+#define SERVICE_PRAMOD_PF "pramod_pf"
+#define SERVICE_SAMSON_PF "samson_pf"
+#define SERVICE_RELATIVE_HEADING_PF "relative_heading_pf"
+#define SERVICE_ILOS_PF "ilos_pf"
+#define SERVICE_RESET_VT_PF "reset_vt_pf"
+#define SERVICE_WP_STANDARD "wp_standard"
+#define SERVICE_RESET_DR "reset_dr"
+#define SERVICE_RESET_PATH "reset_path"
+#define SERVICE_SET_PATH_MODE "set_path_mode"
+
 /**
  * @brief     Path Following Node, where the magic happens 
  * @author    Marcelo Jacinto

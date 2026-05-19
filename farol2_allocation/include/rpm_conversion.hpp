@@ -11,6 +11,11 @@
 #include "farol2_allocation/msg/thruster_rpm.hpp"
 #include "farol2_interfaces/msg/navigation_state.hpp"
 
+// Topic names (short form, remapped in launch file)
+#define TOPIC_SUB_THRUSTER_FORCE "thruster_force"
+#define TOPIC_SUB_NAV_STATE "nav_state"
+#define TOPIC_PUB_RPM_COMMAND "rpm_command"
+
 /**
  * @brief   RPM Conversion
  * @author  Eduardo Cunha

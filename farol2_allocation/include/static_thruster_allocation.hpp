@@ -14,6 +14,10 @@
 
 #include <actuation_utils.hpp>
 
+// Topic names (short form, remapped in launch file)
+#define TOPIC_SUB_BODY_WRENCH_REQUEST "body_wrench_request"
+#define TOPIC_PUB_THRUSTER_FORCE "thruster_force"
+
 /**
  * @brief   Static Thruster Allocation
  * @author  DSOR Team

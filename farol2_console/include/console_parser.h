@@ -48,6 +48,24 @@
 
 #define BUF_SIZE_TIME 80
 
+// Topic/service names (short form, remapped in launch file)
+#define TOPIC_SUB_MISSION_STRING "Mission_String"
+#define TOPIC_SUB_STATE "state"
+#define TOPIC_SUB_MISSION_STATUS "mission_status"
+#define TOPIC_PUB_PATH_SECTION "Path_Section"
+#define TOPIC_PUB_FORMATION "Formation"
+#define TOPIC_PUB_BIASED_FORMATION "biased_formation"
+#define TOPIC_PUB_WP_REF "WPRef"
+#define TOPIC_PUB_DEPTH_REF "DepthRef"
+#define TOPIC_PUB_ALT_REF "AltRef"
+#define TOPIC_PUB_FULL_MISSION "FullMission"
+#define SERVICE_RESET_PATH "reset_path"
+#define SERVICE_ARC2D_PATH "arc2d_path"
+#define SERVICE_LINE_PATH "line_path"
+#define SERVICE_SET_SPEED "set_speed"
+#define SERVICE_PF_START "pf_start"
+#define SERVICE_PF_STOP "pf_stop"
+
 /**
  * @brief Class Responsible for parsing a mission from the console Yebisu to farol_vx stack format
  * 

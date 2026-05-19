@@ -25,6 +25,19 @@
 #include "wp_loose.h"
 #include "wp_standard.h"
 
+// Topic/service names (short form, remapped in launch file)
+#define TOPIC_SUB_MISSION_STATUS "mission_status"
+#define TOPIC_SUB_STATE "state"
+#define TOPIC_SUB_TURN_RADIUS_FLAG "turn_radius_flag"
+#define TOPIC_PUB_YAW_REF "yaw_ref"
+#define TOPIC_PUB_YAW_RATE_REF "yaw_rate_ref"
+#define TOPIC_PUB_U_REF "u_ref"
+#define TOPIC_PUB_V_REF "v_ref"
+#define TOPIC_PUB_MISSION_STATUS "mission_status"
+#define SERVICE_WP_STANDARD "wp_standard"
+#define SERVICE_WP_LOOSE "wp_loose"
+#define SERVICE_WP_HEADING "wp_heading"
+
 /**
  * @brief  ROS node class
  */

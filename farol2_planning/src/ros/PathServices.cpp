@@ -6,49 +6,49 @@
  */
 void PathNode::initializeServices() {
   this->reset_path_srv_ = create_service<farol2_planning::srv::ResetPath>(
-      declare_parameter<std::string>("topics.services.reset_path"),
+      SERVICE_RESET_PATH,
       [this](const std::shared_ptr<farol2_planning::srv::ResetPath::Request> request,
         std::shared_ptr<farol2_planning::srv::ResetPath::Response> response){
         ResetPathService(request, response);});
 
   this->set_mode_srv_ = create_service<farol2_planning::srv::SetMode>(
-      declare_parameter<std::string>("topics.services.set_mode"),
+      SERVICE_SET_MODE,
       [this](const std::shared_ptr<farol2_planning::srv::SetMode::Request> request,
         std::shared_ptr<farol2_planning::srv::SetMode::Response> response){
         SetModeService(request, response);});
   
   this->arc2d_srv_ = create_service<farol2_planning::srv::SpawnArc2D>(
-      declare_parameter<std::string>("topics.services.arc2d_path"),
+      SERVICE_ARC2D_PATH,
       [this](const std::shared_ptr<farol2_planning::srv::SpawnArc2D::Request> request,
         std::shared_ptr<farol2_planning::srv::SpawnArc2D::Response> response){
         Arc2DService(request, response);});
 
   this->bernoulli_srv_ = create_service<farol2_planning::srv::SpawnBernoulli>(
-      declare_parameter<std::string>("topics.services.bernoulli_path"),
+      SERVICE_BERNOULLI_PATH,
       [this](const std::shared_ptr<farol2_planning::srv::SpawnBernoulli::Request> request,
         std::shared_ptr<farol2_planning::srv::SpawnBernoulli::Response> response){
         BernoulliService(request, response);});
   
   this->circle2D_srv_ = create_service<farol2_planning::srv::SpawnCircle2D>(
-      declare_parameter<std::string>("topics.services.circle2d_path"),
+      SERVICE_CIRCLE2D_PATH,
       [this](const std::shared_ptr<farol2_planning::srv::SpawnCircle2D::Request> request,
         std::shared_ptr<farol2_planning::srv::SpawnCircle2D::Response> response){
         Circle2DService(request, response);});
   
   this->line_srv_ = create_service<farol2_planning::srv::SpawnLine>(
-      declare_parameter<std::string>("topics.services.line_path"),
+      SERVICE_LINE_PATH,
       [this](const std::shared_ptr<farol2_planning::srv::SpawnLine::Request> request,
         std::shared_ptr<farol2_planning::srv::SpawnLine::Response> response){
         LineService(request, response);});
 
   this->rabbit_const_speed_srv_ = create_service<farol2_planning::srv::SetConstSpeed>(
-      declare_parameter<std::string>("topics.services.speed.const_rabbit_speed"),
+      SERVICE_CONST_RABBIT_SPEED,
       [this](const std::shared_ptr<farol2_planning::srv::SetConstSpeed::Request> request,
         std::shared_ptr<farol2_planning::srv::SetConstSpeed::Response> response){
         RabbitConstSpeedService(request, response);});
   
   this->vehicle_const_speed_srv_ = create_service<farol2_planning::srv::SetConstSpeed>(
-      declare_parameter<std::string>("topics.services.speed.const_vehicle_speed"),
+      SERVICE_CONST_VEHICLE_SPEED,
       [this](const std::shared_ptr<farol2_planning::srv::SetConstSpeed::Request> request,
         std::shared_ptr<farol2_planning::srv::SetConstSpeed::Response> response){
         VehicleConstSpeedService(request, response);});

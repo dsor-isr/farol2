@@ -3,20 +3,15 @@
 <package format="3">
   <name>farol2_bringup</name>
   <version>0.0.0</version>
-  <description>farol2_bringup: Bringup to launch all packages and handle process management</description>
+  <description>farol2_bringup: configuration files and shared launch files for the Farol2 stack</description>
   <maintainer email="eduardo.m.a.cunha@tecnico.ulisboa.pt">Eduardo Cunha</maintainer>
   <license>MIT</license>
 
-  <exec_depend>farol2_interfaces</exec_depend>
-  <exec_depend>rclpy</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
   <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
-  <test_depend>python3-pytest</test_depend>
 
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

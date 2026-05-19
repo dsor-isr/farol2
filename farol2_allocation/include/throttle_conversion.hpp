@@ -11,6 +11,10 @@
 #include "farol2_allocation/msg/thruster_rpm.hpp"
 #include "farol2_interfaces/msg/thruster.hpp"
 
+// Topic names (short form, remapped in launch file)
+#define TOPIC_SUB_RPM_COMMAND "rpm_command"
+#define TOPIC_PUB_THROTTLE_COMMAND "throttle_command"
+
 /**
  * @brief   RPM Conversion
  * @author  Eduardo Cunha
