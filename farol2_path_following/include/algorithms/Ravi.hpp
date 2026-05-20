@@ -2,25 +2,21 @@
 #include "PathFollowing.h"
 
 /**
- * @brief Path following using Pramod's algorithm for path following*
- *
- * This algorithm support:
+ * @brief Path following using an improved versionof Pramod's algorithm for path following
+ *  I put my name but i dont want to remove credits to the original authors of the 
+ *  algorithm, as well as Luis Sebastião who helped with the brainstorming.
  *    Controls:
  *      - yaw
  *      - surge
- *    Supports Cooperative Path Following - True (i dont think it supports tho)
- *    Contains Currents Observers - False
+ *    Supports Cooperative Path Following - False (i think)
+ *    Contains Currents Observers - True (uses the one built into the nav filter)
  *
- * @author    Marcelo Jacinto
- * @author    Joao Quintas
- * @author    Joao Cruz
- * @author    Hung Tuan
  * @author    Ravi Regalo
  * @version   1.0a
  * @date      2021
  * @copyright MIT
  */
-class Pramod : public PathFollowing {
+class Ravi : public PathFollowing {
 
   public:
 
@@ -32,12 +28,12 @@ class Pramod : public PathFollowing {
      * @param yaw_pub The ROS yaw publisher
      * @param mode_client The ROS service client to change the mode of operation of the path (to the closest point)
      */
-    Pramod(std::vector<double> gains, 
-           rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surge_pub, 
-           rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_pub, 
-           rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr gamma_pub, 
-           rclcpp::Client<farol2_planning::srv::SetMode>::SharedPtr mode_client);
-    
+    Ravi(std::vector<double> gains,
+         rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surge_pub,
+         rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_pub,
+         rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr gamma_pub,
+         rclcpp::Client<farol2_planning::srv::SetMode>::SharedPtr mode_client);
+
     /**
      * @brief  Method that given an array of doubles, updates the gains of the controller
      *
@@ -47,15 +43,15 @@ class Pramod : public PathFollowing {
      */
     bool setPFGains(std::vector<double> gains) override;
 
-    /** 
-     * @brief  Method that implements the path following control law 
+    /**
+     * @brief  Method that implements the path following control law
      *
      * @param dt The time diference between the previous and current call (in seconds)
      */
     void callPFController(double dt) override;
 
     /**
-     * @brief  Method to publish the data from the path following 
+     * @brief  Method to publish the data from the path following
      */
     void publish_private() override;
 
@@ -63,7 +59,7 @@ class Pramod : public PathFollowing {
      * @brief  Method used to start the algorithm in the first run
      */
     void start() override;
-    
+
     /**
      * @brief  Method used to check whether we reached the end of the algorithm or not
      *
@@ -72,7 +68,7 @@ class Pramod : public PathFollowing {
     bool stop() override;
 
     /**
-     * @brief  Method used to reset the algorithm control parameters 
+     * @brief  Method used to reset the algorithm control parameters
      * when running the algorithm more than once
      *
      * @return  Whether the reset was made successfully or not
@@ -83,11 +79,11 @@ class Pramod : public PathFollowing {
   private:
 
     /**
-     * @brief Controller paramter gains 
+     * @brief Controller paramter gains
      */
-    double kp_;
-    double ki_;
-    double es_;
+    double e_turn_;
+    double xi_;
+    double epsilon_current_;
 
     /**
      * @brief Variables to store the desired references
@@ -95,6 +91,8 @@ class Pramod : public PathFollowing {
     double desired_surge_{0.0};
     double desired_yaw_{0.0};
     double sigma_{0.0};
+    bool first_ = true;
+    double vc_hat_ = 0.0;
 
     /**
      * @brief ROS publishers
@@ -102,9 +100,9 @@ class Pramod : public PathFollowing {
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surge_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr gamma_pub_;
-    
+
     /**
-     * @brief ROS service to use the closest point to the path 
+     * @brief ROS service to use the closest point to the path
      */
     rclcpp::Client<farol2_planning::srv::SetMode>::SharedPtr mode_client_;
 

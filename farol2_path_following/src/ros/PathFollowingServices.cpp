@@ -47,6 +47,10 @@ void PathFollowingNode::initialiseServices() {
                           SERVICE_PRAMOD_PF,
                           std::bind(&PathFollowingNode::SetPramodService, this, std::placeholders::_1, std::placeholders::_2));
 
+  this->pf_ravi_srv_ = create_service<farol2_path_following::srv::SetPF>(
+                        SERVICE_RAVI_PF,
+                        std::bind(&PathFollowingNode::SetRaviService, this, std::placeholders::_1, std::placeholders::_2));
+
   this->pf_samson_srv_ = create_service<farol2_path_following::srv::SetPF>(
                           SERVICE_SAMSON_PF,
                           std::bind(&PathFollowingNode::SetSamsonService, this, std::placeholders::_1, std::placeholders::_2));
@@ -605,6 +609,61 @@ void PathFollowingNode::SetPramodService(const std::shared_ptr<farol2_path_follo
 
   /* Return success */
   RCLCPP_INFO(this->get_logger(), "PF controller switched to Pramod. This algorithm uses the path closest point to make the computations");
+  return;
+}
+
+/* Service to switch to the Samson Path Following method */
+void PathFollowingNode::SetRaviService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
+                                       std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
+
+  /* Don't change if the algorithm is running */
+  if (!this->timer_->is_canceled()) {
+    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
+    res->success = false;
+    return;
+  }
+
+  /* Clear the memory used by the previous controller */
+  this->deleteCurrentController();
+
+  /* Create the publishers for the node */
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
+                                TOPIC_PUB_SURGE, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
+                                TOPIC_PUB_YAW, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
+                                TOPIC_PUB_RABBIT, 1));
+
+  /* Variables to store the gains of the controller */
+  double e_turn, xi, epsilon_current;
+  std::vector<double> controller_gains;
+
+  try {
+
+    /* Read the gains for the controller */
+    e_turn = get_parameter("controller_gains.ravi.e_turn").as_double();
+    xi = get_parameter("controller_gains.ravi.xi").as_double();
+    epsilon_current = get_parameter("controller_gains.ravi.epsilon_current").as_double();
+
+    controller_gains.push_back(e_turn);
+    controller_gains.push_back(xi);
+    controller_gains.push_back(epsilon_current);
+
+    /* Assign the new controller */
+    this->pf_algorithm_ = new Ravi(controller_gains, this->publishers_[0],
+        this->publishers_[1], this->publishers_[2], this->set_path_mode_client_);
+    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
+                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
+    res->success = true;
+
+  } catch (...) {
+    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
+    res->success = false;
+    return;
+  }
+
+  /* Return success */
+  RCLCPP_INFO(this->get_logger(), "PF controller switched to Ravi. This algorithm uses the path closest point to make the computations");
   return;
 }
 

@@ -35,6 +35,10 @@
           pramod:
             kp: 0.02
             ki: 0.0005
+          ravi:
+            e_turn: 17.60 # meters at which to start turning, ends up being the same as a lookahead distance
+            xi: 1.0 # luis is afraid of overshoot
+            epsilon_current: 0.2 # confidence on current estimate 
           samson:
             k1: 1.0
             k2: 0.3

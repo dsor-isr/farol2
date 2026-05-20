@@ -40,6 +40,7 @@ This node manages the PF properties discussed in the [implementation](implementa
 | /#vehicle#/control/path_following/PFSetRomulo | [path\_following/SetPF](SetPF.md) | Set the desired PF algorithm to Romulo |
 | /#vehicle#/control/path_following/PFSetLapierre | [path\_following/SetPF](SetPF.md) | Set the desired PF algorithm to Lapierre |
 | /#vehicle#/control/path_following/PFSetPramod | [path\_following/SetPF](SetPF.md) | Set the desired PF algorithm to Pramod |
+| /#vehicle#/control/path_following/PFSetRavi | [path\_following/SetPF](SetPF.md) | Set the desired PF algorithm to Ravi |
 | /#vehicle#/control/path_following/PFSetSamson | [path\_following/SetPF](SetPF.md) | Set the desired PF algorithm to Samson |
 | /#vehicle#/control/path_following/ResetPath | [paths/ResetPath](...) | Resets the current path |
 | /#vehicle#/control/path_following/SetMode | [paths/SetMode](...) | Set if mode of operation calculates closest point to the path or if it receives an external gamma for path progression |
@@ -85,6 +86,12 @@ This node manages the PF properties discussed in the [implementation](implementa
 | kz | float | 0.2 |
 
 ### Pramod Algorithm
+| Parameters | type | Default |
+| --- | --- | --- |
+| kp | float | 0.02 |
+| ki | float | 0.0005 |
+
+### Ravi Algorithm
 | Parameters | type | Default |
 | --- | --- | --- |
 | kp | float | 0.02 |
