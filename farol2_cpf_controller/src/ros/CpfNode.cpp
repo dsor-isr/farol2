@@ -1,93 +1,90 @@
-#include "CpfNode.h"
+#include "CpfNode.hpp"
 
 /**
  * @brief  Constructor for the CpfNode
- *
- * @param nh  Pointer to the public nodehandle
- * @param nh  Pointer to the private nodehandle
  */
-CpfNode::CpfNode(ros::NodeHandle * nh, ros::NodeHandle * nh_p):nh_(*nh), nh_p_(*nh_p) {
-  ROS_INFO("in class constructor of CpfNode");
-
-  /* Initialize the default controller */
-  this->cooperative_ = this->createEventTriggeredControl();
-
-  /* Initialize the ROS part */
+CpfNode::CpfNode() : rclcpp::Node("cpf_node",
+                                  rclcpp::NodeOptions()
+                                    .automatically_declare_parameters_from_overrides(true)) {
+  clock_ = this->get_clock();
   this->initializeSubscribers();
   this->initializePublishers();
   this->initializeServices();
   this->initializeTimer();
+
+  /* Allocate memory for the default CPF Algorithm - Event Triggered */
+  this->cooperative_ = this->createEventTriggeredControl();
 }
 
 /**
- * @brief  Destructor for the CpfNode
+ * @brief  Node class destructor
  */
 CpfNode::~CpfNode() {
-
-  /* Shutdown the subscribers */
-  this->external_gamma_sub_.shutdown();
-  this->internal_gamma_sub_.shutdown();
-
-  /* Shutdown the publishers */
-  this->vc_pub_.shutdown();
-  this->cpf_server_pub_.shutdown();
+  /* Stop the timer */
+  if (timer_) {
+    timer_->cancel();
+  }
 
   /* Free the memory allocated for the cooperative object */
-  if(this->cooperative_) {
+  if (this->cooperative_) {
     delete this->cooperative_;
+    this->cooperative_ = nullptr;
   }
-
-  /* Shutdown the timer */
-  timer_.stop();
-
-  /* Shutdown the node */
-  nh_.shutdown();
 }
 
+/**
+ * @brief  Creates the default Event Triggered CPF controller
+ */
 CPFControl* CpfNode::createEventTriggeredControl() {
-  /* Read the network and control parameters */
-  int ID;
-  std::vector<int> adj_matrix;
-  double k_epsilon, c0, c1, alpha;
+  int ID = 0;
+  std::vector<int64_t> adj_matrix;
+  double k_epsilon = 0.0, c0 = 0.0, c1 = 0.0, alpha = 0.0;
 
-  /* Read the network and control parameters */
-  nh_p_.getParam("ID", ID);
-  nh_p_.getParam("adjency_matrix", adj_matrix);
-  nh_p_.getParam("gains/event_triggered/c0", c0);
-  nh_p_.getParam("gains/event_triggered/c1", c1);
-  nh_p_.getParam("gains/event_triggered/alpha", alpha);
-  nh_p_.getParam("gains/event_triggered/k_epsilon", k_epsilon);
-  
+  /* Declare and read parameters */
+  this->declare_parameter<int>("ID", 0);
+  this->declare_parameter<std::vector<int64_t>>("adjency_matrix", std::vector<int64_t>{});
+  this->declare_parameter<double>("gains.event_triggered.c0", 0.0);
+  this->declare_parameter<double>("gains.event_triggered.c1", 0.0);
+  this->declare_parameter<double>("gains.event_triggered.alpha", 0.0);
+  this->declare_parameter<double>("gains.event_triggered.k_epsilon", 0.0);
+
+  ID = this->get_parameter("ID").as_int();
+  adj_matrix = this->get_parameter("adjency_matrix").as_integer_array();
+  c0 = this->get_parameter("gains.event_triggered.c0").as_double();
+  c1 = this->get_parameter("gains.event_triggered.c1").as_double();
+  alpha = this->get_parameter("gains.event_triggered.alpha").as_double();
+  k_epsilon = this->get_parameter("gains.event_triggered.k_epsilon").as_double();
+
   /* Save the ID in the node */
-  this->ID_ = ID;
+  this->ID_ = static_cast<unsigned int>(ID);
 
-  /* Compute the sqrt of the size of the adjency matrix to check if it is square */
-  int num_vehicles = static_cast<int>(std::sqrt(adj_matrix.size()));
+  /* Compute the sqrt of the size of the adjacency matrix to check if it is square */
+  int num_vehicles = static_cast<int>(std::sqrt(static_cast<double>(adj_matrix.size())));
 
-  if(std::pow(num_vehicles, 2) != adj_matrix.size()) {
-    throw std::invalid_argument("The adjency Matrix in the configuration file in not square!");
+  if (std::pow(num_vehicles, 2) != static_cast<int>(adj_matrix.size())) {
+    throw std::invalid_argument("The adjacency Matrix in the configuration file is not square!");
   }
 
-  /* Generate an Eigen Matrix from the vector that contains the adjency matrix */
+  /* Generate an Eigen Matrix from the vector that contains the adjacency matrix */
   this->adjency_matrix_.resize(num_vehicles, num_vehicles);
 
-  for(int i = 0; i < num_vehicles; i++) {
+  for (int i = 0; i < num_vehicles; i++) {
     for (int j = 0; j < num_vehicles; j++) {
       this->adjency_matrix_(i, j) = adj_matrix[(i * num_vehicles) + j];
     }
   }
 
   /* Allocate a cooperative path following control node */
-  return new EventTriggered(this->adjency_matrix_, ID, k_epsilon, c0, c1, alpha); 
+  return new EventTriggered(this->adjency_matrix_, ID, k_epsilon, c0, c1, alpha);
 }
+
 
 /**
  * @brief  Method to stop the current path following algorithm
  */
 bool CpfNode::stop() {
-  
   /* Stop the timer */
-  this->timer_.stop();
+  this->timer_->cancel();
 
   /* Reset the auxiliary variables */
   this->gamma_ = 0.0;
@@ -95,156 +92,153 @@ bool CpfNode::stop() {
   this->seq_ = 0;
 
   /* Call the reset method in the CPF algorithm */
-  if (this->cooperative_) this->cooperative_->reset();
+  if (this->cooperative_) {
+    this->cooperative_->reset();
+  }
 
   return true;
 }
 
+
 /**
- * @brief  Method to initialize all the subscribers 
+ * @brief  Method to initialize all the subscribers
  */
 void CpfNode::initializeSubscribers() {
-  ROS_INFO("Initializing Subscribers for CpfNode");
+  RCLCPP_INFO(this->get_logger(), "Initializing Subscribers for CpfNode");
 
-  /* Get the topic names for the subscribers */
-  std::string gamma_topic = FarolGimmicks::getParameters<std::string>(this->nh_p_, "topics/subscribers/internal_gamma");
-  std::string external_gamma_topic = FarolGimmicks::getParameters<std::string>(this->nh_p_, "topics/subscribers/external_gamma");
+  this->declare_parameter<std::string>("topics.subscribers.internal_gamma", "/internal_gamma");
+  this->declare_parameter<std::string>("topics.subscribers.external_gamma", "/external_gamma");
 
-  /* Initialize the subscribers */
-  this->internal_gamma_sub_ = nh_.subscribe(gamma_topic, 10, &CpfNode::internalInfoCallback, this);
-  this->external_gamma_sub_ = nh_.subscribe(external_gamma_topic, 10, &CpfNode::externalInfoCallback, this);
+  std::string gamma_topic = this->get_parameter("topics.subscribers.internal_gamma").as_string();
+  std::string external_gamma_topic = this->get_parameter("topics.subscribers.external_gamma").as_string();
+
+  this->internal_gamma_sub_ = this->create_subscription<farol2_planning::msg::PathData>(
+    gamma_topic, 10,
+    [this](const farol2_planning::msg::PathData::SharedPtr msg) {
+      this->internalInfoCallback(*msg);
+    });
+
+  this->external_gamma_sub_ = this->create_subscription<farol2_interfaces::msg::CPFGamma>(
+    external_gamma_topic, 10,
+    [this](const farol2_interfaces::msg::CPFGamma::SharedPtr msg) {
+      this->externalInfoCallback(*msg);
+    });
 }
 
 /**
- * @brief  Method to initialize all the publishers 
+ * @brief  Method to initialize all the publishers
  */
 void CpfNode::initializePublishers() {
-  ROS_INFO("Initializing Publishers for CpfNode");
+  RCLCPP_INFO(this->get_logger(), "Initializing Publishers for CpfNode");
 
-  /* Get the topic names for the publishers */
-  std::string vc_topic = FarolGimmicks::getParameters<std::string>(this->nh_p_, "topics/publishers/vc");
-  std::string cpf_server_input_topic = FarolGimmicks::getParameters<std::string>(this->nh_p_, "topics/publishers/cpf_server_input");
+  this->declare_parameter<std::string>("topics.publishers.vc", "/vc");
+  this->declare_parameter<std::string>("topics.publishers.cpf_server_input", "/cpf_server_input");
 
-  /* Initialize the publishers */
-  this->vc_pub_ = nh_.advertise<std_msgs::Float64>(vc_topic, 1);
-  this->cpf_server_pub_ = nh_.advertise<farol_msgs::CPFGamma>(cpf_server_input_topic, 1);
+  std::string vc_topic = this->get_parameter("topics.publishers.vc").as_string();
+  std::string cpf_server_input_topic = this->get_parameter("topics.publishers.cpf_server_input").as_string();
 
+  this->vc_pub_ = this->create_publisher<std_msgs::msg::Float64>(vc_topic, 1);
+  this->cpf_server_pub_ = this->create_publisher<farol2_interfaces::msg::CPFGamma>(cpf_server_input_topic, 1);
 }
 
 /**
- * @brief  Method to create the timer that will do all the work 
+ * @brief  Method to create the timer that will do all the work
  */
 void CpfNode::initializeTimer() {
-  this->timer_ =nh_.createTimer(ros::Duration(1.0 / CpfNode::nodeFrequency()), &CpfNode::timerIterCallback, this);
-  this->timer_.stop();
-}
+  /* Get node frequency from parameters */
+  this->declare_parameter<double>("node_frequency", 2.0);
+  double node_frequency = this->get_parameter("node_frequency").as_double();
+  RCLCPP_INFO(this->get_logger(), "Node will run at : %lf [hz]", node_frequency);
 
-/**
- * @brief  Method to retrieve the working frequency of this node 
- *
- * @return  A double with the frequency of the node
- */
-double CpfNode::nodeFrequency() {
-  double node_frequency;
-  this->nh_.param("node_frequency", node_frequency, 2.0);
-  ROS_INFO("Node will run at : %lf [hz]", node_frequency);
-  return node_frequency;
+  /* Create timer */
+  auto period = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / node_frequency));
+  this->timer_ = this->create_timer(period, [this]() { timerIterCallback(); });
+
+  /* Wait for the start service to start the CPF */
+  this->timer_->cancel();
 }
 
 /**
  * @brief  Callback for the timer interruption. Where all the logic of the algorithms
  * is executed with a fixed period
- *
- * @param event  The timer event (unused)
  */
-void CpfNode::timerIterCallback(const ros::TimerEvent &event) {
-
-  double t = ros::Time::now().toSec();
+void CpfNode::timerIterCallback() {
+  double t = this->clock_->now().seconds();
 
   /* Run the coordination controller */
   double vc = this->cooperative_->coordinationController(t);
 
   /* Publish the correction factor to the VC topic */
-  std_msgs::Float64 msg;
-  msg.data = vc;
-  this->vc_pub_.publish(msg);
+  auto vc_msg = std_msgs::msg::Float64();
+  vc_msg.data = vc;
+  this->vc_pub_->publish(vc_msg);
 
   /* Check if it is time to publish the current gamma to the vehicle network */
   bool pub = this->cooperative_->publishCurrentGamma(t);
 
-  if(pub) {
+  if (pub) {
+    /* Publish the current gamma to the network */
+    farol2_interfaces::msg::CPFGamma msg;
 
-    /* publish the current gamma to the network */
-    farol_msgs::CPFGamma msg;
-
-    msg.header.seq = this->seq_;
-    this->seq_++;
-    msg.header.stamp = ros::Time::now();
+    msg.header.stamp = this->clock_->now();
     msg.header.frame_id = "";
 
-    msg.ID = this->cooperative_->getCurrentVehicleID();
-    msg.gamma = this->gamma_; 
+    msg.id = this->cooperative_->getCurrentVehicleID();
+    msg.gamma = this->gamma_;
     msg.vd = this->vd_;
 
-    this->cpf_server_pub_.publish(msg);
+    this->cpf_server_pub_->publish(msg);
+    this->seq_++;
   }
 }
 
-/* Callback for receiving the external vehicle data */
-void CpfNode::externalInfoCallback(const farol_msgs::CPFGamma& msg) {
-
-  double t = ros::Time::now().toSec();
+/**
+ * @brief  Callback for receiving the external vehicle data
+ */
+void CpfNode::externalInfoCallback(const farol2_interfaces::msg::CPFGamma & msg) {
+  double t = this->clock_->now().seconds();
 
   /* Interpret the message */
-  unsigned int vehicle_ID = msg.ID;
+  unsigned int vehicle_ID = msg.id;
   double gamma = msg.gamma;
   double vd = msg.vd;
 
-  /* Ignore an external message that contains data respective to ou vehicle */
-  if(vehicle_ID == this->ID_) return;
-
-  /* Update the data inside the cooperative library */
-  if(this->cooperative_) {
-    this->cooperative_->updateVehiclesInformation(t, vehicle_ID, gamma, vd);
+  /* Ignore an external message that contains data respective to our vehicle */
+  if (vehicle_ID == this->ID_) {
+    return;
   }
 
+  /* Update the data inside the cooperative library */
+  if (this->cooperative_) {
+    this->cooperative_->updateVehiclesInformation(t, vehicle_ID, gamma, vd);
+  }
 }
 
-/* Callback for receiving the data from this vehicle */
-void CpfNode::internalInfoCallback(const dsor_paths::PathData &msg) {
 
-  double t = ros::Time::now().toSec();
+/**
+ * @brief  Callback for receiving the data from this vehicle
+ */
+void CpfNode::internalInfoCallback(const farol2_planning::msg::PathData & msg) {
+  double t = this->clock_->now().seconds();
 
-  /* Update the temporary varibales */
+  /* Update the temporary variables */
   this->gamma_ = msg.gamma;
-  this->vd_ = msg.vd; 
+  this->vd_ = msg.vd;
 
   /* Update the data inside the cooperative library */
-  if(this->cooperative_) {
+  if (this->cooperative_) {
     this->cooperative_->updateVehiclesInformation(t, this->ID_, this->gamma_, this->vd_);
   }
 }
 
 /**
- * @brief  The main function. THe entry point for this ros node
- *
- * @param argc  The number of arguments
- * @param argv  The array of arguments
- *
- * @return   An integer with success or failure
+ * @brief  The main function. The entry point for this ROS2 node
  */
-int main(int argc, char** argv) {
-
-  /* Inititate the node and the node handles*/
-  ros::init(argc, argv, "cpf_node"); 
-  ros::NodeHandle nh;
-  ros::NodeHandle nh_p("~");
-
-  ROS_INFO("main: instantiating an object of type CpfNode");
-
-  /* Instantiate the object and go into spin. Let the timer callback work */
-  CpfNode cpfNode(&nh, &nh_p);
-  ros::spin();
+int main(int argc, char ** argv) {
+  /* Initialize ROS2 and start the node */
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<CpfNode>());
+  rclcpp::shutdown();
 
   return 0;
 }

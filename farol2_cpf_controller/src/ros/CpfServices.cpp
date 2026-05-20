@@ -1,41 +1,75 @@
-#include "CpfNode.h"
+#include "CpfNode.hpp"
+
 
 /**
  * @brief  Method to initialize all the services
  */
 void CpfNode::initializeServices() {
-  ROS_INFO("Initializing Services for CpfNode");
+  RCLCPP_INFO(this->get_logger(), "Initializing Services for CpfNode");
 
-  /* Get the service names for starting and stoping the path following */
-  std::string start_cpf_name = FarolGimmicks::getParameters<std::string>(this->nh_p_, "topics/services/start_cpf", "/start_cpf");
-  std::string stop_cpf_name = FarolGimmicks::getParameters<std::string>(this->nh_p_, "topics/services/stop_cpf", "/stop_cpf");
-  std::string change_topology_name = FarolGimmicks::getParameters<std::string>(this->nh_p_, "topics/services/change_topology", "/change_topology");
+  /* Declare parameters and get service names */
+  this->declare_parameter<std::string>("topics.services.start_cpf", "/start_cpf");
+  this->declare_parameter<std::string>("topics.services.stop_cpf", "/stop_cpf");
+  this->declare_parameter<std::string>("topics.services.change_topology", "/change_topology");
 
-  /* Advertise the services with these names */
-  this->startCPF_srv_= this->nh_.advertiseService(start_cpf_name, &CpfNode::StartService, this);
-  this->stopCPF_srv_ = this->nh_.advertiseService(stop_cpf_name, &CpfNode::StopService, this);
-  this->change_topology_srv_ = this->nh_.advertiseService(change_topology_name, &CpfNode::ChangeTopologyService, this);
+  std::string start_cpf_name = this->get_parameter("topics.services.start_cpf").as_string();
+  std::string stop_cpf_name = this->get_parameter("topics.services.stop_cpf").as_string();
+  std::string change_topology_name = this->get_parameter("topics.services.change_topology").as_string();
+
+  /* Create ROS2 services */
+  startCPF_srv_ = this->create_service<farol2_cpf_controller::srv::StartStop>(
+    start_cpf_name,
+    [this](const std::shared_ptr<rmw_request_id_t> /*req_header*/,
+           const std::shared_ptr<farol2_cpf_controller::srv::StartStop::Request> req,
+           std::shared_ptr<farol2_cpf_controller::srv::StartStop::Response> res) {
+      (void)req;
+      this->StartService(*req, *res);
+    });
+
+  stopCPF_srv_ = this->create_service<farol2_cpf_controller::srv::StartStop>(
+    stop_cpf_name,
+    [this](const std::shared_ptr<rmw_request_id_t> /*req_header*/,
+           const std::shared_ptr<farol2_cpf_controller::srv::StartStop::Request> req,
+           std::shared_ptr<farol2_cpf_controller::srv::StartStop::Response> res) {
+      (void)req;
+      this->StopService(*req, *res);
+    });
+
+  change_topology_srv_ = this->create_service<farol2_cpf_controller::srv::ChangeTopology>(
+    change_topology_name,
+    [this](const std::shared_ptr<rmw_request_id_t> /*req_header*/,
+           const std::shared_ptr<farol2_cpf_controller::srv::ChangeTopology::Request> req,
+           std::shared_ptr<farol2_cpf_controller::srv::ChangeTopology::Response> res) {
+      this->ChangeTopologyService(*req, *res);
+    });
 }
 
-/* Start Service callback */
-bool CpfNode::StartService(cpf_control::StartStop::Request &req, cpf_control::StartStop::Response &res) {
 
-  /* Check if timer was already running or not */
-  if (timer_.hasStarted()) {
-    ROS_INFO("CPF is already running");
+/* Start Service callback */
+bool CpfNode::StartService(farol2_cpf_controller::srv::StartStop::Request & /*req*/, farol2_cpf_controller::srv::StartStop::Response & res) {
+  if (!timer_) {
+    RCLCPP_ERROR(this->get_logger(), "Timer not initialized");
+    res.success = false;
     return true;
   }
 
-  /* Check if the pointer is not null and start the callback timer */
-  if(this->cooperative_ != nullptr) {
-    ROS_INFO("CPF will start.");
-    timer_.start();
+  /* If timer is already active, inform and return */
+  if (!timer_->is_canceled()) {
+    RCLCPP_INFO(this->get_logger(), "CPF is already running");
+    res.success = true;
+    return true;
+  }
+
+  /* Check and start timer */
+  if (this->cooperative_ != nullptr) {
+    RCLCPP_INFO(this->get_logger(), "CPF will start.");
+    timer_->reset();
     res.success = true;
     gamma_ = 0.0;
     vd_ = 0.0;
   } else {
-    ROS_ERROR("For some reason the CPF algorithm is not instantiated. Restart this node");
-    timer_.stop();
+    RCLCPP_ERROR(this->get_logger(), "CPF algorithm is not instantiated. Restart this node");
+    timer_->cancel();
     res.success = false;
   }
 
@@ -43,48 +77,47 @@ bool CpfNode::StartService(cpf_control::StartStop::Request &req, cpf_control::St
 }
 
 /* Stop Service callback */
-bool CpfNode::StopService(cpf_control::StartStop::Request &req, cpf_control::StartStop::Response &res) {
-
-  /* Check if the timer was running or not */
-  if (timer_.hasStarted()) {
-    ROS_INFO("CPF will stop.");
-  } else {
-    ROS_INFO("CPF was not running.");
+bool CpfNode::StopService(farol2_cpf_controller::srv::StartStop::Request & /*req*/, farol2_cpf_controller::srv::StartStop::Response & res) {
+  if (timer_) {
+    if (timer_->is_canceled()) {
+      RCLCPP_INFO(this->get_logger(), "CPF was not running.");
+    } else {
+      RCLCPP_INFO(this->get_logger(), "CPF will stop.");
+    }
   }
 
-  /* Call the method that stops the CPF algorithm and resets it */
+  /* Stop and reset CPF algorithm */
   this->stop();
-  
+
   res.success = true;
   return true;
 }
 
-/* Service to change the topology of the network */
-bool CpfNode::ChangeTopologyService(cpf_control::ChangeTopology::Request &req, cpf_control::ChangeTopology::Response &res) {
 
-  int new_matrix_size = req.adjency_matrix.size();
+/* Service to change the topology of the network */
+bool CpfNode::ChangeTopologyService(farol2_cpf_controller::srv::ChangeTopology::Request & req, farol2_cpf_controller::srv::ChangeTopology::Response & res) {
+  int new_matrix_size = static_cast<int>(req.adjency_matrix.size());
 
   /* Check the size of the received adjency_matrix in the form of an std::vector */
   if (new_matrix_size != this->adjency_matrix_.rows() * this->adjency_matrix_.cols()) {
-    
-    /* In this case do not update to the new matrix and return */
-    ROS_INFO("New Matrix does not have the same size as the current Adjency Matrix");
+    RCLCPP_INFO(this->get_logger(), "New Matrix does not have the same size as the current Adjacency Matrix");
     res.success = false;
     return true;
   }
 
-  /* Otherwise update the new topology */
-  for(int i = 0; i < this->adjency_matrix_.rows(); i++) {
-    for (int j = 0; j < this->adjency_matrix_.cols(); j++) {
+  /* Update adjacency matrix */
+  for (int i = 0; i < this->adjency_matrix_.rows(); ++i) {
+    for (int j = 0; j < this->adjency_matrix_.cols(); ++j) {
       this->adjency_matrix_(i, j) = req.adjency_matrix[(i * this->adjency_matrix_.rows()) + j];
     }
   }
 
   /* Update the value inside the CPF control class */
-  this->cooperative_->updateAdjencyMatrix(this->adjency_matrix_);
+  if (this->cooperative_) {
+    this->cooperative_->updateAdjencyMatrix(this->adjency_matrix_);
+  }
 
-  /* Inform that everything went smoothly */
-  ROS_INFO("Updated new Adjency Matrix successfully!");
+  RCLCPP_INFO(this->get_logger(), "Updated new Adjacency Matrix successfully!");
   res.success = true;
   return true;
 }
