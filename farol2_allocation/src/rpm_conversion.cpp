@@ -23,7 +23,7 @@ void RPMConversion::initialiseSubscribers() {
   nav_state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
     TOPIC_SUB_NAV_STATE,
     rclcpp::QoS(1),
-    [this](farol2_interfaces::msg::NavigationState::SharedPtr msg){surge_ = msg->body_velocity_fluid.x;});
+    [this](farol2_interfaces::msg::NavigationState::SharedPtr msg){surge_ = msg->velocity_through_water_body.x;});
 }
 
 /**

@@ -48,6 +48,12 @@ def generate_launch_description():
     description='Boolean to determine if "sample_and_hold" node is launched.'
   )
 
+  launch_filter_node_arg = DeclareLaunchArgument(
+    'filter_node',
+    default_value='false',
+    description='Boolean to determine if the new side-by-side filter_node is launched.'
+  )
+
 
 
   ###################################
@@ -122,6 +128,43 @@ def generate_launch_description():
     ]
   )
 
+  new_filter_node = Node(
+    package='farol2_nav',
+    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'nav']),
+    executable='filter_node',
+    name='filter_node',
+    output='screen',
+    condition=IfCondition(LaunchConfiguration('filter_node')),
+    parameters=params,
+    remappings=[
+      # Subscribers
+      ('imu', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/imu')]),
+      ('gnss', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/gnss')]),
+      ('ned_utm', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/ned_utm')]),
+      ('velocity_over_ground', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/velocity_over_ground')]),
+      ('velocity_through_water', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/velocity_through_water')]),
+      ('current_velocity', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/current_velocity')]),
+      ('depth', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/depth')]),
+      ('altimeter', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/altimeter')]),
+      ('altitude', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/altitude')]),
+      ('rudder_angle', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/drivers/can_instrumentation/rudder_angle')]),
+      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
+      # Publishers
+      ('state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      ##############################################################################################################################
+      ## this needs to be like this because the rcl library doesnt support wildcards in remaping.
+      ##  it is only possible via the cli. if it changes in the future it should work like this:
+      ##
+      # ('/**/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/\\1/state')]),
+      ##
+      ## instead we roll like this, every new filter plugin needs to be added here manually:
+      ##############################################################################################################################
+      ('sample_and_hold/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/sample_and_hold/state')]),
+      ('orientation_mahony/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/orientation_mahony/state')]),
+      ('position_ekf/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/position_ekf/state')]),
+    ]
+  )
+
 
   ######################################################
   # Return launch description with arguments and nodes #
@@ -134,9 +177,11 @@ def generate_launch_description():
     config_package_path_share_arg,
     config_package_path_real_arg,
     launch_sample_and_hold_arg,
+    launch_filter_node_arg,
     # ...
     # nodes
     # filter_handler_node,
-    sample_and_hold_filter_node,
+    # sample_and_hold_filter_node,
+    new_filter_node,
     # ... 
   ])

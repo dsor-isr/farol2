@@ -52,3 +52,22 @@
         override_velocity: 1.71  # m/s at override_rpms (0.0 = disabled)
         override_rpms: 600.0    # RPM setpoint for calibration
         override_timeout_s: 5.0  # Time to stay in ±1% band before applying override
+
+  filter_node:
+    ros__parameters:
+      node_frequency: 10.0
+      publish_all_steps: true
+      # sample_and_hold is always applied first implicitly.
+      filters: 
+        - "" ## this is needed because ROS2 is stupid and doesnt understand this an empty array of strings... might be fixed in the future 
+        # - "orientation_mahony"
+        # - "position_ekf"
+      timeouts:
+        imu: 1.0
+        navsat: 2.0
+        utm: 2.0
+      plugins:
+        orientation_mahony:
+          blend: 0.15
+        position_ekf:
+          alpha: 0.25

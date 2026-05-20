@@ -210,9 +210,9 @@ void SampleAndHold::measurement_callback(farol2_interfaces::msg::Measurement::Co
         RCLCPP_ERROR(get_logger(), "Measurement ORIENTATION has incorrect length or type.");
         break;
       }
-      filter_state_msg_.orientation.x = farol2_utils::rad2deg(farol2_utils::wrapToPi(msg->value[0]));
-      filter_state_msg_.orientation.y = farol2_utils::rad2deg(farol2_utils::wrapToPi(msg->value[1]));
-      filter_state_msg_.orientation.z = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(msg->value[2]));
+      filter_state_msg_.attitude.x = farol2_utils::rad2deg(farol2_utils::wrapToPi(msg->value[0]));
+      filter_state_msg_.attitude.y = farol2_utils::rad2deg(farol2_utils::wrapToPi(msg->value[1]));
+      filter_state_msg_.attitude.z = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(msg->value[2]));
       break;
     /* Orientation rate: roll rate, pitch rate, yaw rate */
     case farol2_interfaces::msg::Measurement::MEAS_ANGULAR_VELOCITY:
@@ -220,9 +220,9 @@ void SampleAndHold::measurement_callback(farol2_interfaces::msg::Measurement::Co
         RCLCPP_ERROR(get_logger(), "Measurement ORIENTATION_RATE has incorrect length or type.");
         break;
       }
-      filter_state_msg_.orientation_rate.x = farol2_utils::rad2deg(msg->value[0]);
-      filter_state_msg_.orientation_rate.y = farol2_utils::rad2deg(msg->value[1]);
-      filter_state_msg_.orientation_rate.z = farol2_utils::rad2deg(msg->value[2]);
+      filter_state_msg_.angular_velocity.x = farol2_utils::rad2deg(msg->value[0]);
+      filter_state_msg_.angular_velocity.y = farol2_utils::rad2deg(msg->value[1]);
+      filter_state_msg_.angular_velocity.z = farol2_utils::rad2deg(msg->value[2]);
       last_yaw_rate_meas_ = farol2_utils::rad2deg(msg->value[2]);
       break;
     /* UTM position (easting, northing) and UTM zone */
@@ -302,9 +302,9 @@ void SampleAndHold::measurement_callback(farol2_interfaces::msg::Measurement::Co
         break;
       }
       // inertial velocity in the inertial frame (what VN310 gives)
-      filter_state_msg_.ned_velocity_inertial.x = msg->value[0];
-      filter_state_msg_.ned_velocity_inertial.y = msg->value[1];
-      filter_state_msg_.ned_velocity_inertial.z = msg->value[2];
+      filter_state_msg_.velocity_over_ground_ned.x = msg->value[0];
+      filter_state_msg_.velocity_over_ground_ned.y = msg->value[1];
+      filter_state_msg_.velocity_over_ground_ned.z = msg->value[2];
 
       // Convert inertial velocity from inertial frame to body frame      
       // First, build velocity vector from message  
@@ -312,25 +312,25 @@ void SampleAndHold::measurement_callback(farol2_interfaces::msg::Measurement::Co
       // Build rotation matrix from body to inertial
       Eigen::Matrix3d R =
         Eigen::Matrix3d(
-            Eigen::AngleAxisd(farol2_utils::deg2rad(filter_state_msg_.orientation.z),   Eigen::Vector3d::UnitZ()) *
-            Eigen::AngleAxisd(farol2_utils::deg2rad(filter_state_msg_.orientation.y), Eigen::Vector3d::UnitY()) *
-            Eigen::AngleAxisd(farol2_utils::deg2rad(filter_state_msg_.orientation.x),  Eigen::Vector3d::UnitX())
+            Eigen::AngleAxisd(farol2_utils::deg2rad(filter_state_msg_.attitude.z),   Eigen::Vector3d::UnitZ()) *
+            Eigen::AngleAxisd(farol2_utils::deg2rad(filter_state_msg_.attitude.y), Eigen::Vector3d::UnitY()) *
+            Eigen::AngleAxisd(farol2_utils::deg2rad(filter_state_msg_.attitude.x),  Eigen::Vector3d::UnitX())
         );
       // Rotate velocity from inertial to body
       Eigen::Vector3d v_b = R.transpose() * v_i;
       // Set values
-      filter_state_msg_.body_velocity_inertial.x = v_b.x();
-      filter_state_msg_.body_velocity_inertial.y = v_b.y();
-      filter_state_msg_.body_velocity_inertial.z = v_b.z();
+      filter_state_msg_.velocity_over_ground_body.x = v_b.x();
+      filter_state_msg_.velocity_over_ground_body.y = v_b.y();
+      filter_state_msg_.velocity_over_ground_body.z = v_b.z();
 
       /* If current is neglected, body velocity relative to the fluid will be the same as inertial one */
       if (neglect_current_) {
-        filter_state_msg_.body_velocity_fluid.x = v_b.x();
-        filter_state_msg_.body_velocity_fluid.y = v_b.y();
-        filter_state_msg_.body_velocity_fluid.z = v_b.z();
-        filter_state_msg_.ned_velocity_inertial.x = msg->value[0];
-        filter_state_msg_.ned_velocity_inertial.y = msg->value[1];
-        filter_state_msg_.ned_velocity_inertial.z = msg->value[2];
+        filter_state_msg_.velocity_through_water_body.x = v_b.x();
+        filter_state_msg_.velocity_through_water_body.y = v_b.y();
+        filter_state_msg_.velocity_through_water_body.z = v_b.z();
+        filter_state_msg_.velocity_over_ground_ned.x = msg->value[0];
+        filter_state_msg_.velocity_over_ground_ned.y = msg->value[1];
+        filter_state_msg_.velocity_over_ground_ned.z = msg->value[2];
       }
       break;}
 
@@ -340,9 +340,9 @@ void SampleAndHold::measurement_callback(farol2_interfaces::msg::Measurement::Co
         RCLCPP_ERROR(get_logger(), "Measurement BODY_VELOCITY_FLUID has incorrect length or type.");
         break;
       }
-      filter_state_msg_.body_velocity_fluid.x = msg->value[0];
-      filter_state_msg_.body_velocity_fluid.y = msg->value[1];
-      filter_state_msg_.body_velocity_fluid.z = msg->value[2];
+      filter_state_msg_.velocity_through_water_body.x = msg->value[0];
+      filter_state_msg_.velocity_through_water_body.y = msg->value[1];
+      filter_state_msg_.velocity_through_water_body.z = msg->value[2];
       break;
   }
 }
@@ -354,6 +354,7 @@ void SampleAndHold::measurement_callback(farol2_interfaces::msg::Measurement::Co
 void SampleAndHold::timerCallback() {
 
   double dt = 1.0 / node_frequency_;
+  float heading_rate = static_cast<float>(filter_state_msg_.angular_velocity.z);
   // Fill header 
   filter_state_msg_.header.stamp = clock_->now();
 
@@ -368,14 +369,14 @@ void SampleAndHold::timerCallback() {
   // Yaw-rate filtering executed in fixed-rate timer loop (not in measurement callback).
   if(use_yaw_rate_notch_filter_) {
     try {
-      yaw_rate_notch_filter_.step(filter_state_msg_.orientation_rate.z, dt);
-      filter_state_msg_.heading_rate = yaw_rate_notch_filter_.y();
-      filter_state_msg_.heading_rate = smooth_deadzone(filter_state_msg_.heading_rate, 2.5, 4.0);
-      // if(abs(filter_state_msg_.heading_rate<2.5)){
-      //   filter_state_msg_.heading_rate = 0;
+      yaw_rate_notch_filter_.step(filter_state_msg_.angular_velocity.z, dt);
+      heading_rate = yaw_rate_notch_filter_.y();
+      heading_rate = smooth_deadzone(heading_rate, 2.5, 4.0);
+      // if(abs(heading_rate<2.5)){
+      //   heading_rate = 0;
       // }
     } catch (const std::exception &e) {
-      filter_state_msg_.heading_rate = filter_state_msg_.orientation_rate.z;
+      heading_rate = filter_state_msg_.angular_velocity.z;
     }
   }
   if(use_yaw_rate_kf_){
@@ -395,10 +396,10 @@ void SampleAndHold::timerCallback() {
     // Compute torque from rudder angle
     double K_s_ = 1.0;
     double rudder_cm_distance_ = 4.0; 
-    double fluid_velocity = sqrt(pow(filter_state_msg_.body_velocity_inertial.x, 2) + pow(filter_state_msg_.body_velocity_inertial.y, 2));
+    double fluid_velocity = sqrt(pow(filter_state_msg_.velocity_over_ground_body.x, 2) + pow(filter_state_msg_.velocity_over_ground_body.y, 2));
     double tau_r = rudder_angle_ * (K_s_ * rudder_cm_distance_ * fluid_velocity); 
-    // double u = filter_state_msg_.body_velocity_inertial.x;
-    // double v = filter_state_msg_.body_velocity_inertial.y;
+    // double u = filter_state_msg_.velocity_over_ground_body.x;
+    // double v = filter_state_msg_.velocity_over_ground_body.y;
     debug_pub2_->publish(std_msgs::msg::Float64().set__data(tau_r));
 
 
@@ -409,7 +410,7 @@ void SampleAndHold::timerCallback() {
     P_ = A_ * P_ * A_.transpose() + Q_;
 
     // Kalman filter update (using yaw measurement)
-    double yaw_meas_rad = farol2_utils::deg2rad(filter_state_msg_.orientation.z);
+    double yaw_meas_rad = farol2_utils::deg2rad(filter_state_msg_.attitude.z);
     Eigen::VectorXd z(1);
     z << yaw_meas_rad;
     Eigen::VectorXd y = (z - C_ * x_);
@@ -425,7 +426,7 @@ void SampleAndHold::timerCallback() {
 
 
     // Set filtered values
-    filter_state_msg_.heading_rate = farol2_utils::rad2deg(x_(1));
+    heading_rate = farol2_utils::rad2deg(x_(1));
   }
   if(use_course_cf_){
     ////////////////////////////////////////////////////////////////
@@ -433,11 +434,11 @@ void SampleAndHold::timerCallback() {
     ////////////////////////////////////////////////////////////////
 
     // Measurement: course angle from inertial velocity
-    double course_angle_meas = farol2_utils::wrapTo2Pi(std::atan2(filter_state_msg_.ned_velocity_inertial.y, filter_state_msg_.ned_velocity_inertial.x));
+    double course_angle_meas = farol2_utils::wrapTo2Pi(std::atan2(filter_state_msg_.velocity_over_ground_ned.y, filter_state_msg_.velocity_over_ground_ned.x));
     // debug_pub2_->publish(std_msgs::msg::Float64().set__data(farol2_utils::rad2deg(course_angle_meas)));
       
     // Predict with gyro integration
-    course_angle_est_ += farol2_utils::deg2rad(filter_state_msg_.heading_rate) * dt;
+    course_angle_est_ += farol2_utils::deg2rad(heading_rate) * dt;
     course_angle_est_ = farol2_utils::wrapTo2Pi(course_angle_est_);
     
     // Correct estimate
@@ -445,7 +446,7 @@ void SampleAndHold::timerCallback() {
     course_angle_est_ = farol2_utils::wrapTo2Pi(course_angle_est_);
 
     // Output in degrees
-    filter_state_msg_.course_angle = farol2_utils::rad2deg(course_angle_est_);
+    filter_state_msg_.course_over_ground = farol2_utils::rad2deg(course_angle_est_);
   }
 
   // Publish filter state message 
@@ -505,7 +506,7 @@ double SampleAndHold::rpm_to_body_speed_mps(double dt) {
 }
 
 void SampleAndHold::predict_position_ekf(double dt) {
-  const double psi = farol2_utils::deg2rad(filter_state_msg_.orientation.z);
+  const double psi = farol2_utils::deg2rad(filter_state_msg_.attitude.z);
   const double vm_body = rpm_to_body_speed_mps(dt);
   const double vn_m = vm_body * std::cos(psi);
   const double ve_m = vm_body * std::sin(psi);
