@@ -160,8 +160,7 @@ def generate_launch_description():
       ## instead we roll like this, every new filter plugin needs to be added here manually:
       ##############################################################################################################################
       ('sample_and_hold/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/sample_and_hold/state')]),
-      ('orientation_mahony/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/orientation_mahony/state')]),
-      ('position_ekf/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/position_ekf/state')]),
+      ('position_current_ekf/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/position_current_ekf/state')]),
     ]
   )
 
