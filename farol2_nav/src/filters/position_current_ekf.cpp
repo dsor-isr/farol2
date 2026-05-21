@@ -108,7 +108,7 @@ double PositionCurrentEkfFilter::rpm_to_body_speed_mps(const MeasurementSnapshot
   return u_estimated_;
 }
 
-void PositionCurrentEkfFilter::update(double dt_s, const MeasurementSnapshot & m, State & s)
+void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State & s)
 {
   // Measurement is taken from the pass-through state (already populated from GNSS/UTM inputs).
   // This keeps one canonical measurement path in the pipeline instead of each filter

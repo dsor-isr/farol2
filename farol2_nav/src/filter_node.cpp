@@ -2,6 +2,7 @@
 
 #include <farol2_nav/filters/pass_through.hpp>
 #include <farol2_nav/filters/position_current_ekf.hpp>
+#include <farol2_nav/filters/yaw_rate_ekf.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -115,6 +116,8 @@ void FilterNode::build_pipeline()
     std::unique_ptr<farol2_nav::filters::BaseFilter> filter;
     if (key == "position_current_ekf") {
       filter = std::make_unique<farol2_nav::filters::PositionCurrentEkfFilter>();
+    } else if (key == "yaw_rate_ekf") {
+      filter = std::make_unique<farol2_nav::filters::YawRateEkfFilter>();
     // Here add additional filters with else if blocks, following the pattern above. For example:
     // } else if (key == "your_filter_name") {
     //   filter = std::make_unique<farol2_nav::filters::YourFilter>();
@@ -176,7 +179,7 @@ void FilterNode::on_timer()
   // run filter pipeline 
   for (size_t i = 0; i < pipeline_.size(); ++i) {
     auto & filter = pipeline_[i];
-    filter->update(dt_s, snapshot_, state_);
+    filter->compute(dt_s, snapshot_, state_);
 
     // Only intermediate stages use stage publishers.
     if (publish_all_steps_ && (i + 1U < pipeline_.size())) {

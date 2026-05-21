@@ -18,7 +18,7 @@ public:
 
   virtual std::string name() const = 0;
   virtual void configure(rclcpp::Node & node) = 0;
-  virtual void update(double dt_s, const MeasurementSnapshot & measurements, State & state) = 0;
+  virtual void compute(double dt_s, const MeasurementSnapshot & measurements, State & state) = 0;
 };
 
 }  // namespace filters

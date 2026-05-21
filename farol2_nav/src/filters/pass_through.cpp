@@ -1,5 +1,10 @@
 #include <farol2_nav/filters/pass_through.hpp>
 
+#include <farol2_utils/angles.hpp>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 #include <algorithm>
 #include <GeographicLib/UTMUPS.hpp>
 
@@ -12,7 +17,7 @@ void PassThroughFilter::configure(rclcpp::Node &)
 {
 }
 
-void PassThroughFilter::update(double, const MeasurementSnapshot & m, State & s)
+void PassThroughFilter::compute(double, const MeasurementSnapshot & m, State & s)
 {
   if (m.gnss != nullptr) {
     s.latitude_deg = m.gnss->latitude;
@@ -62,26 +67,21 @@ void PassThroughFilter::update(double, const MeasurementSnapshot & m, State & s)
   }
 
   if (m.imu != nullptr) {
-    const auto & q = m.imu->orientation;
-    const double sinr_cosp = 2.0 * (q.w * q.x + q.y * q.z);
-    const double cosr_cosp = 1.0 - 2.0 * (q.x * q.x + q.y * q.y);
-    const double roll_rad = std::atan2(sinr_cosp, cosr_cosp);
+    tf2::Quaternion q_tf;
+    tf2::fromMsg(m.imu->orientation, q_tf);
 
-    const double sinp = 2.0 * (q.w * q.y - q.z * q.x);
-    const double pitch_rad = std::asin(std::clamp(sinp, -1.0, 1.0));
+    double roll_rad = 0.0;
+    double pitch_rad = 0.0;
+    double yaw_rad = 0.0;
+    tf2::Matrix3x3(q_tf).getRPY(roll_rad, pitch_rad, yaw_rad);
 
-    const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
-    const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
-    const double yaw_rad = std::atan2(siny_cosp, cosy_cosp);
+    s.attitude_deg(0) = farol2_utils::rad2deg(roll_rad);
+    s.attitude_deg(1) = farol2_utils::rad2deg(pitch_rad);
+    s.attitude_deg(2) = farol2_utils::rad2deg(yaw_rad);
 
-    constexpr double RAD2DEG = 57.29577951308232;
-    s.attitude_deg(0) = roll_rad * RAD2DEG;
-    s.attitude_deg(1) = pitch_rad * RAD2DEG;
-    s.attitude_deg(2) = yaw_rad * RAD2DEG;
-
-    s.angular_velocity_dps(0) = m.imu->angular_velocity.x * RAD2DEG;
-    s.angular_velocity_dps(1) = m.imu->angular_velocity.y * RAD2DEG;
-    s.angular_velocity_dps(2) = m.imu->angular_velocity.z * RAD2DEG;
+    s.angular_velocity_dps(0) = farol2_utils::rad2deg(m.imu->angular_velocity.x);
+    s.angular_velocity_dps(1) = farol2_utils::rad2deg(m.imu->angular_velocity.y);
+    s.angular_velocity_dps(2) = farol2_utils::rad2deg(m.imu->angular_velocity.z);
   }
 }
 
