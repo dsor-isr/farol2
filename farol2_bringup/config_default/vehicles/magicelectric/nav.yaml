@@ -60,14 +60,30 @@
       # sample_and_hold is always applied first implicitly.
       filters: 
         - "" ## this is needed because ROS2 is stupid and doesnt understand this an empty array of strings... might be fixed in the future 
-        # - "orientation_mahony"
-        # - "position_ekf"
+        - "position_current_ekf"
       timeouts:
         imu: 1.0
         navsat: 2.0
         utm: 2.0
+        rpm: 1.0
       plugins:
-        orientation_mahony:
-          blend: 0.15
-        position_ekf:
-          alpha: 0.25
+        position_current_ekf:
+          override_position_state: true
+          process_noise_pos: 0.1
+          process_noise_current: 0.01
+          measurement_noise_pos: 1.0
+          init_cov_pos: 25.0
+          init_cov_current: 1.0
+          rpm_min: -2000.0
+          rpm_max: 2000.0
+          rpm_rate_limit: 200.0
+          rho: 1025.0
+          prop_pitch: 0.381
+          prop_diameter: 0.4318
+          k_t_bp: 0.061461915
+          m_u: 3100.0
+          x_u: 0.0
+          x_uu: -96.2270
+          override_velocity: 1.618
+          override_rpms: 600.0
+          override_timeout_s: 5.0

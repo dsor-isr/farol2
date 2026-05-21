@@ -1,8 +1,7 @@
 #include "filter_node.hpp"
 
-#include <farol2_nav/filters/mahony.hpp>
 #include <farol2_nav/filters/pass_through.hpp>
-#include <farol2_nav/filters/pos_ekf.hpp>
+#include <farol2_nav/filters/position_current_ekf.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -29,6 +28,7 @@ void FilterNode::load_params()
   imu_timeout_s_ = declare_parameter<double>("timeouts.imu", 1.0);
   navsat_timeout_s_ = declare_parameter<double>("timeouts.navsat", 2.0);
   utm_timeout_s_ = declare_parameter<double>("timeouts.utm", 2.0);
+  rpm_timeout_s_ = declare_parameter<double>("timeouts.rpm", 1.0);
 }
 
 void FilterNode::initialise_publishers()
@@ -113,10 +113,8 @@ void FilterNode::build_pipeline()
 
   for (const auto & key : filters_) {
     std::unique_ptr<farol2_nav::filters::BaseFilter> filter;
-    if (key == "position_ekf") {
-      filter = std::make_unique<farol2_nav::filters::PosEkfFilter>();
-    } else if (key == "orientation_mahony") {
-      filter = std::make_unique<farol2_nav::filters::MahonyFilter>();    
+    if (key == "position_current_ekf") {
+      filter = std::make_unique<farol2_nav::filters::PositionCurrentEkfFilter>();
     // Here add additional filters with else if blocks, following the pattern above. For example:
     // } else if (key == "your_filter_name") {
     //   filter = std::make_unique<farol2_nav::filters::YourFilter>();
@@ -167,6 +165,9 @@ void FilterNode::on_timer()
   }
   if (!is_fresh(snapshot_.utm_ned_stamp, utm_timeout_s_)) {
     snapshot_.utm_ned.reset();
+  }
+  if (!is_fresh(snapshot_.rpm_stamp, rpm_timeout_s_)) {
+    snapshot_.rpm_command.reset();
   }
 
   // Every cycle starts from a clean state. sample_and_hold runs first and repopulates it.

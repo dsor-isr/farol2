@@ -44,8 +44,7 @@ add_executable(sample_and_hold src/sample_and_hold.cpp)
 add_executable(filter_node
   src/filter_node.cpp
   src/filters/pass_through.cpp
-  src/filters/pos_ekf.cpp
-  src/filters/mahony.cpp
+  src/filters/position_current_ekf.cpp
 )
 
 ament_target_dependencies(filter_handler
@@ -70,6 +69,7 @@ ament_target_dependencies(filter_node
   geometry_msgs
   farol2_interfaces
   farol2_allocation
+  farol2_utils
 )
 
 

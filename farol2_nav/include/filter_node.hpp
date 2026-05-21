@@ -52,6 +52,7 @@ private:
   double imu_timeout_s_{1.0};
   double navsat_timeout_s_{2.0};
   double utm_timeout_s_{2.0};
+  double rpm_timeout_s_{1.0};
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_sub_;

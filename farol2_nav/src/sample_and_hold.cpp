@@ -541,7 +541,7 @@ void SampleAndHold::update_position_ekf(double northing, double easting) {
 }
 
 void SampleAndHold::publish_position_from_ekf() {
-  filter_state_msg_.utm_position.northing = x_pos_(0);
+  filter_state_msg_.utm_position.northing = x_pos_(0);  
   filter_state_msg_.utm_position.easting = x_pos_(1);
   filter_state_msg_.utm_position.utm_zone = latest_utm_zone_;
   filter_state_msg_.current_velocity_inertial.x = x_pos_(2);
