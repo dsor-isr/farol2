@@ -39,28 +39,12 @@ ament_export_dependencies(rosidl_default_runtime)
 # --------------------
 # Executables
 # --------------------
-add_executable(filter_handler src/filter_handler.cpp)
-add_executable(sample_and_hold src/sample_and_hold.cpp)
 add_executable(filter_node
   src/filter_node.cpp
   src/filters/pass_through.cpp
   src/filters/position_current_ekf.cpp
 )
 
-ament_target_dependencies(filter_handler
-  rclcpp
-  std_msgs
-  sensor_msgs
-  farol2_interfaces
-)
-
-ament_target_dependencies(sample_and_hold
-  rclcpp
-  std_msgs
-  farol2_interfaces
-  farol2_allocation
-  farol2_utils
-)
 
 ament_target_dependencies(filter_node
   rclcpp
@@ -74,16 +58,6 @@ ament_target_dependencies(filter_node
 
 
 # Include dirs
-target_include_directories(filter_handler PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
-)
-
-target_include_directories(sample_and_hold PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
-)
-
 target_include_directories(filter_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
@@ -91,8 +65,6 @@ target_include_directories(filter_node PUBLIC
 
 
 # C/C++ standard
-target_compile_features(filter_handler PUBLIC c_std_99 cxx_std_17)
-target_compile_features(sample_and_hold PUBLIC c_std_99 cxx_std_17)
 target_compile_features(filter_node PUBLIC c_std_99 cxx_std_17)
 
 # --------------------
@@ -100,20 +72,15 @@ target_compile_features(filter_node PUBLIC c_std_99 cxx_std_17)
 # --------------------
 # Link this package's generated typesupport (needed if you use nav_filters msg/srv types)
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
-target_link_libraries(filter_handler "${cpp_typesupport_target}")
-target_link_libraries(sample_and_hold "${cpp_typesupport_target}" ${GEOGRAPHIC_LIB})
 target_link_libraries(filter_node "${cpp_typesupport_target}" ${GEOGRAPHIC_LIB})
 
 # Eigen
-target_link_libraries(sample_and_hold Eigen3::Eigen)
 target_link_libraries(filter_node Eigen3::Eigen)
 
 # --------------------
 # Install
 # --------------------
 install(TARGETS
-  filter_handler
-  sample_and_hold
   filter_node
   DESTINATION lib/${PROJECT_NAME}
 )
