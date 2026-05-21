@@ -14,7 +14,7 @@ class PositionCurrentEkfFilter : public BaseFilter
 public:
   std::string name() const override { return "position_current_ekf"; }
   void configure(rclcpp::Node & node) override;
-  void update(double dt_s, const MeasurementSnapshot & measurements, State & state) override;
+  void compute(double dt_s, const MeasurementSnapshot & measurements, State & state) override;
 
 private:
   double rpm_to_body_speed_mps(const MeasurementSnapshot & m, double dt_s);
