@@ -17,6 +17,9 @@
   <depend>farol2_allocation</depend>
   <depend>farol2_utils</depend>
   <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
 
   <build_depend>rosidl_default_generators</build_depend>
   <build_depend>geographiclib</build_depend>

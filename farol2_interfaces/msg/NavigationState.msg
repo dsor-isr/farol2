@@ -7,25 +7,27 @@ UTM utm_position # Universal Transverse Mercator: Northing, Easting (m), UTM zon
 # Depth
 float32 depth
 
+# Altimeter
+float32 altimeter 
+
 # Altitude
-float32 altimeter # output altimeter
 float32 altitude_ellipsoidal # ellipsoidal altitude WGS84
 LocalDatum local_datum # local datum altitude
 
-# Velocity
-geometry_msgs/Vector3 body_velocity_inertial # velocity relative to static frame (NED), expressed in the body (m/s)
-geometry_msgs/Vector3 body_velocity_fluid # velocity relative to the fluid frame (NED-oriented but moving with water), expressed in the body (m/s)
-geometry_msgs/Vector3 ned_velocity_inertial # velocity relative to static frame, expressed in the NED frame (m/s)
-geometry_msgs/Vector3 ned_velocity_fluid # velocity relative to the fluid expressed in the NED frame (m/s)
+# Body Velocities
+geometry_msgs/Vector3 velocity_over_ground_body # velocity relative to static frame (NED), expressed in the body (m/s)
+geometry_msgs/Vector3 velocity_through_water_body # velocity relative to the fluid frame (NED-oriented but moving with water), expressed in the body (m/s)
+
+# Inertial Velocities
+geometry_msgs/Vector3 velocity_over_ground_ned # velocity relative to static frame, expressed in the NED frame (m/s)
+geometry_msgs/Vector3 velocity_through_water_ned # velocity relative to the fluid expressed in the NED frame (m/s)
+float32 course_over_ground # course over ground (deg)
+
+# Velocity of the current
 geometry_msgs/Vector3 current_velocity_inertial # estimated current velocity in inertial NED frame (m/s)
 
-# Orientation
-geometry_msgs/Vector3 orientation # [roll pitch yaw] (rad)
+# Attitude
+geometry_msgs/Vector3 attitude # [roll pitch yaw] (deg)
 
-# Orientation Rate
-geometry_msgs/Vector3 orientation_rate # [p q r] (rad/s)
-
-float32 course_angle
-float32 heading_rate
-
-# If needed: add variances to position, orientation and other estimated variables
+# Angular Velocity
+geometry_msgs/Vector3 angular_velocity # [p q r] (deg/s)

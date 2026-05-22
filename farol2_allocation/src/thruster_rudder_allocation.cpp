@@ -142,26 +142,26 @@ void ThrusterRudderAllocation::bodyWrenchRequestCallback(geometry_msgs::msg::Wre
 
 void ThrusterRudderAllocation::computeRudderAngle(double tau_r) 
 {
-  // if (nav_state_.body_velocity_fluid.x == 0.0 && nav_state_.body_velocity_fluid.y == 0.0 && nav_state_.body_velocity_fluid.z == 0.0)
+  // if (nav_state_.velocity_through_water_body.x == 0.0 && nav_state_.velocity_through_water_body.y == 0.0 && nav_state_.velocity_through_water_body.z == 0.0)
     // RCLCPP_WARN(get_logger(), "Body Velocity relative to the fluid is 0. Is it not being updated?");
   /* Cap velocity to avoid division by 0 on later computations */
-  nav_state_.body_velocity_fluid.x =
-    (std::abs(nav_state_.body_velocity_fluid.x) < 0.05)
-      ? std::copysign(0.05, nav_state_.body_velocity_fluid.x == 0.0 ? 1.0 : nav_state_.body_velocity_fluid.x)
-      : nav_state_.body_velocity_fluid.x;
+  nav_state_.velocity_through_water_body.x =
+    (std::abs(nav_state_.velocity_through_water_body.x) < 0.05)
+      ? std::copysign(0.05, nav_state_.velocity_through_water_body.x == 0.0 ? 1.0 : nav_state_.velocity_through_water_body.x)
+      : nav_state_.velocity_through_water_body.x;
 
   /* Course angle = Heading + Sideslip */
-  sideslip_angle_ = (nav_state_.body_velocity_fluid.x != 0.0) ? atan2(nav_state_.body_velocity_fluid.y, nav_state_.body_velocity_fluid.x) : 0.0;
-  course_angle_ = nav_state_.orientation.z + sideslip_angle_;
+  sideslip_angle_ = (nav_state_.velocity_through_water_body.x != 0.0) ? atan2(nav_state_.velocity_through_water_body.y, nav_state_.velocity_through_water_body.x) : 0.0;
+  course_angle_ = nav_state_.attitude.z + sideslip_angle_;
 
   /* Compute velocity at the rudder */
   /* V_r = r * l * [sin(yaw), -cos(yaw)], r -> yaw rate, l -> distance from rudder to center of mass */
-  V_cm_ = Eigen::Vector2d(std::cos(course_angle_), std::sin(course_angle_)) * std::hypot(nav_state_.body_velocity_fluid.x, nav_state_.body_velocity_fluid.y);
-  V_r_ = Eigen::Vector2d(std::sin(nav_state_.orientation.z), -std::cos(nav_state_.orientation.z)) * rudder_cm_distance_ * nav_state_.orientation_rate.z;
+  V_cm_ = Eigen::Vector2d(std::cos(course_angle_), std::sin(course_angle_)) * std::hypot(nav_state_.velocity_through_water_body.x, nav_state_.velocity_through_water_body.y);
+  V_r_ = Eigen::Vector2d(std::sin(nav_state_.attitude.z), -std::cos(nav_state_.attitude.z)) * rudder_cm_distance_ * nav_state_.angular_velocity.z;
   V_s_ = V_cm_ + V_r_;
 
   // angle between Vs and x_body of the boat
-  gamma_ = farol2_utils::wrapToPi(std::atan2(V_s_(1),V_s_(0)) - nav_state_.orientation.z);
+  gamma_ = farol2_utils::wrapToPi(std::atan2(V_s_(1),V_s_(0)) - nav_state_.attitude.z);
 
   /* Compute rudder angle according to Fossen model, in "A Survey of Control Allocation Methods for Underwater Vehicles", p. 126 */
   /* N = K.l.v^2.δ */
@@ -176,7 +176,7 @@ void ThrusterRudderAllocation::computeRudderAngle(double tau_r)
 
   /* Compute fluid flow to rudder angle */
   V_s_angle_ = (V_s_[0] != 0.0) ? atan2(V_s_[1], V_s_[0]) : 0.0;
-  flow_to_rudder_angle_ = rudder_angle_ + V_s_angle_ - nav_state_.orientation.z;
+  flow_to_rudder_angle_ = rudder_angle_ + V_s_angle_ - nav_state_.attitude.z;
 
   /* Compute lift and drag */
   L = K_L_ * flow_to_rudder_angle_ * V_s_.dot(V_s_);

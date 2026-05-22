@@ -233,20 +233,20 @@ void PathFollowingNode::vehicleStateCallback(const farol2_interfaces::msg::Navig
                                msg.altimeter;
 
   /* Update the vehicle orientation */
-  double roll = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.orientation.x));
-  double pitch = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.orientation.y));
-  double yaw = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.orientation.z));
+  double roll = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.attitude.x));
+  double pitch = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.attitude.y));
+  double yaw = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.attitude.z));
   this->vehicle_state_.eta2 << roll, pitch, yaw;
 
   /* Update the vehicle linear velocity */
-  this->vehicle_state_.v1 << msg.body_velocity_inertial.x,
-                             msg.body_velocity_inertial.y,
-                             msg.body_velocity_inertial.z;
+  this->vehicle_state_.v1 << msg.velocity_over_ground_body.x,
+                             msg.velocity_over_ground_body.y,
+                             msg.velocity_over_ground_body.z;
 
   /* Update the vehicle angular velocity */
-  this->vehicle_state_.v2 << farol2_utils::deg2rad(msg.orientation_rate.x),
-                             farol2_utils::deg2rad(msg.orientation_rate.y), 
-                             farol2_utils::deg2rad(msg.orientation_rate.z);
+  this->vehicle_state_.v2 << farol2_utils::deg2rad(msg.angular_velocity.x),
+                             farol2_utils::deg2rad(msg.angular_velocity.y), 
+                             farol2_utils::deg2rad(msg.angular_velocity.z);
 
   /* Update estimated current velocity in inertial frame */
   this->vehicle_state_.vc_inertial << msg.current_velocity_inertial.x,
