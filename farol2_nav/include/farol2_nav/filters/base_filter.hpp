@@ -1,7 +1,7 @@
 #pragma once
 
-#include <farol2_nav/filters/measurement_snapshot.hpp>
-#include <farol2_nav/filters/state.hpp>
+#include <farol2_nav/measurement_snapshot.hpp>
+#include <farol2_nav/state.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <string>

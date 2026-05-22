@@ -12,6 +12,15 @@ namespace filters
 
 void PositionCurrentEkfFilter::configure(rclcpp::Node & node)
 {
+  tune_ekf_srv_ = node.create_service<farol2_nav::srv::TunePositionEkf>(
+    "position_current_ekf/tune",
+    [this](
+      const std::shared_ptr<farol2_nav::srv::TunePositionEkf::Request> req,
+      std::shared_ptr<farol2_nav::srv::TunePositionEkf::Response> res)
+    {
+      this->on_tune_ekf(req, res);
+    });
+
   q_pos_ = node.declare_parameter<double>("plugins.position_current_ekf.process_noise_pos", 0.1);
   q_current_ = node.declare_parameter<double>("plugins.position_current_ekf.process_noise_current", 0.01);
   r_pos_ = node.declare_parameter<double>("plugins.position_current_ekf.measurement_noise_pos", 1.0);
@@ -43,9 +52,36 @@ void PositionCurrentEkfFilter::configure(rclcpp::Node & node)
 
   R_.setIdentity();
   R_ *= std::max(1e-9, r_pos_);
-  RCLCPP_INFO_STREAM(node.get_logger(), "PositionCurrentEkfFilter configured with Q diagonal [" << q_pos_ << ", " << q_pos_ << ", " << q_current_ << ", " << q_current_ << "] and R [" << r_pos_ << "]");
 }
 
+void PositionCurrentEkfFilter::on_tune_ekf(
+  const std::shared_ptr<farol2_nav::srv::TunePositionEkf::Request> req,
+  std::shared_ptr<farol2_nav::srv::TunePositionEkf::Response> res)
+{
+  if (req->process_noise_pos <= 0.0 ||
+    req->process_noise_current <= 0.0 ||
+    req->measurement_noise_pos <= 0.0)
+  {
+    res->success = false;
+    res->message =
+      "All EKF noise parameters must be > 0 (process_noise_pos, process_noise_current, measurement_noise_pos).";
+    return;
+  }
+
+  q_pos_ = req->process_noise_pos;
+  q_current_ = req->process_noise_current;
+  r_pos_ = req->measurement_noise_pos;
+
+  Q_.setZero();
+  Q_.diagonal() << q_pos_, q_pos_, q_current_, q_current_;
+  R_.setIdentity();
+  R_ *= std::max(1e-9, r_pos_);
+
+  res->success = true;
+  res->message = "Position-current EKF noise parameters updated.";
+}
+
+// TODO: fix this to get surge and sway (when we know Y_v and Y_vv and m_uv)
 double PositionCurrentEkfFilter::rpm_to_body_speed_mps(const MeasurementSnapshot & m, double dt_s)
 {
   if (dt_s <= 0.0) {
@@ -114,10 +150,10 @@ void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & 
   // This keeps one canonical measurement path in the pipeline instead of each filter
   // reading raw topics independently.
   const bool has_position_measurement = (m.gnss != nullptr) || (m.utm_ned != nullptr);
-  const double measured_x_m = s.northing_m;
-  const double measured_y_m = s.easting_m;
+  const double measured_x_m = s.northing;
+  const double measured_y_m = s.easting;
 
-  // EKF bootstrapping: initialize when the first valid position measurement appears.
+  // initialize ekf whith the first measurement
   if (!initialized_) {
     if (!has_position_measurement) {
       return;
@@ -138,6 +174,11 @@ void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & 
 
   const double dt = std::max(0.0, dt_s);
 
+  const double psi = farol2_utils::deg2rad(s.attitude(2));
+  const double vm_body = rpm_to_body_speed_mps(m, dt);
+  const double vx_model = vm_body * std::cos(psi);
+  const double vy_model = vm_body * std::sin(psi);
+
   // ---------------------------
   // EKF prediction step (model)
   // ---------------------------
@@ -151,11 +192,7 @@ void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & 
   //
   // Covariance model:
   //   P_k|k-1 = F P_k-1|k-1 F^T + Q_d
-  const double psi = farol2_utils::deg2rad(s.attitude_deg(2));
-  const double vm_body = rpm_to_body_speed_mps(m, dt);
-  const double vx_model = vm_body * std::cos(psi);
-  const double vy_model = vm_body * std::sin(psi);
-
+  // ---------------------------
   x_(0) += dt * (vx_model + x_(2));
   x_(1) += dt * (vy_model + x_(3));
 
@@ -186,12 +223,17 @@ void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & 
 
   // Write estimator output back to the shared pipeline state.
   if (override_position_state_) {
-    s.northing_m = x_(0);
-    s.easting_m = x_(1);
+    s.northing = x_(0);
+    s.easting = x_(1);
   }
-  s.current_velocity_inertial_mps(0) = x_(2);
-  s.current_velocity_inertial_mps(1) = x_(3);
-  s.current_velocity_inertial_mps(2) = 0.0;
+  s.current_velocity_inertial(0) = x_(2);
+  s.current_velocity_inertial(1) = x_(3);
+  s.current_velocity_inertial(2) = 0.0;
+  // velocity through water using only the model 
+  s.velocity_through_water_ned(0) = vx_model;
+  s.velocity_through_water_ned(1) = vy_model;
+  s.velocity_through_water_body(0) = vm_body;
+  s.velocity_through_water_body(1) = 0.0; // assuming no sway in the model
 }
 
 }  // namespace filters

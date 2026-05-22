@@ -20,50 +20,50 @@ void PassThroughFilter::configure(rclcpp::Node &)
 void PassThroughFilter::compute(double, const MeasurementSnapshot & m, State & s)
 {
   if (m.gnss != nullptr) {
-    s.latitude_deg = m.gnss->latitude;
-    s.longitude_deg = m.gnss->longitude;
+    s.latitude = m.gnss->latitude;
+    s.longitude = m.gnss->longitude;
 
-    if (std::isfinite(s.latitude_deg) && std::isfinite(s.longitude_deg) &&
-      s.latitude_deg >= -90.0 && s.latitude_deg <= 90.0 &&
-      s.longitude_deg >= -180.0 && s.longitude_deg <= 180.0)
+    if (std::isfinite(s.latitude) && std::isfinite(s.longitude) &&
+      s.latitude >= -90.0 && s.latitude <= 90.0 &&
+      s.longitude >= -180.0 && s.longitude <= 180.0)
     {
       int zone = 0;
       bool northp = true;
       double easting = 0.0;
       double northing = 0.0;
-      GeographicLib::UTMUPS::Forward(s.latitude_deg, s.longitude_deg, zone, northp, easting, northing);
-      s.northing_m = northing;
-      s.easting_m = easting;
+      GeographicLib::UTMUPS::Forward(s.latitude, s.longitude, zone, northp, easting, northing);
+      s.northing = northing;
+      s.easting = easting;
       s.utm_zone = static_cast<int32_t>(zone);
     }
   }
 
   if (m.utm_ned != nullptr) {
-    s.northing_m = m.utm_ned->vector.x;
-    s.easting_m = m.utm_ned->vector.y;
+    s.northing = m.utm_ned->vector.x;
+    s.easting = m.utm_ned->vector.y;
     s.utm_zone = static_cast<int32_t>(m.utm_ned->vector.z);
   }
 
   if (m.velocity_over_ground != nullptr) {
-    s.velocity_over_ground_ned_mps <<
+    s.velocity_over_ground_ned <<
       m.velocity_over_ground->vector.x,
       m.velocity_over_ground->vector.y,
       m.velocity_over_ground->vector.z;
   }
 
   if (m.velocity_through_water != nullptr) {
-    s.velocity_through_water_body_mps <<
+    s.velocity_through_water_body <<
       m.velocity_through_water->vector.x,
       m.velocity_through_water->vector.y,
       m.velocity_through_water->vector.z;
   }
 
   if (m.depth != nullptr) {
-    s.depth_m = m.depth->data;
+    s.depth = m.depth->data;
   }
 
   if (m.altimeter != nullptr) {
-    s.altimeter_m = m.altimeter->data;
+    s.altimeter = m.altimeter->data;
   }
 
   if (m.imu != nullptr) {
@@ -75,13 +75,13 @@ void PassThroughFilter::compute(double, const MeasurementSnapshot & m, State & s
     double yaw_rad = 0.0;
     tf2::Matrix3x3(q_tf).getRPY(roll_rad, pitch_rad, yaw_rad);
 
-    s.attitude_deg(0) = farol2_utils::rad2deg(roll_rad);
-    s.attitude_deg(1) = farol2_utils::rad2deg(pitch_rad);
-    s.attitude_deg(2) = farol2_utils::rad2deg(yaw_rad);
+    s.attitude(0) = farol2_utils::rad2deg(roll_rad);
+    s.attitude(1) = farol2_utils::rad2deg(pitch_rad);
+    s.attitude(2) = farol2_utils::rad2deg(yaw_rad);
 
-    s.angular_velocity_dps(0) = farol2_utils::rad2deg(m.imu->angular_velocity.x);
-    s.angular_velocity_dps(1) = farol2_utils::rad2deg(m.imu->angular_velocity.y);
-    s.angular_velocity_dps(2) = farol2_utils::rad2deg(m.imu->angular_velocity.z);
+    s.angular_velocity(0) = farol2_utils::rad2deg(m.imu->angular_velocity.x);
+    s.angular_velocity(1) = farol2_utils::rad2deg(m.imu->angular_velocity.y);
+    s.angular_velocity(2) = farol2_utils::rad2deg(m.imu->angular_velocity.z);
   }
 }
 

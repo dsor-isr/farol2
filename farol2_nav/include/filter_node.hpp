@@ -1,8 +1,8 @@
 #pragma once
 
 #include <farol2_nav/filters/base_filter.hpp>
-#include <farol2_nav/filters/measurement_snapshot.hpp>
-#include <farol2_nav/filters/state.hpp>
+#include <farol2_nav/measurement_snapshot.hpp>
+#include <farol2_nav/state.hpp>
 
 #include <farol2_allocation/msg/thruster_rpm.hpp>
 #include <farol2_interfaces/msg/navigation_state.hpp>

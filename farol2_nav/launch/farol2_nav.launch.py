@@ -114,6 +114,7 @@ def generate_launch_description():
       ##############################################################################################################################
       ('sample_and_hold/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/sample_and_hold/state')]),
       ('position_current_ekf/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/position_current_ekf/state')]),
+      ('yaw_rate_ekf/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/yaw_rate_ekf/state')]),
     ]
   )
 

@@ -200,42 +200,42 @@ void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
   // Reuse a single message instance to avoid per-tick temporary allocations.
   msg_.header.stamp = stamp;
   msg_.header.frame_id = "";
-  msg_.global_position.latitude = state_.latitude_deg;
-  msg_.global_position.longitude = state_.longitude_deg;
+  msg_.global_position.latitude = state_.latitude;
+  msg_.global_position.longitude = state_.longitude;
 
-  msg_.utm_position.northing = state_.northing_m;
-  msg_.utm_position.easting = state_.easting_m;
+  msg_.utm_position.northing = state_.northing;
+  msg_.utm_position.easting = state_.easting;
   msg_.utm_position.utm_zone = static_cast<uint32_t>(std::max(0, state_.utm_zone));
-  msg_.utm_position.northp = (state_.latitude_deg >= 0.0);
+  msg_.utm_position.northp = (state_.latitude >= 0.0);
 
-  msg_.depth = state_.depth_m;
-  msg_.altimeter = state_.altimeter_m;
-  msg_.altitude_ellipsoidal = state_.altitude_ellipsoidal_m;
-  msg_.local_datum.altitude = state_.local_datum_altitude_m;
+  msg_.depth = state_.depth;
+  msg_.altimeter = state_.altimeter;
+  msg_.altitude_ellipsoidal = state_.altitude_ellipsoidal;
+  msg_.local_datum.altitude = state_.local_datum_altitude;
 
-  msg_.velocity_over_ground_body.x = state_.velocity_over_ground_body_mps(0);
-  msg_.velocity_over_ground_body.y = state_.velocity_over_ground_body_mps(1);
-  msg_.velocity_over_ground_body.z = state_.velocity_over_ground_body_mps(2);
-  msg_.velocity_through_water_body.x = state_.velocity_through_water_body_mps(0);
-  msg_.velocity_through_water_body.y = state_.velocity_through_water_body_mps(1);
-  msg_.velocity_through_water_body.z = state_.velocity_through_water_body_mps(2);
-  msg_.velocity_over_ground_ned.x = state_.velocity_over_ground_ned_mps(0);
-  msg_.velocity_over_ground_ned.y = state_.velocity_over_ground_ned_mps(1);
-  msg_.velocity_over_ground_ned.z = state_.velocity_over_ground_ned_mps(2);
-  msg_.velocity_through_water_ned.x = state_.velocity_through_water_ned_mps(0);
-  msg_.velocity_through_water_ned.y = state_.velocity_through_water_ned_mps(1);
-  msg_.velocity_through_water_ned.z = state_.velocity_through_water_ned_mps(2);
-  msg_.course_over_ground = state_.course_over_ground_deg;
-  msg_.current_velocity_inertial.x = state_.current_velocity_inertial_mps(0);
-  msg_.current_velocity_inertial.y = state_.current_velocity_inertial_mps(1);
-  msg_.current_velocity_inertial.z = state_.current_velocity_inertial_mps(2);
+  msg_.velocity_over_ground_body.x = state_.velocity_over_ground_body(0);
+  msg_.velocity_over_ground_body.y = state_.velocity_over_ground_body(1);
+  msg_.velocity_over_ground_body.z = state_.velocity_over_ground_body(2);
+  msg_.velocity_through_water_body.x = state_.velocity_through_water_body(0);
+  msg_.velocity_through_water_body.y = state_.velocity_through_water_body(1);
+  msg_.velocity_through_water_body.z = state_.velocity_through_water_body(2);
+  msg_.velocity_over_ground_ned.x = state_.velocity_over_ground_ned(0);
+  msg_.velocity_over_ground_ned.y = state_.velocity_over_ground_ned(1);
+  msg_.velocity_over_ground_ned.z = state_.velocity_over_ground_ned(2);
+  msg_.velocity_through_water_ned.x = state_.velocity_through_water_ned(0);
+  msg_.velocity_through_water_ned.y = state_.velocity_through_water_ned(1);
+  msg_.velocity_through_water_ned.z = state_.velocity_through_water_ned(2);
+  msg_.course_over_ground = state_.course_over_ground;
+  msg_.current_velocity_inertial.x = state_.current_velocity_inertial(0);
+  msg_.current_velocity_inertial.y = state_.current_velocity_inertial(1);
+  msg_.current_velocity_inertial.z = state_.current_velocity_inertial(2);
 
-  msg_.attitude.x = state_.attitude_deg(0);
-  msg_.attitude.y = state_.attitude_deg(1);
-  msg_.attitude.z = state_.attitude_deg(2);
-  msg_.angular_velocity.x = state_.angular_velocity_dps(0);
-  msg_.angular_velocity.y = state_.angular_velocity_dps(1);
-  msg_.angular_velocity.z = state_.angular_velocity_dps(2);
+  msg_.attitude.x = state_.attitude(0);
+  msg_.attitude.y = state_.attitude(1);
+  msg_.attitude.z = state_.attitude(2);
+  msg_.angular_velocity.x = state_.angular_velocity(0);
+  msg_.angular_velocity.y = state_.angular_velocity(1);
+  msg_.angular_velocity.z = state_.angular_velocity(2);
 }
 
 int main(int argc, char ** argv)

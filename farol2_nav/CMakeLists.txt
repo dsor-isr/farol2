@@ -13,6 +13,8 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 find_package(farol2_interfaces REQUIRED)
 find_package(farol2_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
@@ -43,6 +45,7 @@ add_executable(filter_node
   src/filter_node.cpp
   src/filters/pass_through.cpp
   src/filters/position_current_ekf.cpp
+  src/filters/yaw_rate_ekf.cpp
 )
 
 
@@ -51,6 +54,8 @@ ament_target_dependencies(filter_node
   std_msgs
   sensor_msgs
   geometry_msgs
+  tf2
+  tf2_geometry_msgs
   farol2_interfaces
   farol2_allocation
   farol2_utils

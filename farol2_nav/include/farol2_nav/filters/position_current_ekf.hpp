@@ -1,6 +1,7 @@
 #pragma once
 
 #include <farol2_nav/filters/base_filter.hpp>
+#include <farol2_nav/srv/tune_position_ekf.hpp>
 
 #include <Eigen/Dense>
 
@@ -18,6 +19,9 @@ public:
 
 private:
   double rpm_to_body_speed_mps(const MeasurementSnapshot & m, double dt_s);
+  void on_tune_ekf(
+    const std::shared_ptr<farol2_nav::srv::TunePositionEkf::Request> req,
+    std::shared_ptr<farol2_nav::srv::TunePositionEkf::Response> res);
 
   bool initialized_{false};
   Eigen::Vector4d x_{Eigen::Vector4d::Zero()};
@@ -56,6 +60,8 @@ private:
   double rpm_model_state_{0.0};
   double u_estimated_{0.0};
   double time_in_override_zone_s_{0.0};
+
+  rclcpp::Service<farol2_nav::srv::TunePositionEkf>::SharedPtr tune_ekf_srv_{};
 };
 
 }  // namespace filters
