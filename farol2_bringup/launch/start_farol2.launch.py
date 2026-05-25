@@ -14,7 +14,7 @@ def generate_launch_description():
         'id', default_value='0', description='Vehicle ID.'
     )
     config_package_arg = DeclareLaunchArgument(
-        'config_package', default_value='magicelectric_bringup', description='Config package.'
+        'config_package', default_value='personal_bringup', description='Config package.'
     )
     config_package_path_real_arg = DeclareLaunchArgument(
         'config_package_path_real',
@@ -62,6 +62,18 @@ def generate_launch_description():
         }.items()
     )
 
+    tf_static = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('farol2_description'), 'launch', 'tf_static.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'vehicle_name': LaunchConfiguration('name'),
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+        }.items()
+    )
+
     allocation = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -74,8 +86,7 @@ def generate_launch_description():
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'config_package_path_share': FindPackageShare(LaunchConfiguration('config_package')),
             'config_package_path_real': LaunchConfiguration('config_package_path_real'),
-            'static_thruster_allocation': 'false',
-            'thruster_rudder_allocation': 'true',
+            'thruster_allocation': 'true',
         }.items()
     )
 
@@ -92,7 +103,7 @@ def generate_launch_description():
             'config_package_path_share': FindPackageShare(LaunchConfiguration('config_package')),
             'config_package_path_real': LaunchConfiguration('config_package_path_real'),
             'pid': 'true',
-            'open_loop': 'true',
+            'open_loop': 'false',
         }.items()
     )
 
@@ -166,6 +177,7 @@ def generate_launch_description():
         config_package_path_real_arg,
         use_sim_time_arg,
         nav,
+        tf_static,
         allocation,
         inner_loop,
         waypoint,

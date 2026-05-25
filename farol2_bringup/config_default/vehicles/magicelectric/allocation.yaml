@@ -2,45 +2,32 @@
 #   Default Parameters
 ################################
 
-/**/allocation/**:
-  ros__parameters:
-    allocation:
-      model:
-        K_s: 1.0
-        K_L: 0.0    # 0.0 -> drag induced by rudder is not accounted for
-        K_D0: 0.0   # 0.0 -> drag induced by rudder is not accounted for
-        K_D1: 0.0   # 0.0 -> drag induced by rudder is not accounted for
-      rudder:
-        limits:
-          max: 36.0 # [deg]
-          min: -36.0 # [deg]
-        cm_distance: 4.0 # [m]
-      thrusters:
-        open_loop: true
-        n_thrusters: 2
-        configuration:
-          0:
-            name: "Portside"
-            moment_arms: [-4.0, -1.5, 0.0] # [m]
-            angles: [0.0, 0.0, 0.0] # roll, pitch, yaw [deg]
-          1:
-            name: "Starboard"
-            moment_arms: [-4.0, 1.5, 0.0] # [m]
-            angles: [0.0, 0.0, 0.0] # roll, pitch, yaw [deg]
-
-# Parameters by NODE
 /**:
   wrench_manager:
     ros__parameters:
       node_frequency: 10.0
 
-  static_thruster_allocation:
+  thruster_allocation:
     ros__parameters:
       node_frequency: 10.0
-  
-  thruster_rudder_allocation:
-    ros__parameters:
-      node_frequency: 10.0
+      allocation:
+        type: "thrust_rudder"
+        model:
+          K_s: 1.0
+          K_L: 0.0    # 0.0 -> drag induced by rudder is not accounted for
+          K_D0: 0.0   # 0.0 -> drag induced by rudder is not accounted for
+          K_D1: 0.0   # 0.0 -> drag induced by rudder is not accounted for
+        rudder:
+          limits:
+            max: 36.0 # [deg]
+            min: -36.0 # [deg]
+          cm_distance: 4.0 # [m]
+        thrusters:
+          open_loop: true
+          base_frame: "base_link"
+          thrust_axis: [1.0, 0.0, 0.0]
+          frames:
+            - "thruster_middle_link"
   
   rpm_conversion:
     ros__parameters:
@@ -57,6 +44,3 @@
       max_rpm: 2000.0
       min_rpm: -2000.0
 
-  throttle_conversion:
-    ros__parameters:
-      k: 20.0 # throttle[%] * k = [RPM] -> throttle[%] = [RPM] / k

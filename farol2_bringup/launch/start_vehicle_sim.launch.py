@@ -24,7 +24,7 @@ def generate_launch_description():
 
   config_package_arg = DeclareLaunchArgument(
     'config_package',
-    default_value='magicelectric_bringup',
+    default_value='personal_bringup',
     description='Package where the configuration files are.'
   )
 
@@ -43,6 +43,14 @@ def generate_launch_description():
     "'", LaunchConfiguration('name'), "' + '", LaunchConfiguration('id'), "'"
   ])
 
+  is_magic_electric = PythonExpression([
+    "'", LaunchConfiguration('name'), "' == 'magicelectric'"
+  ])
+
+  is_not_magic_electric = PythonExpression([
+    "'", LaunchConfiguration('name'), "' != 'magicelectric'"
+  ])
+
   ###################################################
   # Include simulation launch (before Farol stack) #
   ###################################################
@@ -59,8 +67,8 @@ def generate_launch_description():
       'vehicle_name': LaunchConfiguration('name'),
       'config_package_path_share': FindPackageShare(LaunchConfiguration('config_package')),
       'config_package_path_real': LaunchConfiguration('config_package_path_real'),
-      'magic_electric_sim': 'true',
-      'auv_sim': 'false',
+      'magic_electric_sim': is_magic_electric,
+      'auv_sim': is_not_magic_electric,
     }.items()
   )
 
@@ -69,7 +77,7 @@ def generate_launch_description():
   ###############################################################
   farol_stack = IncludeLaunchDescription(
     PythonLaunchDescriptionSource([
-      PathJoinSubstitution([FindPackageShare('magicelectric_bringup'), 'launch', 'start_farol2.launch.py'])
+      PathJoinSubstitution([FindPackageShare('personal_bringup'), 'launch', 'start_farol2.launch.py'])
     ]),
     launch_arguments={
       'name': LaunchConfiguration('name'),
@@ -88,4 +96,3 @@ def generate_launch_description():
     simulation,
     farol_stack,
   ])
-
