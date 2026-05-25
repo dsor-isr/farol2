@@ -7,33 +7,22 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     # Arguments for vehicle identity and config
-    name_arg = DeclareLaunchArgument(
-        'name', default_value='magicelectric', description='Vehicle name.'
+    vehicle_name_arg = DeclareLaunchArgument(
+        'vehicle_name', default_value='magicelectric', description='Vehicle name.'
     )
-    id_arg = DeclareLaunchArgument(
-        'id', default_value='0', description='Vehicle ID.'
+    vehicle_id_arg = DeclareLaunchArgument(
+        'vehicle_id', default_value='0', description='Vehicle ID.'
     )
-    config_package_arg = DeclareLaunchArgument(
-        'config_package', default_value='magicelectric_bringup', description='Config package.'
+    
+    config_to_use_arg = DeclareLaunchArgument(
+        'config_to_use', default_value='default', description='Config folder to use.'
     )
-    config_package_path_real_arg = DeclareLaunchArgument(
-        'config_package_path_real',
-        default_value=PathJoinSubstitution([
-            FindPackageShare(LaunchConfiguration('config_package')),
-            '..', '..', '..', '..',
-            'src',
-            LaunchConfiguration('config_package')
-        ]),
-        description='Path to the config package in the src folder.'
-    )
+    
     use_sim_time_arg = DeclareLaunchArgument(
         'use_sim_time', default_value='false', description='Use simulation time for Farol stack.'
     )
 
-    vehicle_ns = PythonExpression([
-        "'", LaunchConfiguration('name'), "' + '", LaunchConfiguration('id'), "'"
-    ])
-
+    
     # --- EDIT BELOW: This is your new stack definition ---
     # Add/remove IncludeLaunchDescription or Node actions as needed
     # Example: Navigation
@@ -52,13 +41,12 @@ def generate_launch_description():
             ])
         ]),
         launch_arguments={
-            'vehicle_ns': vehicle_ns,
-            'vehicle_name': LaunchConfiguration('name'),
+            'vehicle_name': LaunchConfiguration('vehicle_name'),
+            'vehicle_id': LaunchConfiguration('vehicle_id'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'config_package_path_share': FindPackageShare(LaunchConfiguration('config_package')),
-            'config_package_path_real': LaunchConfiguration('config_package_path_real'),
-            'sample_and_hold': 'true',
-            'low_pass': 'false',
+            'config_to_use': LaunchConfiguration('config_to_use'),
+            'sample_and_hold': 'false',
+            'filter_node': 'true',
         }.items()
     )
 
@@ -69,11 +57,10 @@ def generate_launch_description():
             ])
         ]),
         launch_arguments={
-            'vehicle_ns': vehicle_ns,
-            'vehicle_name': LaunchConfiguration('name'),
+            'vehicle_name': LaunchConfiguration('vehicle_name'),
+            'vehicle_id': LaunchConfiguration('vehicle_id'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'config_package_path_share': FindPackageShare(LaunchConfiguration('config_package')),
-            'config_package_path_real': LaunchConfiguration('config_package_path_real'),
+            'config_to_use': LaunchConfiguration('config_to_use'),
             'static_thruster_allocation': 'false',
             'thruster_rudder_allocation': 'true',
         }.items()
@@ -86,11 +73,10 @@ def generate_launch_description():
             ])
         ]),
         launch_arguments={
-            'vehicle_ns': vehicle_ns,
-            'vehicle_name': LaunchConfiguration('name'),
+            'vehicle_name': LaunchConfiguration('vehicle_name'),
+            'vehicle_id': LaunchConfiguration('vehicle_id'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'config_package_path_share': FindPackageShare(LaunchConfiguration('config_package')),
-            'config_package_path_real': LaunchConfiguration('config_package_path_real'),
+            'config_to_use': LaunchConfiguration('config_to_use'),
             'pid': 'true',
             'open_loop': 'true',
         }.items()
@@ -103,11 +89,10 @@ def generate_launch_description():
             ])
         ]),
         launch_arguments={
-            'vehicle_ns': vehicle_ns,
-            'vehicle_name': LaunchConfiguration('name'),
+            'vehicle_name': LaunchConfiguration('vehicle_name'),
+            'vehicle_id': LaunchConfiguration('vehicle_id'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'config_package_path_share': FindPackageShare(LaunchConfiguration('config_package')),
-            'config_package_path_real': LaunchConfiguration('config_package_path_real'),
+            'config_to_use': LaunchConfiguration('config_to_use'),
         }.items()
     )
 
@@ -118,11 +103,10 @@ def generate_launch_description():
             ])
         ]),
         launch_arguments={
-            'vehicle_ns': vehicle_ns,
-            'vehicle_name': LaunchConfiguration('name'),
+            'vehicle_name': LaunchConfiguration('vehicle_name'),
+            'vehicle_id': LaunchConfiguration('vehicle_id'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'config_package_path_share': FindPackageShare(LaunchConfiguration('config_package')),
-            'config_package_path_real': LaunchConfiguration('config_package_path_real'),
+            'config_to_use': LaunchConfiguration('config_to_use'),
             # Example: add custom args here if needed
         }.items()
     )
@@ -134,11 +118,10 @@ def generate_launch_description():
             ])
         ]),
         launch_arguments={
-            'vehicle_ns': vehicle_ns,
-            'vehicle_name': LaunchConfiguration('name'),
+            'vehicle_name': LaunchConfiguration('vehicle_name'),
+            'vehicle_id': LaunchConfiguration('vehicle_id'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'config_package_path_share': FindPackageShare(LaunchConfiguration('config_package')),
-            'config_package_path_real': LaunchConfiguration('config_package_path_real'),
+            'config_to_use': LaunchConfiguration('config_to_use'),
         }.items()
     )
 
@@ -149,22 +132,22 @@ def generate_launch_description():
             ])
         ]),
         launch_arguments={
-            'vehicle_ns': vehicle_ns,
-            'vehicle_name': LaunchConfiguration('name'),
+            'vehicle_name': LaunchConfiguration('vehicle_name'),
+            'vehicle_id': LaunchConfiguration('vehicle_id'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'config_package_path_share': FindPackageShare(LaunchConfiguration('config_package')),
-            'config_package_path_real': LaunchConfiguration('config_package_path_real'),
+            'config_to_use': LaunchConfiguration('config_to_use'),
         }.items()
     )
 
     # --- END EDIT ---
 
     return LaunchDescription([
-        name_arg,
-        id_arg,
-        config_package_arg,
-        config_package_path_real_arg,
+        # args
+        vehicle_name_arg,
+        vehicle_id_arg,
+        config_to_use_arg,
         use_sim_time_arg,
+        # launches (one per package)
         nav,
         allocation,
         inner_loop,

@@ -11,10 +11,10 @@ def generate_launch_description():
   ####################
   # Launch arguments #
   ####################
-  vehicle_ns_arg = DeclareLaunchArgument(
-    'vehicle_ns',
-    default_value='vehicle0',
-    description='Vehicle namespace for topics, nodes, etc.'
+  vehicle_id_arg = DeclareLaunchArgument(
+    'vehicle_id',
+    default_value='0',
+    description='Vehicle ID'
   )
 
   vehicle_name_arg = DeclareLaunchArgument(
@@ -29,17 +29,13 @@ def generate_launch_description():
     description='Use simulation time'
   )
 
-  config_package_path_share_arg = DeclareLaunchArgument(
-    'config_package_path_share',
-    default_value='',
-    description='Path to the config package, usually the personal bringup of the workspace, in the install folder'
+  config_to_use = DeclareLaunchArgument(
+    'config_to_use',
+    default_value='default',
+    description='Config folder to use.'
   )
 
-  config_package_path_real_arg = DeclareLaunchArgument(
-    'config_package_path_real',
-    default_value='',
-    description='Path to the config package, usually the personal bringup of the workspace, in the src folder'
-  )
+  vehicle_ns = PythonExpression(["'", LaunchConfiguration('vehicle_name'), "' + '", LaunchConfiguration('vehicle_id'), "'"])
 
   launch_pid_arg = DeclareLaunchArgument(
     'pid',
@@ -58,26 +54,26 @@ def generate_launch_description():
   ###################################
   params = [
             # vehicle namespace
-            {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
+            {'vehicle_name': LaunchConfiguration('vehicle_name')},
+            {'vehicle_id': LaunchConfiguration('vehicle_id')},
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
 
             # load default PID configs
             PathJoinSubstitution([
               FindPackageShare('farol2_bringup'),
-              'config_default',
-              'vehicles',
+              'config',
               LaunchConfiguration('vehicle_name'),
+              'default',
               'inner_loop.yaml'
             ]),
-            
-            # override with personal PID configs
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_share'),
-              'config_personal',
-              'vehicles',
-              LaunchConfiguration('vehicle_name'),
-              'inner_loop.yaml'
-            ]),
+            # override config — same path as default when config_to_use == 'default'
+          #   PathJoinSubstitution([
+          #     FindPackageShare('farol2_bringup'),
+          #     'config',
+          #     LaunchConfiguration('vehicle_name'),
+          #     LaunchConfiguration('config_to_use'),
+          #     'inner_loop.yaml'
+          #   ]),
           ]
 
 
@@ -87,7 +83,7 @@ def generate_launch_description():
   
   pid_node = Node(
     package='farol2_inner_loop',
-    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'inner_loop']),
+    namespace=PathJoinSubstitution([vehicle_ns, 'inner_loop']),
     executable='pid_control',
     name='pid',
     output='screen',
@@ -95,41 +91,41 @@ def generate_launch_description():
     parameters=params,
     remappings=[
       # Subscribers
-      ('nav_state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
-      ('surge_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/surge')]),
-      ('sway_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/sway')]),
-      ('heave_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/heave')]),
-      ('yaw_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/yaw')]),
-      ('pitch_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/pitch')]),
-      ('roll_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/roll')]),
-      ('yaw_rate_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/yaw_rate')]),
-      ('pitch_rate_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/pitch_rate')]),
-      ('roll_rate_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/roll_rate')]),
+      ('nav_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
+      ('surge_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/surge')]),
+      ('sway_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/sway')]),
+      ('heave_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/heave')]),
+      ('yaw_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/yaw')]),
+      ('pitch_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/pitch')]),
+      ('roll_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/roll')]),
+      ('yaw_rate_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/yaw_rate')]),
+      ('pitch_rate_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/pitch_rate')]),
+      ('roll_rate_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/roll_rate')]),
       # Publishers
-      ('thrust_x', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thrust_x')]),
-      ('thrust_y', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thrust_y')]),
-      ('thrust_z', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thrust_z')]),
-      ('torque_x', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/torque_x')]),
-      ('torque_y', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/torque_y')]),
-      ('torque_z', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/torque_z')]),
-      ('debug_surge', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/pid/surge/debug')]),
-      ('debug_sway', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/pid/sway/debug')]),
-      ('debug_heave', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/pid/heave/debug')]),
-      ('debug_yaw', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/pid/yaw/debug')]),
-      ('debug_pitch', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/pid/pitch/debug')]),
-      ('debug_roll', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/pid/roll/debug')]),
-      ('debug_yaw_rate', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/pid/yaw_rate/debug')]),
-      ('debug_pitch_rate', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/pid/pitch_rate/debug')]),
-      ('debug_roll_rate', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/pid/roll_rate/debug')]),
+      ('thrust_x', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thrust_x')]),
+      ('thrust_y', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thrust_y')]),
+      ('thrust_z', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thrust_z')]),
+      ('torque_x', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/torque_x')]),
+      ('torque_y', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/torque_y')]),
+      ('torque_z', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/torque_z')]),
+      ('debug_surge', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/pid/surge/debug')]),
+      ('debug_sway', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/pid/sway/debug')]),
+      ('debug_heave', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/pid/heave/debug')]),
+      ('debug_yaw', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/pid/yaw/debug')]),
+      ('debug_pitch', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/pid/pitch/debug')]),
+      ('debug_roll', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/pid/roll/debug')]),
+      ('debug_yaw_rate', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/pid/yaw_rate/debug')]),
+      ('debug_pitch_rate', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/pid/pitch_rate/debug')]),
+      ('debug_roll_rate', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/pid/roll_rate/debug')]),
       # Services
-      ('change_params', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/change_params')]),
-      ('course_control', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/course_control')]),
+      ('change_params', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/change_params')]),
+      ('course_control', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/course_control')]),
     ]
   )
 
   open_loop_node = Node(
     package='farol2_inner_loop',
-    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'inner_loop']),
+    namespace=PathJoinSubstitution([vehicle_ns, 'inner_loop']),
     executable='open_loop',
     name='open_loop',
     output='screen',
@@ -137,10 +133,10 @@ def generate_launch_description():
     parameters=params,
     remappings=[
       # Subscribers
-      ('surge_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/inner_loop/ref/surge')]),
-      ('mission_status', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/mission_status')]),
+      ('surge_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/surge')]),
+      ('mission_status', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/mission_status')]),
       # Publishers
-      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
+      ('rpm_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rpm_command')]),
     ]
   )
 
@@ -149,11 +145,10 @@ def generate_launch_description():
   ######################################################
   return LaunchDescription([
     # launch arguments
-    vehicle_ns_arg,
+    vehicle_id_arg,
     vehicle_name_arg,
     use_sim_time_arg,
-    config_package_path_share_arg,
-    config_package_path_real_arg,
+    config_to_use,
     launch_pid_arg,
     launch_openloop_arg,
     # nodes
