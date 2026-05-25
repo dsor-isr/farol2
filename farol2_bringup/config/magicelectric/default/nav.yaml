@@ -1,5 +1,5 @@
 ################################
-#   Default Parameters
+#  Parameters
 ################################
 
 # "/**" is needed for nodes to find their params despite the "/vehicle0/<meta_package>/"<node_name>. the /**/ essentially leaves only the "node_name" as a key.

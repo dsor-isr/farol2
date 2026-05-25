@@ -11,10 +11,10 @@ def generate_launch_description():
   ####################
   # Launch arguments #
   ####################
-  vehicle_ns_arg = DeclareLaunchArgument(
-    'vehicle_ns',
-    default_value='vehicle0',
-    description='Vehicle namespace for topics, nodes, etc.'
+  vehicle_id_arg = DeclareLaunchArgument(
+    'vehicle_id',
+    default_value='0',
+    description='Vehicle ID'
   )
 
   vehicle_name_arg = DeclareLaunchArgument(
@@ -29,51 +29,39 @@ def generate_launch_description():
     description='Use simulation time'
   )
 
-  config_package_path_share_arg = DeclareLaunchArgument(
-    'config_package_path_share',
-    default_value='',
-    description='Path to the config package, usually the personal bringup of the workspace, in the install folder'
+  config_to_use = DeclareLaunchArgument(
+    'config_to_use',
+    default_value='default',
+    description='Config folder to use.'
   )
 
-  config_package_path_real_arg = DeclareLaunchArgument(
-    'config_package_path_real',
-    default_value='',
-    description='Path to the config package, usually the personal bringup of the workspace, in the src folder'
-  )
-
-  launch_filter_node_arg = DeclareLaunchArgument(
-    'filter_node',
-    default_value='false',
-    description='Boolean to determine if the new side-by-side filter_node is launched.'
-  )
-
-
+  vehicle_ns = PythonExpression(["'", LaunchConfiguration('vehicle_name'), "' + '", LaunchConfiguration('vehicle_id'), "'"])
 
   ###################################
   # Define parameters for all nodes #
   ###################################
   params = [
             # vehicle namespace
-            {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
+            {'vehicle_id': LaunchConfiguration('vehicle_id')},
+            {'vehicle_name': LaunchConfiguration('vehicle_name')},
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
 
             # load default nav configs
             PathJoinSubstitution([
               FindPackageShare('farol2_bringup'),
-              'config_default',
-              'vehicles',
+              'config',
               LaunchConfiguration('vehicle_name'),
+              'default',
               'nav.yaml'
             ]),
-            
-            # override with personal nav configs
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_share'),
-              'config_personal',
-              'vehicles',
-              LaunchConfiguration('vehicle_name'),
-              'nav.yaml'
-            ]),
+            # override config — same path as default when config_to_use == 'default'
+          #   PathJoinSubstitution([
+          #     FindPackageShare('farol2_bringup'),
+          #     'config',
+          #     LaunchConfiguration('vehicle_name'),
+          #     LaunchConfiguration('config_to_use'),
+          #     'nav.yaml'
+          #   ]),
           ]
 
 
@@ -83,7 +71,7 @@ def generate_launch_description():
 
   filter_node = Node(
     package='farol2_nav',
-    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'nav']),
+    namespace=PathJoinSubstitution([vehicle_ns, 'nav']),
     executable='filter_node',
     name='filter_node',
     output='screen',
@@ -91,30 +79,30 @@ def generate_launch_description():
     parameters=params,
     remappings=[
       # Subscribers
-      ('imu', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/imu')]),
-      ('gnss', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/gnss')]),
-      ('ned_utm', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/ned_utm')]),
-      ('velocity_over_ground', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/velocity_over_ground')]),
-      ('velocity_through_water', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/velocity_through_water')]),
-      ('current_velocity', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/current_velocity')]),
-      ('depth', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/depth')]),
-      ('altimeter', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/altimeter')]),
-      ('altitude', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement/altitude')]),
-      ('rudder_angle', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/drivers/can_instrumentation/rudder_angle')]),
-      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
+      ('imu', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/imu')]),
+      ('gnss', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/gnss')]),
+      ('ned_utm', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/ned_utm')]),
+      ('velocity_over_ground', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/velocity_over_ground')]),
+      ('velocity_through_water', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/velocity_through_water')]),
+      ('current_velocity', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/current_velocity')]),
+      ('depth', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/depth')]),
+      ('altimeter', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/altimeter')]),
+      ('altitude', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/altitude')]),
+      ('rudder_angle', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/drivers/can_instrumentation/rudder_angle')]),
+      ('rpm_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rpm_command')]),
       # Publishers
-      ('state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      ('state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
       ##############################################################################################################################
       ## this needs to be like this because the rcl library doesnt support wildcards in remaping.
       ##  it is only possible via the cli. if it changes in the future it should work like this:
       ##
-      # ('/**/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/\\1/state')]),
+      # ('/**/state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/\\1/state')]),
       ##
       ## instead we roll like this, every new filter plugin needs to be added here manually:
       ##############################################################################################################################
-      ('sample_and_hold/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/sample_and_hold/state')]),
-      ('position_current_ekf/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/position_current_ekf/state')]),
-      ('yaw_rate_ekf/state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/yaw_rate_ekf/state')]),
+      ('sample_and_hold/state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/sample_and_hold/state')]),
+      ('position_current_ekf/state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/position_current_ekf/state')]),
+      ('yaw_rate_ekf/state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/yaw_rate_ekf/state')]),
     ]
   )
 
@@ -124,16 +112,10 @@ def generate_launch_description():
   ######################################################
   return LaunchDescription([
     # launch arguments
-    vehicle_ns_arg,
+    vehicle_id_arg,
     vehicle_name_arg,
     use_sim_time_arg,
-    config_package_path_share_arg,
-    config_package_path_real_arg,
-    launch_filter_node_arg,
-    # ...
+    config_to_use,
     # nodes
-    # filter_handler_node,
-    # sample_and_hold_filter_node,
     filter_node,
-    # ... 
   ])
