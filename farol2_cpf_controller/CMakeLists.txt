@@ -38,8 +38,7 @@ add_executable(cpf_controller_node
   # ROS Nodes
   src/ros/CpfNode.cpp
   src/ros/CpfServices.cpp
-
-  # Algorithms
+  # CPF Controller Implementation
   src/algorithms/CPFControl.cpp
   src/algorithms/EventTriggered.cpp
 )

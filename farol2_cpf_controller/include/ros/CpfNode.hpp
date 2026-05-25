@@ -17,6 +17,17 @@
 #include "farol2_cpf_controller/srv/start_stop.hpp"
 #include "farol2_cpf_controller/srv/change_topology.hpp"
 
+
+// Topic/service names (short form, remapped in launch file)
+#define TOPIC_SUB_EXTERNAL "external_gamma"
+#define TOPIC_SUB_INTERNAL "internal_gamma"
+#define TOPIC_PUB_VC "vc"
+#define TOPIC_PUB_BROADCAST_DATA "broadcast_data"
+#define SERVICE_CHANGE_TOPOLOGY "change_topology"
+#define SERVICE_START_CPF "start_cpf"
+#define SERVICE_STOP_CPF "stop_cpf"
+
+
 /**
  * @brief ROS2 node to perform Cooperative Path Following (CPF)
  */
@@ -46,7 +57,7 @@ private:
   rclcpp::Subscription<farol2_interfaces::msg::CPFGamma>::SharedPtr external_gamma_sub_;
 
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr vc_pub_;
-  rclcpp::Publisher<farol2_interfaces::msg::CPFGamma>::SharedPtr cpf_server_pub_;
+  rclcpp::Publisher<farol2_interfaces::msg::CPFGamma>::SharedPtr cpf_broadcast_pub_;
 
   rclcpp::Service<farol2_cpf_controller::srv::StartStop>::SharedPtr startCPF_srv_;
   rclcpp::Service<farol2_cpf_controller::srv::StartStop>::SharedPtr stopCPF_srv_;
@@ -57,6 +68,8 @@ private:
   void initializePublishers();
   void initializeServices();
   void initializeTimer();
+
+  double node_frequency_;
 
   /* Create default CPF controller */
   CPFControl * createEventTriggeredControl();
@@ -72,7 +85,10 @@ private:
   void internalInfoCallback(const farol2_planning::msg::PathData & msg);
   
   /* Service callbacks (kept signature style compatible with being called from lambdas) */
-  bool StartService(farol2_cpf_controller::srv::StartStop::Request & req, farol2_cpf_controller::srv::StartStop::Response & res);
-  bool StopService(farol2_cpf_controller::srv::StartStop::Request & req, farol2_cpf_controller::srv::StartStop::Response & res);
-  bool ChangeTopologyService(farol2_cpf_controller::srv::ChangeTopology::Request & req, farol2_cpf_controller::srv::ChangeTopology::Response & res);
+  bool StartService(const std::shared_ptr<farol2_cpf_controller::srv::StartStop::Request> req,
+                                      std::shared_ptr<farol2_cpf_controller::srv::StartStop::Response> res);
+  bool StopService(const std::shared_ptr<farol2_cpf_controller::srv::StartStop::Request> req,
+                                     std::shared_ptr<farol2_cpf_controller::srv::StartStop::Response> res);
+  bool ChangeTopologyService(const std::shared_ptr<farol2_cpf_controller::srv::ChangeTopology::Request> req,
+                                                std::shared_ptr<farol2_cpf_controller::srv::ChangeTopology::Response> res);
 };

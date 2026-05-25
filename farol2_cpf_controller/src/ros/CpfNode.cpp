@@ -40,20 +40,12 @@ CPFControl* CpfNode::createEventTriggeredControl() {
   std::vector<int64_t> adj_matrix;
   double k_epsilon = 0.0, c0 = 0.0, c1 = 0.0, alpha = 0.0;
 
-  /* Declare and read parameters */
-  this->declare_parameter<int>("ID", 0);
-  this->declare_parameter<std::vector<int64_t>>("adjency_matrix", std::vector<int64_t>{});
-  this->declare_parameter<double>("gains.event_triggered.c0", 0.0);
-  this->declare_parameter<double>("gains.event_triggered.c1", 0.0);
-  this->declare_parameter<double>("gains.event_triggered.alpha", 0.0);
-  this->declare_parameter<double>("gains.event_triggered.k_epsilon", 0.0);
-
-  ID = this->get_parameter("ID").as_int();
-  adj_matrix = this->get_parameter("adjency_matrix").as_integer_array();
-  c0 = this->get_parameter("gains.event_triggered.c0").as_double();
-  c1 = this->get_parameter("gains.event_triggered.c1").as_double();
-  alpha = this->get_parameter("gains.event_triggered.alpha").as_double();
-  k_epsilon = this->get_parameter("gains.event_triggered.k_epsilon").as_double();
+  ID = get_parameter("ID").as_int();
+  adj_matrix = get_parameter("adjency_matrix").as_integer_array();
+  c0 = get_parameter("gains.event_triggered.c0").as_double();
+  c1 = get_parameter("gains.event_triggered.c1").as_double();
+  alpha = get_parameter("gains.event_triggered.alpha").as_double();
+  k_epsilon = get_parameter("gains.event_triggered.k_epsilon").as_double();
 
   /* Save the ID in the node */
   this->ID_ = static_cast<unsigned int>(ID);
@@ -106,23 +98,13 @@ bool CpfNode::stop() {
 void CpfNode::initializeSubscribers() {
   RCLCPP_INFO(this->get_logger(), "Initializing Subscribers for CpfNode");
 
-  this->declare_parameter<std::string>("topics.subscribers.internal_gamma", "/internal_gamma");
-  this->declare_parameter<std::string>("topics.subscribers.external_gamma", "/external_gamma");
+  this->external_gamma_sub_ = create_subscription<farol2_interfaces::msg::CPFGamma>(  
+                                TOPIC_SUB_EXTERNAL, 10, 
+                                std::bind(&CpfNode::externalInfoCallback, this, std::placeholders::_1));
 
-  std::string gamma_topic = this->get_parameter("topics.subscribers.internal_gamma").as_string();
-  std::string external_gamma_topic = this->get_parameter("topics.subscribers.external_gamma").as_string();
-
-  this->internal_gamma_sub_ = this->create_subscription<farol2_planning::msg::PathData>(
-    gamma_topic, 10,
-    [this](const farol2_planning::msg::PathData::SharedPtr msg) {
-      this->internalInfoCallback(*msg);
-    });
-
-  this->external_gamma_sub_ = this->create_subscription<farol2_interfaces::msg::CPFGamma>(
-    external_gamma_topic, 10,
-    [this](const farol2_interfaces::msg::CPFGamma::SharedPtr msg) {
-      this->externalInfoCallback(*msg);
-    });
+  this->internal_gamma_sub_ = create_subscription<farol2_planning::msg::PathData>(
+                                TOPIC_SUB_INTERNAL, 10, 
+                                std::bind(&CpfNode::internalInfoCallback, this, std::placeholders::_1));
 }
 
 /**
@@ -131,30 +113,22 @@ void CpfNode::initializeSubscribers() {
 void CpfNode::initializePublishers() {
   RCLCPP_INFO(this->get_logger(), "Initializing Publishers for CpfNode");
 
-  this->declare_parameter<std::string>("topics.publishers.vc", "/vc");
-  this->declare_parameter<std::string>("topics.publishers.cpf_server_input", "/cpf_server_input");
-
-  std::string vc_topic = this->get_parameter("topics.publishers.vc").as_string();
-  std::string cpf_server_input_topic = this->get_parameter("topics.publishers.cpf_server_input").as_string();
-
-  this->vc_pub_ = this->create_publisher<std_msgs::msg::Float64>(vc_topic, 1);
-  this->cpf_server_pub_ = this->create_publisher<farol2_interfaces::msg::CPFGamma>(cpf_server_input_topic, 1);
-}
+  this->vc_pub_ = create_publisher<std_msgs::msg::Float64>(TOPIC_PUB_VC, 10);
+  this->cpf_broadcast_pub_ = create_publisher<farol2_interfaces::msg::CPFGamma>(TOPIC_PUB_BROADCAST_DATA, 10);
+} 
 
 /**
  * @brief  Method to create the timer that will do all the work
  */
 void CpfNode::initializeTimer() {
   /* Get node frequency from parameters */
-  this->declare_parameter<double>("node_frequency", 2.0);
-  double node_frequency = this->get_parameter("node_frequency").as_double();
-  RCLCPP_INFO(this->get_logger(), "Node will run at : %lf [hz]", node_frequency);
-
+  node_frequency_ = get_parameter("node_frequency").as_double();
+  
   /* Create timer */
-  auto period = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / node_frequency));
-  this->timer_ = this->create_timer(period, [this]() { timerIterCallback(); });
+  auto period = std::chrono::nanoseconds( static_cast<int64_t>(1e9 / node_frequency_));
+  this->timer_ = create_timer(period, [this]() {timerIterCallback();});
 
-  /* Wait for the start service to start the CPF */
+  /* Wait for the start service to start the Path Following */
   this->timer_->cancel();
 }
 
@@ -187,7 +161,7 @@ void CpfNode::timerIterCallback() {
     msg.gamma = this->gamma_;
     msg.vd = this->vd_;
 
-    this->cpf_server_pub_->publish(msg);
+    this->cpf_broadcast_pub_->publish(msg);
     this->seq_++;
   }
 }
