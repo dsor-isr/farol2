@@ -23,7 +23,7 @@
           override_position_state: true
           process_noise_pos: 0.1
           process_noise_current: 0.01
-          measurement_noise_pos: 1.0
+          measurement_noise_pos: 10000.0
           init_cov_pos: 25.0
           init_cov_current: 1.0
           rpm_min: -2000.0
@@ -43,7 +43,7 @@
           process_noise_yaw_rate: 0.02
           process_noise_bias: 0.01
           measurement_noise_yaw_rate: 0.1
-          measurement_window_samples: 30 
+          measurement_window_samples: 60 
           init_cov_yaw_rate: 1.0
           init_cov_bias: 1.0
           inertia: 88.478840

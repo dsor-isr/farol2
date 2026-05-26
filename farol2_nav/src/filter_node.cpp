@@ -193,6 +193,10 @@ void FilterNode::on_timer()
   // Final output is always published after the full pipeline is applied.
   fill_state_msg(tick_stamp);
   final_state_pub_->publish(msg_);
+
+  // Flush the consumed measurements so the next tick only sees new input.
+  snapshot_ = farol2_nav::filters::MeasurementSnapshot{};
+
 }
 
 void FilterNode::fill_state_msg(const rclcpp::Time & stamp)

@@ -49,7 +49,9 @@ class OpenLoop : public rclcpp::Node {
 
     rclcpp::TimerBase::SharedPtr timer_;
     void timerCallback();
-    double surge_ref_;
+    double surge_ref_ = 0.0;
+    rclcpp::Time last_surge_ref_time_;
+    bool has_surge_ref_ = false;
 
 
     /* Callbacks */
