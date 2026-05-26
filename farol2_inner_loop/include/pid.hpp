@@ -34,6 +34,8 @@
 #define TOPIC_SUB_SURGE_REF "surge_ref"
 #define TOPIC_SUB_SWAY_REF "sway_ref"
 #define TOPIC_SUB_HEAVE_REF "heave_ref"
+#define TOPIC_SUB_DEPTH_REF "depth_ref"
+#define TOPIC_SUB_ALTITUDE_REF "altitude_ref"
 #define TOPIC_SUB_YAW_REF "yaw_ref"
 #define TOPIC_SUB_PITCH_REF "pitch_ref"
 #define TOPIC_SUB_ROLL_REF "roll_ref"
@@ -49,6 +51,8 @@
 #define TOPIC_PUB_DEBUG_SURGE "debug_surge"
 #define TOPIC_PUB_DEBUG_SWAY "debug_sway"
 #define TOPIC_PUB_DEBUG_HEAVE "debug_heave"
+#define TOPIC_PUB_DEBUG_DEPTH "debug_depth"
+#define TOPIC_PUB_DEBUG_ALTITUDE "debug_altitude"
 #define TOPIC_PUB_DEBUG_YAW "debug_yaw"
 #define TOPIC_PUB_DEBUG_PITCH "debug_pitch"
 #define TOPIC_PUB_DEBUG_ROLL "debug_roll"
@@ -62,12 +66,14 @@ enum ControllerType {
   SURGE = 0,
   SWAY = 1,
   HEAVE = 2,
-  YAW = 3,
-  PITCH = 4,
-  ROLL = 5,
-  YAW_RATE = 6,
-  PITCH_RATE = 7,
-  ROLL_RATE = 8,
+  DEPTH = 3,
+  ALTITUDE = 4,
+  YAW = 5,
+  PITCH = 6,
+  ROLL = 7,
+  YAW_RATE = 8,
+  PITCH_RATE = 9,
+  ROLL_RATE = 10,
 };
 
 // Use the reusable controller classes from farol_control namespace
@@ -203,6 +209,8 @@ class PID : public rclcpp::Node {
       {"surge", SURGE},
       {"sway", SWAY},
       {"heave", HEAVE},
+      {"depth", DEPTH},
+      {"altitude", ALTITUDE},
       {"yaw", YAW},
       {"pitch", PITCH},
       {"roll", ROLL},
@@ -264,6 +272,7 @@ class PID : public rclcpp::Node {
 
         /** Latest references for all channels (internally stored in SI units). */
     double surge_ref_ = 0.0, sway_ref_ = 0.0, heave_ref_ = 0.0,
+           depth_ref_ = 0.0, altitude_ref_ = 0.0,
            yaw_ref_ = 0.0, pitch_ref_ = 0.0, roll_ref_ = 0.0,
            yaw_rate_ref_ = 0.0, pitch_rate_ref_ = 0.0, roll_rate_ref_ = 0.0;
 
@@ -282,6 +291,8 @@ class PID : public rclcpp::Node {
     std::unique_ptr<ControllerPI> controller_surge_;
     std::unique_ptr<ControllerPI> controller_sway_;
     std::unique_ptr<ControllerPI> controller_heave_;
+    std::unique_ptr<ControllerPID> controller_depth_;
+    std::unique_ptr<ControllerPID> controller_altitude_;
     std::unique_ptr<ControllerPID> controller_yaw_;
     std::unique_ptr<ControllerPID> controller_pitch_;
     std::unique_ptr<ControllerPID> controller_roll_;

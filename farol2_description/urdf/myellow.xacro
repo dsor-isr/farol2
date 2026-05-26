@@ -7,51 +7,54 @@
   <!-- Base -->
   <link name="base_link"/>
 
-  <!-- Thrusters -->
-  <link name="thruster_portside_bow"/>
-  <joint name="base_to_thruster_portside_bow" type="fixed">
+  <!-- Portside horizontal back thruster -->
+  <link name="thruster_portside_horizontal_back_link"/>
+  <joint name="base_to_thruster_portside_horizontal_back" type="fixed">
     <parent link="base_link"/>
-    <child link="thruster_portside_bow"/>
-    <origin xyz="-0.5 0.34 0.0" rpy="0 0 0"/>
+    <child link="thruster_portside_horizontal_back_link"/>
+    <origin xyz="-0.306 0.062 0.0" rpy="0 0 ${0.25*M_PI}"/>
   </joint>
-  <link name="thruster_portside_stern"/>
-  <joint name="base_to_thruster_portside_stern" type="fixed">
+
+  <!-- Starboard horizontal back thruster -->
+  <link name="thruster_starboard_horizontal_back_link"/>
+  <joint name="base_to_thruster_starboard_horizontal_back" type="fixed">
     <parent link="base_link"/>
-    <child link="thruster_portside_stern"/>
-    <origin xyz="0.5 0.34 0.0" rpy="0 0 0"/>
+    <child link="thruster_starboard_horizontal_back_link"/>
+    <origin xyz="-0.306 -0.062 0.0" rpy="0 0 -${0.25*M_PI}"/>
   </joint>
-  <link name="thruster_portside_vertical"/>
+
+  <!-- Portside vertical thruster -->
+  <link name="thruster_portside_vertical_link"/>
   <joint name="base_to_thruster_portside_vertical" type="fixed">
     <parent link="base_link"/>
-    <child link="thruster_portside_vertical"/>
-    <origin xyz="0.0 0.34 0.0" rpy="0 0 0"/>
+    <child link="thruster_portside_vertical_link"/>
+    <origin xyz="0.087 -0.120 -0.12" rpy="0 -${0.5*M_PI} 0"/>
   </joint>
-  <link name="thruster_starboard_bow"/>
-  <joint name="base_to_thruster_starboard_bow" type="fixed">
-    <parent link="base_link"/>
-    <child link="thruster_starboard_bow"/>
-    <origin xyz="0.5 -0.34 0.0" rpy="0 0 0"/>
-  </joint> 
-  <link name="thruster_starboard_stern"/>
-  <joint name="base_to_thruster_starboard_stern" type="fixed">
-    <parent link="base_link"/>
-    <child link="thruster_starboard_stern"/>
-    <origin xyz="-0.5 -0.34 0.0" rpy="0 0 0"/>
-  </joint>
-  <link name="thruster_starboard_vertical"/>
+
+  <!-- Starboard vertical thruster -->
+  <link name="thruster_starboard_vertical_link"/>
   <joint name="base_to_thruster_starboard_vertical" type="fixed">
     <parent link="base_link"/>
-    <child link="thruster_starboard_vertical"/>
-    <origin xyz="0.0 -0.34 0.0" rpy="0 0 0"/>
+    <child link="thruster_starboard_vertical_link"/>
+    <origin xyz="0.087 0.120 -0.12" rpy="0 -${0.5*M_PI} 0"/>
   </joint>
 
-  <!-- IMU -->
-  <link name="imu_link"/>
-  <joint name="base_to_imu" type="fixed">
+  <!-- Portside horizontal front thruster -->
+  <link name="thruster_portside_horizontal_front_link"/>
+  <joint name="base_to_thruster_portside_horizontal_front" type="fixed">
     <parent link="base_link"/>
-    <child link="imu_link"/>
-    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+    <child link="thruster_portside_horizontal_front_link"/>
+    <origin xyz="0.300 0.197 0.0" rpy="0 0 -${0.25*M_PI}"/>
   </joint>
+
+  <!-- Starboard horizontal front thruster -->
+  <link name="thruster_starboard_horizontal_front_link"/>
+  <joint name="base_to_thruster_starboard_horizontal_front" type="fixed">
+    <parent link="base_link"/>
+    <child link="thruster_starboard_horizontal_front_link"/>
+    <origin xyz="0.300 -0.197 0.0" rpy="0 0 ${0.25*M_PI}"/>
+  </joint>
+
+
 
 </robot>
-

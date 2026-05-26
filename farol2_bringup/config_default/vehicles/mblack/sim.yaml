@@ -2,7 +2,7 @@
   auv_sim:
     ros__parameters:
       node_frequency: 100
-      speedup: 1.0
+      speedup: 20.0
       initial_state:
         position: [38.690323, -9.211736, 0.0] # (lat, lon, depth) from expo   
         body_velocity: [0.0, 0.0, 0.0]
@@ -27,10 +27,8 @@
         actuators:
           # For each thruster [Fx, Fy, Fz, lx, ly, lz] where F = forces and l = moments arms
           # and each line of the matrix represents a thruster
-          allocation_matrix: [1.0, 0.0, 0.0, -0.290,  0.140,  0.011,
-                              1.0, 0.0, 0.0, -0.290, -0.140,  0.011,
-                              0.0, 0.0, 1.0, -0.012, -0.140, -0.107,
-                              0.0, 0.0, 1.0, -0.012,  0.140, -0.107]
+          allocation_matrix: [1.0, 0.0, 0.0, -0.25, -0.15, 0.0,
+                              1.0, 0.0, 0.0, -0.25,  0.15, 0.0]
 
           # Thrusters parameter
           lump_param_positive: [0.00000177778, 0.0, 0.0]  # (a*|x|^{2} + b*|x| + c)

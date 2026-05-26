@@ -13,49 +13,12 @@
       
       # Controllers gains and parameters
       surge:
-        enabled: false
+        enabled: true
         kp: 10.0
         ki: 1.0
         lpf_wc: 31.4 # rad/s
         tau_min: -30.0 # N
         tau_max: 30.0 # N
-      altitude:
-        debug: false
-        enabled: false
-        delta_implementation: false
-        use_ref_lpf: false
-        use_rate_limiter: false
-        rate_limit: 0.5 # m/s
-        kp: 22.0
-        ki: 0.0
-        kd: 0.0
-        lpf_wc: 6.28 # rad/s
-        tau_min: -6.0 # N
-        tau_max: 6.0 # N
-      
-      ## Delta pid implementation
-      # yaw:
-      #   debug: true
-      #   enabled: true
-      #   delta_implementation: true
-      #   use_ref_lpf: true
-      #   use_rate_limiter: false
-      #   rate_limit: 6.0 # deg/s
-      #   kp: 21.0
-      #   ki: 2.0
-      #   kd: 110.0
-      #   # kffv_lin: 14.334052 # linear drag term (N.s/m) SHOULD BE POSITIVE
-      #   # kffv_sq: 260.675031 # quadratic drag term (N.s^2/m^2) SHOULD BE POSITIVE
-      #   # kffa: 88.478840   # hydrodynamic compensated mass (Kg) SHOULD BE POSITIVE
-      #   kffv_lin: 0.0
-      #   kffv_sq: 0.0
-      #   kffa: 0.0
-      #   lpf_wc: 6.28 # rad/s (2hz about the maximum possible given that sampling is 10hz)
-      #   # lpf_wc: 12.5664 # rad/s (2hz about the maximum possible given that sampling is 10hz)
-      #   tau_min: -6.0  # N.m (actual in simulation is 5.93)
-      #   tau_max: 6.0 # N.m
-
-      ## Simple pid
       yaw:
         debug: true
         enabled: true
@@ -70,12 +33,10 @@
         kffv_sq: 0.0
         kffa: 0.0
         lpf_wc: 6.28 # rad/s (2hz about the maximum possible given that sampling is 10hz)
-        # lpf_wc: 12.5664 # rad/s (2hz about the maximum possible given that sampling is 10hz)
         tau_min: -6.0  # N.m (actual in simulation is 5.93)
         tau_max: 6.0 # N.m
-
       yaw_rate:
-        enabled: false
+        enabled: true
         kp: 1.0
         ki: 1.0
         lpf_wc: 31.4 # rad/s
@@ -85,5 +46,5 @@
   open_loop:
     ros__parameters:
       surge:
-        enabled: true
+        enabled: false
         gain: 2000.0 # surge m/s to rpms

@@ -12,10 +12,8 @@
           base_frame: "base_link"
           thrust_axis: [1.0, 0.0, 0.0]
           frames:
-            - "thruster_portside_horizontal_link"
-            - "thruster_starboard_horizontal_link"
-            - "thruster_portside_vertical_link"
-            - "thruster_starboard_vertical_link"
+            - "thruster_portside_link"
+            - "thruster_starboard_link"
 
   wrench_manager:
     ros__parameters:

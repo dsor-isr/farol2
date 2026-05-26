@@ -21,7 +21,7 @@
   <joint name="base_to_thruster_middle" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_middle_link"/>
-    <origin xyz="-0.5 0.0 0.0" rpy="0 0 0"/>
+    <origin xyz="-4.0 0.0 0.0" rpy="0 0 0"/>
   </joint>
 
   <!-- Thrusters (commented out)
@@ -29,13 +29,13 @@
   <joint name="base_to_thruster_left" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_left_link"/>
-    <origin xyz="-0.5 0.34 0.0" rpy="0 0 0"/>
+    <origin xyz="-4.0 -1.5 0.0" rpy="0 0 0"/>
   </joint>
   <link name="thruster_right_link"/>
   <joint name="base_to_thruster_right" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_right_link"/>
-    <origin xyz="-0.5 -0.34 0.0" rpy="0 0 0"/>
+    <origin xyz="-4.0 1.5 0.0" rpy="0 0 0"/>
   </joint>
   -->
 

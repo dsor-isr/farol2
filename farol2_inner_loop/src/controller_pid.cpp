@@ -91,9 +91,11 @@ double ControllerPID::callController(double state, double state_ref, double stat
     tau_d_ = -ki_*error_;
     Ka_ = 1.0/dt;
     tau_dot_ = tau_d_ - Ka_*(tau_prev_ - tau_sat_prev_);
+    if(abs(tau_)<(tau_max_-0.5))
+      i_term_ = i_term_ + tau_dot_*dt ;
+    
     i_term_ = i_term_ + tau_dot_*dt ;
 
-    if(abs(tau_d_) < 0.0001) i_term_ = 0.0; // fix estupido
     p_term_ = -kp_ * error_;
     d_term_ = -kd_ * error_rate_;
     ff_term_ = 0.0;
