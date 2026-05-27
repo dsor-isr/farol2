@@ -1,4 +1,4 @@
-#include <farol2_nav/filters/pass_through.hpp>
+#include <farol2_nav/filters/sample_and_hold.hpp>
 
 #include <farol2_utils/angles.hpp>
 #include <tf2/LinearMath/Matrix3x3.h>
@@ -13,11 +13,11 @@ namespace farol2_nav
 namespace filters
 {
 
-void PassThroughFilter::configure(rclcpp::Node &)
+void SampleAndHoldFilter::configure(rclcpp::Node &)
 {
 }
 
-void PassThroughFilter::compute(double, const MeasurementSnapshot & m, State & s)
+void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State & s)
 {
   if (m.gnss != nullptr) {
     s.latitude = m.gnss->latitude;

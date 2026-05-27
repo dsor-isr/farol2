@@ -1,6 +1,6 @@
 #include "filter_node.hpp"
 
-#include <farol2_nav/filters/pass_through.hpp>
+#include <farol2_nav/filters/sample_and_hold.hpp>
 #include <farol2_nav/filters/position_current_ekf.hpp>
 #include <farol2_nav/filters/yaw_rate_ekf.hpp>
 
@@ -108,9 +108,9 @@ void FilterNode::build_pipeline()
 {
   pipeline_.clear();
 
-  auto pass_through = std::make_unique<farol2_nav::filters::PassThroughFilter>();
-  pass_through->configure(*this);
-  pipeline_.push_back(std::move(pass_through));
+  auto sample_and_hold = std::make_unique<farol2_nav::filters::SampleAndHoldFilter>();
+  sample_and_hold->configure(*this);
+  pipeline_.push_back(std::move(sample_and_hold));
 
   for (const auto & key : filters_) {
     std::unique_ptr<farol2_nav::filters::BaseFilter> filter;

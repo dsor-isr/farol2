@@ -7,7 +7,7 @@ namespace farol2_nav
 namespace filters
 {
 
-class PassThroughFilter : public BaseFilter
+class SampleAndHoldFilter : public BaseFilter
 {
 public:
   std::string name() const override { return "sample_and_hold"; }
