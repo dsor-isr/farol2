@@ -94,8 +94,13 @@ def generate_launch_description():
       ('orientation_rate', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/orientation_rate')]),
       ('body_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/body_acceleration')]),
       ('angular_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/angular_acceleration')]),
-      ('rudder_angle', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/rudder_angle')]),
-      ('measurement', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement')]),
+      ('rudder_angle', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/rudder_angle')]),
+      ('imu', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/imu')]),
+      ('gnss', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/gnss')]),
+      ('ned_utm', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/ned_utm')]),
+      ('velocity_over_ground', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/velocity_over_ground')]),
+      ('velocity_through_water', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/velocity_through_water')]),
+      ('depth', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/depth')]),
     ]
   )
 
@@ -117,7 +122,12 @@ def generate_launch_description():
       ('orientation_rate', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/orientation_rate')]),
       ('body_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/body_acceleration')]),
       ('angular_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/angular_acceleration')]),
-      ('measurement', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement')]),
+      ('imu', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/imu')]),
+      ('gnss', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/gnss')]),
+      ('ned_utm', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/ned_utm')]),
+      ('velocity_over_ground', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/velocity_over_ground')]),
+      ('velocity_through_water', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/velocity_through_water')]),
+      ('depth', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/depth')]),
     ]
   )
 

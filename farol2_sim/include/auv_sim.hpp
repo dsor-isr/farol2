@@ -11,12 +11,16 @@
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "farol2_allocation/msg/thruster_rpm.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
+#include "geometry_msgs/msg/vector3_stamped.hpp"
 #include "sim_utilis/AUV.hpp"
 #include "sim_utilis/Utilis.hpp"
 #include <Eigen/Dense>
 #include "farol2_interfaces/msg/utm.hpp"
-#include "farol2_interfaces/msg/measurement.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+#include "sensor_msgs/msg/nav_sat_fix.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <GeographicLib/UTMUPS.hpp>
 
 // Topic names (short form, remapped in launch file)
@@ -28,7 +32,12 @@
 #define TOPIC_PUB_ORIENTATION_RATE "orientation_rate"
 #define TOPIC_PUB_BODY_ACCELERATION "body_acceleration"
 #define TOPIC_PUB_ANGULAR_ACCELERATION "angular_acceleration"
-#define TOPIC_PUB_MEASUREMENT "measurement"
+#define TOPIC_PUB_IMU "imu"
+#define TOPIC_PUB_GNSS "gnss"
+#define TOPIC_PUB_UTM_NED "ned_utm"
+#define TOPIC_PUB_VELOCITY_OVER_GROUND "velocity_over_ground"
+#define TOPIC_PUB_VELOCITY_THROUGH_WATER "velocity_through_water"
+#define TOPIC_PUB_DEPTH "depth"
 
 /**
  * @brief   Sim
@@ -81,7 +90,12 @@ class AuvSim : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_acceleration_pub_;
 
     rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
-    rclcpp::Publisher<farol2_interfaces::msg::Measurement>::SharedPtr meas_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr utm_ned_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_over_ground_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_through_water_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr depth_pub_;
 
     rclcpp::Subscription<farol2_allocation::msg::ThrusterRPM>::SharedPtr rpm_sub_;
     
