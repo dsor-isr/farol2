@@ -1,0 +1,21 @@
+################################
+#   Default Parameters
+################################
+
+
+/**:
+  waypoint:
+    ros__parameters:
+      node_frequency: 10.0
+      cdist: 1.5
+      delta_t: 5.0
+      type1:
+        gains:
+          ku: 1.0
+          ks: 4.0
+          speed_turn: 5.0
+      type2:
+        gains:
+          k1: 0.05
+          k2: 0.1
+          k3: 0.1

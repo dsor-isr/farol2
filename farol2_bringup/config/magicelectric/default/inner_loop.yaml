@@ -1,5 +1,5 @@
 ################################
-#  Parameters
+#   Override Parameters
 ################################
 /**:
   pid:
@@ -19,6 +19,19 @@
         lpf_wc: 31.4 # rad/s
         tau_min: -30.0 # N
         tau_max: 30.0 # N
+      altitude:
+        debug: false
+        enabled: false
+        delta_implementation: false
+        use_ref_lpf: false
+        use_rate_limiter: false
+        rate_limit: 0.5 # m/s
+        kp: 22.0
+        ki: 0.0
+        kd: 0.0
+        lpf_wc: 6.28 # rad/s
+        tau_min: -6.0 # N
+        tau_max: 6.0 # N
       
       ## Delta pid implementation
       # yaw:

@@ -1,0 +1,16 @@
+################################
+#   Default Parameters
+################################
+/**:
+  console_parser:
+    ros__parameters: 
+      node_frequency: 5.0
+      path_folder: "../paths_from_console" 
+      vehicle_id: 3
+      console_new: false
+
+  console_server:
+    ros__parameters:
+      # node_frequency: 10.0
+      PORT: 7080
+      root_namespace: true

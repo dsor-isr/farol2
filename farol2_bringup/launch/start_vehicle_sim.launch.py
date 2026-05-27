@@ -41,7 +41,7 @@ def _launch(context, *args, **kwargs):
       'vehicle_name': vehicle_name,
       'vehicle_id': vehicle_id,
       'config_to_use': config_to_use,
-      'use_sim_time': 'false',
+      'use_sim_time': 'true',
     }.items()
   )
 
@@ -78,4 +78,3 @@ def generate_launch_description():
     config_to_use_arg,
     OpaqueFunction(function=_launch),
   ])
-

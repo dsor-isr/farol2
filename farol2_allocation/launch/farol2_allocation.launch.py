@@ -30,24 +30,7 @@ def generate_launch_description():
     default_value='default',
     description='Config folder to use.'
   )
-  ## TO DIE BELLOW
-  launch_static_thruster_allocation_arg = DeclareLaunchArgument(
-    'static_thruster_allocation',
-    default_value='true',
-    description='Boolean to determine if "static_thruster_allocation" node is launched.'
-  )
 
-  launch_thruster_rudder_allocation_arg = DeclareLaunchArgument(
-    'thruster_rudder_allocation',
-    default_value='false',
-    description='Boolean to determine if "thruster_rudder_allocation" node is launched.'
-  )
-
-  launch_throttle_conversion_arg = DeclareLaunchArgument(
-    'throttle_conversion',
-    default_value='false',
-    description='Boolean to determine if "throttle_conversion" node is launched.'
-  )
   #### TO DIE ABOVE
   
   ############################
@@ -88,29 +71,15 @@ def generate_launch_description():
   # Nodes to launch #
   ###################
 
-  static_thruster_allocation_node = Node(
-    package='farol2_allocation',
-    namespace=PathJoinSubstitution([vehicle_ns, 'allocation']),
-    executable='static_thruster_allocation',
-    name='static_thruster_allocation',
-    output='screen',
-    condition=IfCondition(LaunchConfiguration('static_thruster_allocation')),
-    parameters=params,
-    remappings=[
-      # Subscribers
-      ('body_wrench_request', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/body_wrench_request')]),
-      # Publishers
-      ('thruster_force', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thruster_force')]),
-    ]
-  )
 
-  thruster_rudder_allocation_node = Node(
+
+
+  thruster_allocation_node = Node(
     package='farol2_allocation',
     namespace=PathJoinSubstitution([vehicle_ns, 'allocation']),
-    executable='thruster_rudder_allocation',
-    name='thruster_rudder_allocation',
+    executable='thruster_allocation',
+    name='thruster_allocation',
     output='screen',
-    condition=IfCondition(LaunchConfiguration('thruster_rudder_allocation')),
     parameters=params,
     remappings=[
       # Subscribers
@@ -168,12 +137,8 @@ def generate_launch_description():
     vehicle_id_arg,
     use_sim_time_arg,
     config_to_use_arg,
-    launch_static_thruster_allocation_arg,
-    launch_thruster_rudder_allocation_arg,
-    launch_throttle_conversion_arg,
     # nodes
-    static_thruster_allocation_node,
-    thruster_rudder_allocation_node,
+    thruster_allocation_node,
     rpm_conversion_node,
     wrench_manager_node,
   ])

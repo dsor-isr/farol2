@@ -33,7 +33,7 @@ struct State
   Eigen::Vector3d velocity_over_ground_ned{Eigen::Vector3d::Zero()};
   Eigen::Vector3d velocity_through_water_ned{Eigen::Vector3d::Zero()};
   double course_over_ground{0.0};
-  Eigen::Vector3d current_velocity_inertial{Eigen::Vector3d::Zero()};
+  Eigen::Vector3d current_velocity_ned{Eigen::Vector3d::Zero()};
 
   // Attitude
   Eigen::Vector3d attitude{Eigen::Vector3d::Zero()};

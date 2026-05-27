@@ -3,20 +3,19 @@
 ################################
 
 /**:
-  static_thruster_allocation:
+  thruster_allocation:
     ros__parameters:
       node_frequency: 10.0
-      thrusters:
-        nr_thrusters: 2
-        configuration:
-          0:
-            name: "Portside"
-            moment_arms: [-0.25, -0.15, 0.0]
-            angles: [0.0, 0.0, 0.0]
-          1:
-            name: "Starboard"
-            moment_arms: [-0.25, 0.15, 0.0]
-            angles: [0.0, 0.0, 0.0]
+      allocation:
+        type: "thrust"
+        thrusters:
+          base_frame: "base_link"
+          thrust_axis: [1.0, 0.0, 0.0]
+          frames:
+            - "thruster_portside_horizontal_link"
+            - "thruster_starboard_horizontal_link"
+            - "thruster_portside_vertical_link"
+            - "thruster_starboard_vertical_link"
 
   wrench_manager:
     ros__parameters:

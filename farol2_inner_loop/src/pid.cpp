@@ -5,6 +5,8 @@ const char *referenceTopicForController(const std::string &name) {
   if (name == "surge") return TOPIC_SUB_SURGE_REF;
   if (name == "sway") return TOPIC_SUB_SWAY_REF;
   if (name == "heave") return TOPIC_SUB_HEAVE_REF;
+  if (name == "depth") return TOPIC_SUB_DEPTH_REF;
+  if (name == "altitude") return TOPIC_SUB_ALTITUDE_REF;
   if (name == "yaw") return TOPIC_SUB_YAW_REF;
   if (name == "pitch") return TOPIC_SUB_PITCH_REF;
   if (name == "roll") return TOPIC_SUB_ROLL_REF;
@@ -18,6 +20,8 @@ const char *debugTopicForController(const std::string &name) {
   if (name == "surge") return TOPIC_PUB_DEBUG_SURGE;
   if (name == "sway") return TOPIC_PUB_DEBUG_SWAY;
   if (name == "heave") return TOPIC_PUB_DEBUG_HEAVE;
+  if (name == "depth") return TOPIC_PUB_DEBUG_DEPTH;
+  if (name == "altitude") return TOPIC_PUB_DEBUG_ALTITUDE;
   if (name == "yaw") return TOPIC_PUB_DEBUG_YAW;
   if (name == "pitch") return TOPIC_PUB_DEBUG_PITCH;
   if (name == "roll") return TOPIC_PUB_DEBUG_ROLL;
@@ -43,6 +47,8 @@ PID::PID() : Node("pid",
     {"surge", now},
     {"sway", now},
     {"heave", now},
+    {"depth", now},
+    {"altitude", now},
     {"yaw", now},
     {"pitch", now},
     {"roll", now},
@@ -55,6 +61,8 @@ PID::PID() : Node("pid",
     {"surge", false},
     {"sway", false},
     {"heave", false},
+    {"depth", false},
+    {"altitude", false},
     {"yaw", false},
     {"pitch", false},
     {"roll", false},
@@ -338,6 +346,8 @@ void PID::referenceCallback(const std::string &controller_name, double raw_value
   if (controller_name == "surge") surge_ref_ = ref_value;
   else if (controller_name == "sway") sway_ref_ = ref_value;
   else if (controller_name == "heave") heave_ref_ = ref_value;
+  else if (controller_name == "depth") depth_ref_ = ref_value;
+  else if (controller_name == "altitude") altitude_ref_ = ref_value;
   else if (controller_name == "yaw") {
     ref_value = farol2_utils::deg2rad(raw_value);
     yaw_ref_ = ref_value;
@@ -412,7 +422,8 @@ void PID::createControllers() {
                                  std::unique_ptr<ControllerPID> &controller,
                                  double kffv_lin,
                                  double kffv_sq,
-                                 double kffa) {
+                                 double kffa,
+                                 bool wrap_to_pi) {
     const bool use_ref_lpf = controller_parameters_[name].count("use_ref_lpf") ? controller_parameters_[name]["use_ref_lpf"] != 0.0 : true;
     const bool delta_implementation =
       controller_parameters_[name].count("delta_implementation") ? controller_parameters_[name]["delta_implementation"] != 0.0 : true;
@@ -445,7 +456,7 @@ void PID::createControllers() {
                           controller_parameters_[name]["tau_min"],
                           controller_parameters_[name]["tau_max"],
                           delta_implementation,
-                          true);
+                          wrap_to_pi);
   };
 
   if (controller_names_.count("surge") && !validateControllerParams("surge", pi_required)) {
@@ -466,6 +477,18 @@ void PID::createControllers() {
   }
   if (controller_names_.count("heave")) create_pi("heave", controller_heave_);
 
+  if (controller_names_.count("depth") && !validateControllerParams("depth", pid_required)) {
+    RCLCPP_ERROR(get_logger(), "Depth Controller missing parameters (kp, ki, kd, lpf_wc, tau_min or tau_max).");
+    rclcpp::shutdown();
+  }
+  if (controller_names_.count("depth")) create_pid("depth", controller_depth_, 0.0, 0.0, 0.0, false);
+
+  if (controller_names_.count("altitude") && !validateControllerParams("altitude", pid_required)) {
+    RCLCPP_ERROR(get_logger(), "Altitude Controller missing parameters (kp, ki, kd, lpf_wc, tau_min or tau_max).");
+    rclcpp::shutdown();
+  }
+  if (controller_names_.count("altitude")) create_pid("altitude", controller_altitude_, 0.0, 0.0, 0.0, false);
+
   if (controller_names_.count("yaw") && !validateControllerParams("yaw", yaw_required)) {
     RCLCPP_ERROR(get_logger(), "Yaw Controller missing parameters (kp, ki, kd, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
@@ -475,20 +498,21 @@ void PID::createControllers() {
                controller_yaw_,
                controller_parameters_["yaw"]["kffv_lin"],
                controller_parameters_["yaw"]["kffv_sq"],
-               controller_parameters_["yaw"]["kffa"]);
+               controller_parameters_["yaw"]["kffa"],
+               true);
   }
 
   if (controller_names_.count("pitch") && !validateControllerParams("pitch", pid_required)) {
     RCLCPP_ERROR(get_logger(), "Pitch Controller missing parameters (kp, ki, kd, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
-  if (controller_names_.count("pitch")) create_pid("pitch", controller_pitch_, 0.0, 0.0, 0.0);
+  if (controller_names_.count("pitch")) create_pid("pitch", controller_pitch_, 0.0, 0.0, 0.0, true);
 
   if (controller_names_.count("roll") && !validateControllerParams("roll", pid_required)) {
     RCLCPP_ERROR(get_logger(), "Roll Controller missing parameters (kp, ki, kd, lpf_wc, tau_min or tau_max).");
     rclcpp::shutdown();
   }
-  if (controller_names_.count("roll")) create_pid("roll", controller_roll_, 0.0, 0.0, 0.0);
+  if (controller_names_.count("roll")) create_pid("roll", controller_roll_, 0.0, 0.0, 0.0, true);
 
   if (controller_names_.count("yaw_rate") && !validateControllerParams("yaw_rate", pi_required)) {
     RCLCPP_ERROR(get_logger(), "Yaw Rate Controller missing parameters (kp, ki, lpf_wc, tau_min or tau_max).");
@@ -602,6 +626,70 @@ void PID::initializeControllerConfigs() {
             debug_msg.tau_sat = controller_heave_->getTau_sat();
             debug_msg.a_term = controller_heave_->getAntiWindupTerm();
             debug_msg.tau = tau_;
+          });
+        break;
+
+      case DEPTH:
+        controller_configs_[name] = make_pid_config(
+          name,
+          DEPTH,
+          pid_required,
+          [this]() { return static_cast<double>(nav_state_.depth); },
+          [this]() { return depth_ref_; },
+          [this]() { return nav_state_.velocity_over_ground_body.z; },
+          [this](double tau) { body_wrench_request_msg_.wrench.force.z += tau; },
+          [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
+            const auto &ref = reference_outputs_["depth"];
+            debug_msg.error = controller_depth_->getError();
+            debug_msg.error_rate = controller_depth_->error_dot_;
+            debug_msg.error_rate_dot = controller_depth_->error_rate_dot_;
+            debug_msg.p_term = controller_depth_->getProportionalTerm();
+            debug_msg.i_term = controller_depth_->getIntegralTerm();
+            debug_msg.d_term = controller_depth_->getDerivativeTerm();
+            debug_msg.ff_term = controller_depth_->getFFTerm();
+            debug_msg.tau_d = controller_depth_->getTau_d();
+            debug_msg.tau_dot = controller_depth_->getTauDot();
+            debug_msg.tau_sat = controller_depth_->getTau_sat();
+            debug_msg.a_term = controller_depth_->getAntiWindupTerm();
+            debug_msg.tau = controller_depth_->getTau_sat();
+            debug_msg.state = controller_depth_->state_;
+            debug_msg.state_rate_used = controller_depth_->state_rate_used_;
+            debug_msg.ref_raw = ref.ref_raw;
+            debug_msg.ref_filt = ref.ref_filt;
+            debug_msg.dref_filt = ref.dref;
+            debug_msg.ddref_filt = ref.ddref;
+          });
+        break;
+
+      case ALTITUDE:
+        controller_configs_[name] = make_pid_config(
+          name,
+          ALTITUDE,
+          pid_required,
+          [this]() { return static_cast<double>(nav_state_.altimeter); },
+          [this]() { return altitude_ref_; },
+          [this]() { return -nav_state_.velocity_over_ground_body.z; },
+          [this](double tau) { body_wrench_request_msg_.wrench.force.z -= tau; },
+          [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
+            const auto &ref = reference_outputs_["altitude"];
+            debug_msg.error = controller_altitude_->getError();
+            debug_msg.error_rate = controller_altitude_->error_dot_;
+            debug_msg.error_rate_dot = controller_altitude_->error_rate_dot_;
+            debug_msg.p_term = controller_altitude_->getProportionalTerm();
+            debug_msg.i_term = controller_altitude_->getIntegralTerm();
+            debug_msg.d_term = controller_altitude_->getDerivativeTerm();
+            debug_msg.ff_term = controller_altitude_->getFFTerm();
+            debug_msg.tau_d = controller_altitude_->getTau_d();
+            debug_msg.tau_dot = controller_altitude_->getTauDot();
+            debug_msg.tau_sat = controller_altitude_->getTau_sat();
+            debug_msg.a_term = controller_altitude_->getAntiWindupTerm();
+            debug_msg.tau = -controller_altitude_->getTau_sat();
+            debug_msg.state = controller_altitude_->state_;
+            debug_msg.state_rate_used = controller_altitude_->state_rate_used_;
+            debug_msg.ref_raw = ref.ref_raw;
+            debug_msg.ref_filt = ref.ref_filt;
+            debug_msg.dref_filt = ref.dref;
+            debug_msg.ddref_filt = ref.ddref;
           });
         break;
 
@@ -803,6 +891,14 @@ void PID::timerCallback() {
         float32_msg_.data = body_wrench_request_msg_.wrench.force.z;
         thrust_z_pub_->publish(float32_msg_);
         break;
+      case DEPTH:
+        float32_msg_.data = body_wrench_request_msg_.wrench.force.z;
+        thrust_z_pub_->publish(float32_msg_);
+        break;
+      case ALTITUDE:
+        float32_msg_.data = body_wrench_request_msg_.wrench.force.z;
+        thrust_z_pub_->publish(float32_msg_);
+        break;
       case YAW:
         float32_msg_.data = body_wrench_request_msg_.wrench.torque.z;
         torque_z_pub_->publish(float32_msg_);
@@ -954,6 +1050,14 @@ void PID::executeController(const ControllerConfig &cfg, double dt) {
     case HEAVE:
       if (!controller_heave_) return;
       tau_ = controller_heave_->callController(cfg.get_state(), cfg.get_ref(), dt);
+      break;
+    case DEPTH:
+      if (!controller_depth_) return;
+      tau_ = controller_depth_->callController(cfg.get_state(), ref_used, cfg.get_rate(), dref, ddref, dt);
+      break;
+    case ALTITUDE:
+      if (!controller_altitude_) return;
+      tau_ = controller_altitude_->callController(cfg.get_state(), ref_used, cfg.get_rate(), dref, ddref, dt);
       break;
     case YAW:
       if (!controller_yaw_) return;

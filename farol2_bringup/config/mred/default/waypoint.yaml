@@ -1,8 +1,6 @@
 ################################
-#   Default Parameters
+#   Parameters
 ################################
-
-
 /**:
   waypoint:
     ros__parameters:

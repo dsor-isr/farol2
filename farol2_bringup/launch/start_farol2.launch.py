@@ -50,6 +50,18 @@ def generate_launch_description():
         }.items()
     )
 
+    tf_static = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('farol2_description'), 'launch', 'tf_static.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'vehicle_name': LaunchConfiguration('vehicle_name'),
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+        }.items()
+    )
+
     allocation = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -78,7 +90,7 @@ def generate_launch_description():
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'config_to_use': LaunchConfiguration('config_to_use'),
             'pid': 'true',
-            'open_loop': 'true',
+            'open_loop': 'false',
         }.items()
     )
 
@@ -149,6 +161,7 @@ def generate_launch_description():
         use_sim_time_arg,
         # launches (one per package)
         nav,
+        tf_static,
         allocation,
         inner_loop,
         waypoint,
