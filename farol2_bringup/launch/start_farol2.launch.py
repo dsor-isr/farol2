@@ -57,7 +57,7 @@ def generate_launch_description():
             ])
         ]),
         launch_arguments={
-            'vehicle_name': LaunchConfiguration('name'),
+            'vehicle_name': LaunchConfiguration('vehicle_name'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
         }.items()
     )

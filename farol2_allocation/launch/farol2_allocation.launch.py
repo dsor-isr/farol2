@@ -31,11 +31,6 @@ def generate_launch_description():
     description='Config folder to use.'
   )
 
-  launch_throttle_conversion_arg = DeclareLaunchArgument(
-    'throttle_conversion',
-    default_value='false',
-    description='Boolean to determine if "throttle_conversion" node is launched.'
-  )
   #### TO DIE ABOVE
   
   ############################
@@ -142,7 +137,6 @@ def generate_launch_description():
     vehicle_id_arg,
     use_sim_time_arg,
     config_to_use_arg,
-    launch_throttle_conversion_arg,
     # nodes
     thruster_allocation_node,
     rpm_conversion_node,

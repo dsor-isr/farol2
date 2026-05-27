@@ -219,25 +219,25 @@ void ThrusterAllocation::bodyWrenchRequestCallback(geometry_msgs::msg::WrenchSta
 
 void ThrusterAllocation::computeRudderAngle(double tau_r)
 {
-  nav_state_.body_velocity_fluid.x =
-    (std::abs(nav_state_.body_velocity_fluid.x) < 0.05)
-      ? std::copysign(0.05, nav_state_.body_velocity_fluid.x == 0.0 ? 1.0 : nav_state_.body_velocity_fluid.x)
-      : nav_state_.body_velocity_fluid.x;
+  nav_state_.velocity_through_water_body.x =
+    (std::abs(nav_state_.velocity_through_water_body.x) < 0.05)
+      ? std::copysign(0.05, nav_state_.velocity_through_water_body.x == 0.0 ? 1.0 : nav_state_.velocity_through_water_body.x)
+      : nav_state_.velocity_through_water_body.x;
 
-  sideslip_angle_ = (nav_state_.body_velocity_fluid.x != 0.0) ? atan2(nav_state_.body_velocity_fluid.y, nav_state_.body_velocity_fluid.x) : 0.0;
-  course_angle_ = nav_state_.orientation.z + sideslip_angle_;
+  sideslip_angle_ = (nav_state_.velocity_through_water_body.x != 0.0) ? atan2(nav_state_.velocity_through_water_body.y, nav_state_.velocity_through_water_body.x) : 0.0;
+  course_angle_ = nav_state_.attitude.z + sideslip_angle_;
 
-  V_cm_ = Eigen::Vector2d(std::cos(course_angle_), std::sin(course_angle_)) * std::hypot(nav_state_.body_velocity_fluid.x, nav_state_.body_velocity_fluid.y);
-  V_r_ = Eigen::Vector2d(std::sin(nav_state_.orientation.z), -std::cos(nav_state_.orientation.z)) * rudder_cm_distance_ * nav_state_.orientation_rate.z;
+  V_cm_ = Eigen::Vector2d(std::cos(course_angle_), std::sin(course_angle_)) * std::hypot(nav_state_.velocity_through_water_body.x, nav_state_.velocity_through_water_body.y);
+  V_r_ = Eigen::Vector2d(std::sin(nav_state_.attitude.z), -std::cos(nav_state_.attitude.z)) * rudder_cm_distance_ * nav_state_.angular_velocity.z;
   V_s_ = V_cm_ + V_r_;
 
-  gamma_ = farol2_utils::wrapToPi(std::atan2(V_s_(1),V_s_(0)) - nav_state_.orientation.z);
+  gamma_ = farol2_utils::wrapToPi(std::atan2(V_s_(1),V_s_(0)) - nav_state_.attitude.z);
 
   rudder_angle_ = tau_r / (K_s_ * rudder_cm_distance_ * 1.75);
   rudder_angle_ = (rudder_angle_ > rudder_angle_max_) ? rudder_angle_max_ : ((rudder_angle_ < rudder_angle_min_) ? rudder_angle_min_ : rudder_angle_);
 
   V_s_angle_ = (V_s_[0] != 0.0) ? atan2(V_s_[1], V_s_[0]) : 0.0;
-  flow_to_rudder_angle_ = rudder_angle_ + V_s_angle_ - nav_state_.orientation.z;
+  flow_to_rudder_angle_ = rudder_angle_ + V_s_angle_ - nav_state_.attitude.z;
 
   L = K_L_ * flow_to_rudder_angle_ * V_s_.dot(V_s_);
   D = (K_D0_ + K_D1_ * std::pow(flow_to_rudder_angle_, 2)) * V_s_.dot(V_s_);

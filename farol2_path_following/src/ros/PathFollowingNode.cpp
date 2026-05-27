@@ -249,9 +249,9 @@ void PathFollowingNode::vehicleStateCallback(const farol2_interfaces::msg::Navig
                              farol2_utils::deg2rad(msg.angular_velocity.z);
 
   /* Update estimated current velocity in inertial frame */
-  this->vehicle_state_.vc_inertial << msg.current_velocity_inertial.x,
-                                      msg.current_velocity_inertial.y,
-                                      msg.current_velocity_inertial.z;
+  this->vehicle_state_.vc_inertial << msg.current_velocity_ned.x,
+                                      msg.current_velocity_ned.y,
+                                      msg.current_velocity_ned.z;
 }
 
 /**

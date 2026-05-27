@@ -636,7 +636,7 @@ void PID::initializeControllerConfigs() {
           pid_required,
           [this]() { return static_cast<double>(nav_state_.depth); },
           [this]() { return depth_ref_; },
-          [this]() { return nav_state_.ned_velocity_inertial.z; },
+          [this]() { return nav_state_.velocity_over_ground_body.z; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.z += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             const auto &ref = reference_outputs_["depth"];
@@ -668,7 +668,7 @@ void PID::initializeControllerConfigs() {
           pid_required,
           [this]() { return static_cast<double>(nav_state_.altimeter); },
           [this]() { return altitude_ref_; },
-          [this]() { return -nav_state_.ned_velocity_inertial.z; },
+          [this]() { return -nav_state_.velocity_over_ground_body.z; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.z -= tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             const auto &ref = reference_outputs_["altitude"];

@@ -230,9 +230,9 @@ void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
   msg_.velocity_through_water_ned.y = state_.velocity_through_water_ned(1);
   msg_.velocity_through_water_ned.z = state_.velocity_through_water_ned(2);
   msg_.course_over_ground = state_.course_over_ground;
-  msg_.current_velocity_inertial.x = state_.current_velocity_inertial(0);
-  msg_.current_velocity_inertial.y = state_.current_velocity_inertial(1);
-  msg_.current_velocity_inertial.z = state_.current_velocity_inertial(2);
+  msg_.current_velocity_ned.x = state_.current_velocity_ned(0);
+  msg_.current_velocity_ned.y = state_.current_velocity_ned(1);
+  msg_.current_velocity_ned.z = state_.current_velocity_ned(2);
 
   msg_.attitude.x = state_.attitude(0);
   msg_.attitude.y = state_.attitude(1);

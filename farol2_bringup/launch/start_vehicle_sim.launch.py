@@ -14,14 +14,6 @@ def _launch(context, *args, **kwargs):
   if not vehicle_id:
     vehicle_id = get_next_available_vehicle_id(vehicle_name)
 
-  is_magic_electric = PythonExpression([
-    "'", LaunchConfiguration('name'), "' == 'magicelectric'"
-  ])
-
-  is_not_magic_electric = PythonExpression([
-    "'", LaunchConfiguration('name'), "' != 'magicelectric'"
-  ])
-
   ###################################################
   # Include simulation launch (before Farol stack) #
   ###################################################
@@ -49,7 +41,7 @@ def _launch(context, *args, **kwargs):
       'vehicle_name': vehicle_name,
       'vehicle_id': vehicle_id,
       'config_to_use': config_to_use,
-      'use_sim_time': 'false',
+      'use_sim_time': 'true',
     }.items()
   )
 
