@@ -2,49 +2,20 @@
 
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, SetLaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
+from farol2_bringup import get_next_available_vehicle_id
 
 
-def generate_launch_description():
+def _launch(context, *args, **kwargs):
+  vehicle_name  = LaunchConfiguration('vehicle_name').perform(context)
+  vehicle_id    = LaunchConfiguration('vehicle_id').perform(context).strip()
+  config_to_use = LaunchConfiguration('config_to_use').perform(context)
 
-  ####################
-  # Launch arguments #
-  ####################
-  name_arg = DeclareLaunchArgument(
-    'name',
-    default_value='magicelectric',
-    description='Name of the vehicle to be launched.'
-  )
-
-  id_arg = DeclareLaunchArgument(
-    'id',
-    default_value='0',
-    description='ID of the vehicle to be launched.'
-  )
-
-  config_package_arg = DeclareLaunchArgument(
-    'config_package',
-    default_value='magicelectric_bringup',
-    description='Package where the configuration files are.'
-  )
-
-  config_package_path_real_arg = DeclareLaunchArgument(
-    'config_package_path_real',
-    default_value=PathJoinSubstitution([
-      FindPackageShare(LaunchConfiguration('config_package')),
-      '..', '..', '..', '..',
-      'src',
-      LaunchConfiguration('config_package')
-    ]),
-    description='Path to the config package in the src folder.'
-  )
-
-  vehicle_ns = PythonExpression([
-    "'", LaunchConfiguration('name'), "' + '", LaunchConfiguration('id'), "'"
-  ])
+  if not vehicle_id:
+    vehicle_id = get_next_available_vehicle_id(vehicle_name)
 
   ####################################################
   # Include drivers launch from drivers own package #
@@ -54,14 +25,12 @@ def generate_launch_description():
       PathJoinSubstitution([
         FindPackageShare('farol2_drivers_bringup'),
         'launch',
-        'magicelectric_drivers.launch.py'
+        f'{vehicle_name}_drivers.launch.py'
       ])
     ]),
     launch_arguments={
-      'vehicle_ns': vehicle_ns,
-      'vehicle_name': LaunchConfiguration('name'),
-      'config_package_path_share': FindPackageShare(LaunchConfiguration('config_package')),
-      'config_package_path_real': LaunchConfiguration('config_package_path_real'),
+      'vehicle_name': vehicle_name,
+      'vehicle_id': vehicle_id,
       'vn310': 'false',
       'vn100': 'true',
       'can_thrusters': 'true',
@@ -76,23 +45,47 @@ def generate_launch_description():
   ###############################################################
   farol_stack = IncludeLaunchDescription(
     PythonLaunchDescriptionSource([
-      PathJoinSubstitution([FindPackageShare('magicelectric_bringup'), 'launch', 'start_farol2.launch.py'])
+      PathJoinSubstitution([FindPackageShare('farol2_bringup'), 'launch', 'start_farol2.launch.py'])
     ]),
     launch_arguments={
-      'name': LaunchConfiguration('name'),
-      'id': LaunchConfiguration('id'),
-      'config_package': LaunchConfiguration('config_package'),
-      'config_package_path_real': LaunchConfiguration('config_package_path_real'),
+      'vehicle_name': vehicle_name,
+      'vehicle_id': vehicle_id,
+      'config_to_use': config_to_use,
       'use_sim_time': 'false',
     }.items()
   )
 
+  # Keep vehicle_id in context so ros2 launch tooling can report it.
+  return [SetLaunchConfiguration('vehicle_id', vehicle_id), drivers, farol_stack]
+
+
+def generate_launch_description():
+
+  ####################
+  # Launch arguments #
+  ####################
+  vehicle_name_arg = DeclareLaunchArgument(
+    'vehicle_name',
+    default_value='magicelectric',
+    description='Name of the vehicle to be launched.'
+  )
+
+  vehicle_id_arg = DeclareLaunchArgument(
+    'vehicle_id',
+    default_value='',
+    description='ID of the vehicle to be launched. Leave empty to auto-assign the next available id.'
+  )
+
+  config_to_use_arg = DeclareLaunchArgument(
+    'config_to_use',
+    default_value='default',
+    description='Config to use.'
+  )
+
   return LaunchDescription([
-    name_arg,
-    id_arg,
-    config_package_arg,
-    config_package_path_real_arg,
-    drivers,
-    farol_stack,
+    vehicle_name_arg,
+    vehicle_id_arg,
+    config_to_use_arg,
+    OpaqueFunction(function=_launch),
   ])
 

@@ -12,6 +12,7 @@ find_package(Eigen3 REQUIRED)
 add_library(${PROJECT_NAME}
   src/low_pass_filter.cpp
   src/notch_filter.cpp
+  src/moving_average_filter.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -57,6 +58,11 @@ if(BUILD_TESTING)
     test/test_low_pass_filter.cpp
   )
   target_link_libraries(test_low_pass_filter ${PROJECT_NAME})
+
+  ament_add_gtest(test_moving_average_filter
+    test/test_moving_average_filter.cpp
+  )
+  target_link_libraries(test_moving_average_filter ${PROJECT_NAME})
 endif()
 
 ament_package()

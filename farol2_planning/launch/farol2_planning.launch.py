@@ -10,10 +10,10 @@ def generate_launch_description():
   ####################
   # Launch arguments #
   ####################
-  vehicle_ns_arg = DeclareLaunchArgument(
-    'vehicle_ns',
-    default_value='vehicle0',
-    description='Vehicle namespace for topics, nodes, etc.'
+  vehicle_id_arg = DeclareLaunchArgument(
+    'vehicle_id',
+    default_value='0',
+    description='Vehicle ID'
   )
 
   vehicle_name_arg = DeclareLaunchArgument(
@@ -28,43 +28,39 @@ def generate_launch_description():
     description='Use simulation time'
   )
 
-  config_package_path_share_arg = DeclareLaunchArgument(
-    'config_package_path_share',
-    default_value='',
-    description='Path to the config package, usually the personal bringup of the workspace, in the install folder'
+  config_to_use = DeclareLaunchArgument(
+    'config_to_use',
+    default_value='default',
+    description='Config folder to use.'
   )
 
-  config_package_path_real_arg = DeclareLaunchArgument(
-    'config_package_path_real',
-    default_value='',
-    description='Path to the config package, usually the personal bringup of the workspace, in the src folder'
-  )
+  vehicle_ns = PythonExpression(["'", LaunchConfiguration('vehicle_name'), "' + '", LaunchConfiguration('vehicle_id'), "'"])
 
   ###################################
   # Define parameters for all nodes #
   ###################################
   params = [
             # vehicle namespace
-            {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
+            {'vehicle_name': LaunchConfiguration('vehicle_name')},
+            {'vehicle_id': LaunchConfiguration('vehicle_id')},
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
 
             # load default planning configs
             PathJoinSubstitution([
               FindPackageShare('farol2_bringup'),
-              'config_default',
-              'vehicles',
+              'config',
               LaunchConfiguration('vehicle_name'),
+              'default',
               'planning.yaml'
             ]),
-            
-            # override with personal planning configs
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_share'),
-              'config_personal',
-              'vehicles',
-              LaunchConfiguration('vehicle_name'),
-              'planning.yaml'
-            ]),
+            # override config — same path as default when config_to_use == 'default'
+            # PathJoinSubstitution([
+            #   FindPackageShare('farol2_bringup'),
+            #   'config',
+            #   LaunchConfiguration('vehicle_name'),
+            #   LaunchConfiguration('config_to_use'),
+            #   'planning.yaml'
+            # ]),
           ]
 
 
@@ -73,27 +69,27 @@ def generate_launch_description():
   ###################
   paths_node = Node(
     package='farol2_planning',
-    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'planning']),
+    namespace=PathJoinSubstitution([vehicle_ns, 'planning']),
     executable='path_node',
     name='paths',
     output='screen',
     parameters=params,
     remappings=[
       # Subscribers
-      ('gamma', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/path_following/gamma')]),
-      ('vehicle_state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      ('gamma', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/path_following/gamma')]),
+      ('vehicle_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
       # Publishers
-      ('path_data', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/path_following/path_data')]),
-      ('virtual_target_state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/control/path_following/virtual_state')]),
+      ('path_data', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/path_following/path_data')]),
+      ('virtual_target_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/path_following/virtual_state')]),
       # Services
-      ('reset_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/ResetPath')]),
-      ('set_mode', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SetMode')]),
-      ('arc2d_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SpawnArc2DPath')]),
-      ('bernoulli_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SpawnBernoulliPath')]),
-      ('circle2d_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SpawnCircle2DPath')]),
-      ('line_path', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SpawnLinePath')]),
-      ('speed_const_rabbit_speed', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SetConstVdRabbit')]),
-      ('speed_const_vehicle_speed', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/SetConstVdVehicle')]),
+      ('reset_path', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/ResetPath')]),
+      ('set_mode', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SetMode')]),
+      ('arc2d_path', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SpawnArc2DPath')]),
+      ('bernoulli_path', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SpawnBernoulliPath')]),
+      ('circle2d_path', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SpawnCircle2DPath')]),
+      ('line_path', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SpawnLinePath')]),
+      ('speed_const_rabbit_speed', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SetConstVdRabbit')]),
+      ('speed_const_vehicle_speed', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SetConstVdVehicle')]),
     ]
   )
 
@@ -102,11 +98,10 @@ def generate_launch_description():
   ######################################################
   return LaunchDescription([
     # launch arguments
-    vehicle_ns_arg,
+    vehicle_id_arg,
     vehicle_name_arg,
     use_sim_time_arg,
-    config_package_path_share_arg,
-    config_package_path_real_arg,
+    config_to_use,
     # nodes
     paths_node,
   ])

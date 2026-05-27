@@ -574,7 +574,7 @@ void PID::initializeControllerConfigs() {
           name,
           SURGE,
           pi_required,
-          [this]() { return nav_state_.body_velocity_fluid.x; },
+          [this]() { return nav_state_.velocity_through_water_body.x; },
           [this]() { return surge_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.x += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
@@ -594,7 +594,7 @@ void PID::initializeControllerConfigs() {
           name,
           SWAY,
           pi_required,
-          [this]() { return nav_state_.body_velocity_fluid.y; },
+          [this]() { return nav_state_.velocity_through_water_body.y; },
           [this]() { return sway_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.y += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
@@ -614,7 +614,7 @@ void PID::initializeControllerConfigs() {
           name,
           HEAVE,
           pi_required,
-          [this]() { return nav_state_.body_velocity_fluid.z; },
+          [this]() { return nav_state_.velocity_through_water_body.z; },
           [this]() { return heave_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.z += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
@@ -700,16 +700,13 @@ void PID::initializeControllerConfigs() {
           yaw_required,
           [this]() -> double {
             if (course_control_) {
-              return farol2_utils::deg2rad(static_cast<double>(nav_state_.course_angle));
+              return farol2_utils::deg2rad(static_cast<double>(nav_state_.course_over_ground));
             }
-            return farol2_utils::deg2rad(static_cast<double>(nav_state_.orientation.z));
+            return farol2_utils::deg2rad(static_cast<double>(nav_state_.attitude.z));
           },
           [this]() { return yaw_ref_; },
           [this]() -> double {
-            if (use_heading_rate_as_yaw_rate_) {
-              return farol2_utils::deg2rad(static_cast<double>(nav_state_.heading_rate));
-            }
-            return farol2_utils::deg2rad(static_cast<double>(nav_state_.orientation_rate.z));
+            return farol2_utils::deg2rad(static_cast<double>(nav_state_.angular_velocity.z));
           },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.z += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
@@ -740,9 +737,9 @@ void PID::initializeControllerConfigs() {
           name,
           PITCH,
           pid_required,
-          [this]() { return farol2_utils::deg2rad(nav_state_.orientation.y); },
+          [this]() { return farol2_utils::deg2rad(nav_state_.attitude.y); },
           [this]() { return pitch_ref_; },
-          [this]() { return farol2_utils::deg2rad(nav_state_.orientation_rate.y); },
+          [this]() { return farol2_utils::deg2rad(nav_state_.angular_velocity.y); },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.y += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             debug_msg.error = controller_pitch_->getError();
@@ -764,9 +761,9 @@ void PID::initializeControllerConfigs() {
           name,
           ROLL,
           pid_required,
-          [this]() { return farol2_utils::deg2rad(nav_state_.orientation.x); },
+          [this]() { return farol2_utils::deg2rad(nav_state_.attitude.x); },
           [this]() { return roll_ref_; },
-          [this]() { return farol2_utils::deg2rad(nav_state_.orientation_rate.x); },
+          [this]() { return farol2_utils::deg2rad(nav_state_.angular_velocity.x); },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.x += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             debug_msg.error = controller_roll_->getError();
@@ -788,7 +785,7 @@ void PID::initializeControllerConfigs() {
           name,
           YAW_RATE,
           pi_required,
-          [this]() { return farol2_utils::deg2rad(nav_state_.orientation_rate.z); },
+          [this]() { return farol2_utils::deg2rad(nav_state_.angular_velocity.z); },
           [this]() { return yaw_rate_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.z += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
@@ -808,7 +805,7 @@ void PID::initializeControllerConfigs() {
           name,
           PITCH_RATE,
           pi_required,
-          [this]() { return farol2_utils::deg2rad(nav_state_.orientation_rate.y); },
+          [this]() { return farol2_utils::deg2rad(nav_state_.angular_velocity.y); },
           [this]() { return pitch_rate_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.y += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
@@ -828,7 +825,7 @@ void PID::initializeControllerConfigs() {
           name,
           ROLL_RATE,
           pi_required,
-          [this]() { return farol2_utils::deg2rad(nav_state_.orientation_rate.x); },
+          [this]() { return farol2_utils::deg2rad(nav_state_.angular_velocity.x); },
           [this]() { return roll_rate_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.torque.x += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {

@@ -11,10 +11,10 @@ def generate_launch_description():
   ####################
   # Launch arguments #
   ####################
-  vehicle_ns_arg = DeclareLaunchArgument(
-    'vehicle_ns',
-    default_value='vehicle0',
-    description='Vehicle namespace for topics, nodes, etc.'
+  vehicle_id_arg = DeclareLaunchArgument(
+    'vehicle_id',
+    default_value='0',
+    description='Vehicle ID'
   )
 
   vehicle_name_arg = DeclareLaunchArgument(
@@ -23,17 +23,13 @@ def generate_launch_description():
     description='Vehicle name'
   )
 
-  config_package_path_share_arg = DeclareLaunchArgument(
-    'config_package_path_share',
-    default_value='',
-    description='Path to the config package in the install folder'
+  config_to_use = DeclareLaunchArgument(
+    'config_to_use',
+    default_value='default',
+    description='Config folder to use.'
   )
 
-  config_package_path_real_arg = DeclareLaunchArgument(
-    'config_package_path_real',
-    default_value='',
-    description='Path to the config package in the src folder'
-  )
+  vehicle_ns = PythonExpression(["'", LaunchConfiguration('vehicle_name'), "' + '", LaunchConfiguration('vehicle_id'), "'"])
 
   launch_magic_electric_sim_arg = DeclareLaunchArgument(
     'magic_electric_sim',
@@ -51,25 +47,25 @@ def generate_launch_description():
   # Parameters — vehicle sim nodes always use wall-clock time #
   ############################################################
   params = [
-    {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
+    {'vehicle_name': LaunchConfiguration('vehicle_name')},
+    {'vehicle_id': LaunchConfiguration('vehicle_id')},
 
     # default sim config
     PathJoinSubstitution([
       FindPackageShare('farol2_bringup'),
-      'config_default',
-      'vehicles',
+      'config',
       LaunchConfiguration('vehicle_name'),
+      'default',
       'sim.yaml'
     ]),
-
-    # personal sim config override
-    PathJoinSubstitution([
-      LaunchConfiguration('config_package_path_share'),
-      'config_personal',
-      'vehicles',
-      LaunchConfiguration('vehicle_name'),
-      'sim.yaml'
-    ]),
+    # override config — same path as default when config_to_use == 'default'
+    # PathJoinSubstitution([
+    #   FindPackageShare('farol2_bringup'),
+    #   'config',
+    #   LaunchConfiguration('vehicle_name'),
+    #   LaunchConfiguration('config_to_use'),
+    #   'sim.yaml'
+    # ]),
 
     # vehicle sim nodes are the /clock authority — they must NEVER use sim time
     {'use_sim_time': False},
@@ -81,7 +77,7 @@ def generate_launch_description():
   
   magic_electric_sim_node = Node(
     package='farol2_sim',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
+    namespace=[vehicle_ns, '/sim'],
     executable='magic_electric_sim',
     name='magic_electric_sim',
     output='screen',
@@ -89,23 +85,23 @@ def generate_launch_description():
     parameters=params,
     remappings=[
       # Subscribers
-      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
-      ('rudder_ref', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rudder_command')]),
+      ('rpm_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rpm_command')]),
+      ('rudder_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rudder_command')]),
       # Publishers
-      ('position', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/position')]),
-      ('body_velocity', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/body_velocity')]),
-      ('orientation', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/orientation')]),
-      ('orientation_rate', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/orientation_rate')]),
-      ('body_acceleration', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/body_acceleration')]),
-      ('angular_acceleration', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/angular_acceleration')]),
-      ('rudder_angle', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/rudder_angle')]),
-      ('measurement', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement')]),
+      ('position', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/position')]),
+      ('body_velocity', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/body_velocity')]),
+      ('orientation', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/orientation')]),
+      ('orientation_rate', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/orientation_rate')]),
+      ('body_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/body_acceleration')]),
+      ('angular_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/angular_acceleration')]),
+      ('rudder_angle', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/rudder_angle')]),
+      ('measurement', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement')]),
     ]
   )
 
   auv_sim_node = Node(
     package='farol2_sim',
-    namespace=[LaunchConfiguration('vehicle_ns'), '/sim'],
+    namespace=[vehicle_ns, '/sim'],
     executable='auv_sim',
     name='auv_sim',
     output='screen',
@@ -113,15 +109,15 @@ def generate_launch_description():
     parameters=params,
     remappings=[
       # Subscribers
-      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
+      ('rpm_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rpm_command')]),
       # Publishers
-      ('position', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/position')]),
-      ('body_velocity', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/body_velocity')]),
-      ('orientation', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/orientation')]),
-      ('orientation_rate', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/orientation_rate')]),
-      ('body_acceleration', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/body_acceleration')]),
-      ('angular_acceleration', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/sim/angular_acceleration')]),
-      ('measurement', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/measurement')]),
+      ('position', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/position')]),
+      ('body_velocity', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/body_velocity')]),
+      ('orientation', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/orientation')]),
+      ('orientation_rate', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/orientation_rate')]),
+      ('body_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/body_acceleration')]),
+      ('angular_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/angular_acceleration')]),
+      ('measurement', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement')]),
     ]
   )
 
@@ -129,10 +125,9 @@ def generate_launch_description():
   # Return launch description with arguments and nodes #
   ######################################################
   return LaunchDescription([
-    vehicle_ns_arg,
+    vehicle_id_arg,
     vehicle_name_arg,
-    config_package_path_share_arg,
-    config_package_path_real_arg,
+    config_to_use,
     launch_magic_electric_sim_arg,
     launch_auv_sim_arg,
     magic_electric_sim_node,

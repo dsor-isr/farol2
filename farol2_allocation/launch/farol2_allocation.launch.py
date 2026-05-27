@@ -1,4 +1,5 @@
 from launch import LaunchDescription
+
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
 from launch_ros.actions import Node
@@ -11,17 +12,12 @@ def generate_launch_description():
   ####################
   # Launch arguments #
   ####################
-  vehicle_ns_arg = DeclareLaunchArgument(
-    'vehicle_ns',
-    default_value='vehicle0',
-    description='Vehicle namespace for topics, nodes, etc.'
-  )
-
   vehicle_name_arg = DeclareLaunchArgument(
-    'vehicle_name',
-    default_value='vehicle',
-    description='Vehicle name'
-  )
+        'vehicle_name', default_value='magicelectric', description='Vehicle name.'
+    )
+  vehicle_id_arg = DeclareLaunchArgument(
+        'vehicle_id', default_value='0', description='Vehicle ID.'
+    )
 
   use_sim_time_arg = DeclareLaunchArgument(
     'use_sim_time',
@@ -29,122 +25,111 @@ def generate_launch_description():
     description='Use simulation time'
   )
 
-
-  config_package_path_share_arg = DeclareLaunchArgument(
-    'config_package_path_share',
-    default_value='',
-    description='Path to the config package, usually the personal bringup of the workspace, in the install folder'
+  config_to_use_arg = DeclareLaunchArgument(
+    'config_to_use',
+    default_value='default',
+    description='Config folder to use.'
   )
 
-  config_package_path_real_arg = DeclareLaunchArgument(
-    'config_package_path_real',
-    default_value='',
-    description='Path to the config package, usually the personal bringup of the workspace, in the src folder'
+  launch_throttle_conversion_arg = DeclareLaunchArgument(
+    'throttle_conversion',
+    default_value='false',
+    description='Boolean to determine if "throttle_conversion" node is launched.'
   )
+  #### TO DIE ABOVE
+  
+  ############################
+  # Build vehicle namespace #
+  ############################
+  vehicle_ns = PythonExpression(["'", LaunchConfiguration('vehicle_name'), "' + '", LaunchConfiguration('vehicle_id'), "'"])
+
 
   ###################################
   # Define parameters for all nodes #
   ###################################
   params = [
             # vehicle namespace
-            {'vehicle_ns': LaunchConfiguration('vehicle_ns')},
+            {'vehicle_name': LaunchConfiguration('vehicle_name')},
+            {'vehicle_id': LaunchConfiguration('vehicle_id')},
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
 
             # load default allocation configs
             PathJoinSubstitution([
               FindPackageShare('farol2_bringup'),
-              'config_default',
-              'vehicles',
+              'config',
               LaunchConfiguration('vehicle_name'),
+              "default",
               'allocation.yaml'
             ]),
-            
-            # override with personal allocation configs
-            PathJoinSubstitution([
-              LaunchConfiguration('config_package_path_share'),
-              'config_personal',
-              'vehicles',
-              LaunchConfiguration('vehicle_name'),
-              'allocation.yaml'
-            ]),
+            # override config — same path as default when config_to_use == 'default'
+            # PathJoinSubstitution([
+            #   FindPackageShare('farol2_bringup'),
+            #   'config',
+            #   LaunchConfiguration('vehicle_name'),
+            #   LaunchConfiguration('config_to_use'),
+            #   'allocation.yaml'
+            # ]),
           ]
 
 
   ###################
   # Nodes to launch #
   ###################
-  
 
 
 
 
   thruster_allocation_node = Node(
     package='farol2_allocation',
-    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'allocation']),
+    namespace=PathJoinSubstitution([vehicle_ns, 'allocation']),
     executable='thruster_allocation',
     name='thruster_allocation',
     output='screen',
     parameters=params,
     remappings=[
       # Subscribers
-      ('body_wrench_request', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/body_wrench_request')]),
-      ('nav_state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
-      ('mission_status', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/mission_status')]),
+      ('body_wrench_request', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/body_wrench_request')]),
+      ('nav_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
+      ('mission_status', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/mission_status')]),
       # Publishers
-      ('thruster_force', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thruster_force')]),
-      ('rudder_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rudder_command')]),
+      ('thruster_force', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thruster_force')]),
+      ('rudder_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rudder_command')]),
     ]
   )
 
   rpm_conversion_node = Node(
     package='farol2_allocation',
-    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'allocation']),
+    namespace=PathJoinSubstitution([vehicle_ns, 'allocation']),
     executable='rpm_conversion',
     name='rpm_conversion',
     output='screen',
     parameters=params,
     remappings=[
       # Subscribers
-      ('thruster_force', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thruster_force')]),
-      ('nav_state', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/nav/filter/state')]),
+      ('thruster_force', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thruster_force')]),
+      ('nav_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
       # Publishers
-      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
-    ]
-  )
-
-  throttle_conversion_node = Node(
-    package='farol2_allocation',
-    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'allocation']),
-    executable='throttle_conversion',
-    name='throttle_conversion',
-    output='screen',
-    condition=IfCondition(LaunchConfiguration('throttle_conversion')),
-    parameters=params,
-    remappings=[
-      # Subscribers
-      ('rpm_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/rpm_command')]),
-      # Publishers
-      ('throttle_command', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/throttle_command')]),
+      ('rpm_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rpm_command')]),
     ]
   )
 
   wrench_manager_node = Node(
     package='farol2_allocation',
-    namespace=PathJoinSubstitution([LaunchConfiguration('vehicle_ns'), 'allocation']),
+    namespace=PathJoinSubstitution([vehicle_ns, 'allocation']),
     executable='wrench_manager',
     name='wrench_manager',
     output='screen',
     parameters=params,
     remappings=[
       # Subscribers
-      ('thrust_x', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thrust_x')]),
-      ('thrust_y', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thrust_y')]),
-      ('thrust_z', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/thrust_z')]),
-      ('torque_x', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/torque_x')]),
-      ('torque_y', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/torque_y')]),
-      ('torque_z', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/torque_z')]),
+      ('thrust_x', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thrust_x')]),
+      ('thrust_y', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thrust_y')]),
+      ('thrust_z', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thrust_z')]),
+      ('torque_x', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/torque_x')]),
+      ('torque_y', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/torque_y')]),
+      ('torque_z', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/torque_z')]),
       # Publishers
-      ('body_wrench_request', [TextSubstitution(text='/'), LaunchConfiguration('vehicle_ns'), TextSubstitution(text='/allocation/body_wrench_request')]),
+      ('body_wrench_request', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/body_wrench_request')]),
     ]
   )
 
@@ -153,11 +138,11 @@ def generate_launch_description():
   ######################################################
   return LaunchDescription([
     # launch arguments
-    vehicle_ns_arg,
     vehicle_name_arg,
+    vehicle_id_arg,
     use_sim_time_arg,
-    config_package_path_share_arg,
-    config_package_path_real_arg,
+    config_to_use_arg,
+    launch_throttle_conversion_arg,
     # nodes
     thruster_allocation_node,
     rpm_conversion_node,
