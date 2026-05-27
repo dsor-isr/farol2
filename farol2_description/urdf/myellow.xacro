@@ -2,13 +2,26 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="myellow">
 
   <!-- Constants -->
-  <xacro:property name="M_PI"     value="3.1415926535897931" />
+  <xacro:property name="M_PI" value="3.1415926535897931" />
+
+  <!-- Materials -->
+  <material name="blue">
+    <color rgba="0 0 1 1"/>
+  </material>
 
   <!-- Base -->
   <link name="base_link"/>
 
   <!-- Portside horizontal back thruster -->
-  <link name="thruster_portside_horizontal_back_link"/>
+  <link name="thruster_portside_horizontal_back_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.08"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+  </link>
   <joint name="base_to_thruster_portside_horizontal_back" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_portside_horizontal_back_link"/>
@@ -16,7 +29,15 @@
   </joint>
 
   <!-- Starboard horizontal back thruster -->
-  <link name="thruster_starboard_horizontal_back_link"/>
+  <link name="thruster_starboard_horizontal_back_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.08"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+  </link>
   <joint name="base_to_thruster_starboard_horizontal_back" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_starboard_horizontal_back_link"/>
@@ -24,23 +45,47 @@
   </joint>
 
   <!-- Portside vertical thruster -->
-  <link name="thruster_portside_vertical_link"/>
+  <link name="thruster_portside_vertical_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.08"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+  </link>
   <joint name="base_to_thruster_portside_vertical" type="fixed">
     <parent link="base_link"/>
-    <child link="thruster_portside_vertical_link"/>
+    <child link="thruster_starboard_vertical_link"/>
     <origin xyz="0.087 -0.120 -0.12" rpy="0 -${0.5*M_PI} 0"/>
   </joint>
 
   <!-- Starboard vertical thruster -->
-  <link name="thruster_starboard_vertical_link"/>
+  <link name="thruster_starboard_vertical_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.08"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+  </link>
   <joint name="base_to_thruster_starboard_vertical" type="fixed">
     <parent link="base_link"/>
-    <child link="thruster_starboard_vertical_link"/>
+    <child link="thruster_portside_vertical_link"/>
     <origin xyz="0.087 0.120 -0.12" rpy="0 -${0.5*M_PI} 0"/>
   </joint>
 
   <!-- Portside horizontal front thruster -->
-  <link name="thruster_portside_horizontal_front_link"/>
+  <link name="thruster_portside_horizontal_front_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.08"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+  </link>
   <joint name="base_to_thruster_portside_horizontal_front" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_portside_horizontal_front_link"/>
@@ -48,13 +93,19 @@
   </joint>
 
   <!-- Starboard horizontal front thruster -->
-  <link name="thruster_starboard_horizontal_front_link"/>
+  <link name="thruster_starboard_horizontal_front_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.08"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+  </link>
   <joint name="base_to_thruster_starboard_horizontal_front" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_starboard_horizontal_front_link"/>
     <origin xyz="0.300 -0.197 0.0" rpy="0 0 ${0.25*M_PI}"/>
   </joint>
-
-
 
 </robot>

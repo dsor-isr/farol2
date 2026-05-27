@@ -14,6 +14,8 @@ def _launch(context, *args, **kwargs):
   if not vehicle_id:
     vehicle_id = get_next_available_vehicle_id(vehicle_name)
 
+  use_magic_electric_sim = vehicle_name == 'magicelectric'
+
   ###################################################
   # Include simulation launch (before Farol stack) #
   ###################################################
@@ -25,8 +27,8 @@ def _launch(context, *args, **kwargs):
       'vehicle_name': vehicle_name,
       'vehicle_id': vehicle_id,
       'config_to_use': config_to_use,
-      'magic_electric_sim': 'true',
-      'auv_sim': 'false',
+      'magic_electric_sim': 'true' if use_magic_electric_sim else 'false',
+      'auv_sim': 'false' if use_magic_electric_sim else 'true',
     }.items()
   )
 
