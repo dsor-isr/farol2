@@ -17,7 +17,7 @@
         navsat: 2.0
         utm: 2.0
         rpm: 1.0
-      plugins:
+      # plugins:
         # position_current_ekf:
         #   override_position_state: true
         #   process_noise_pos: 0.1

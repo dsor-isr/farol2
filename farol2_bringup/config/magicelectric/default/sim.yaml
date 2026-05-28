@@ -8,7 +8,7 @@
   sim_clock:
     ros__parameters:
       node_frequency: 10
-      speedup: 20.0
+      speedup: 1.0
   magic_electric_sim:
     ros__parameters:
       node_frequency: 10
