@@ -2,7 +2,7 @@
   auv_sim:
     ros__parameters:
       node_frequency: 100
-      speedup: 20.0
+      speedup: 1.0
       initial_state:
         position: [38.690323, -9.211736, 0.0] # (lat, lon, depth) from expo   
         body_velocity: [0.0, 0.0, 0.0]

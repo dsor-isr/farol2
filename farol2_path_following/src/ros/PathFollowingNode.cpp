@@ -233,9 +233,9 @@ void PathFollowingNode::vehicleStateCallback(const farol2_interfaces::msg::Navig
                                msg.altimeter;
 
   /* Update the vehicle orientation */
-  double roll = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.attitude.x));
-  double pitch = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.attitude.y));
-  double yaw = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.attitude.z));
+  double roll = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.attitude.roll));
+  double pitch = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.attitude.pitch));
+  double yaw = farol2_utils::wrapToPi(farol2_utils::deg2rad(msg.attitude.yaw));
   this->vehicle_state_.eta2 << roll, pitch, yaw;
 
   /* Update the vehicle linear velocity */

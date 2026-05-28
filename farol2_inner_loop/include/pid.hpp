@@ -25,7 +25,6 @@
 #include <farol2_utils/filters/low_pass_filter.hpp>
 #include <farol2_utils/angles.hpp>
 
-#include "farol2_inner_loop/controller_pi.hpp"
 #include "farol2_inner_loop/controller_pid.hpp"
 #include "farol2_inner_loop/reference_generator.hpp"
 
@@ -60,7 +59,7 @@
 #define TOPIC_PUB_DEBUG_PITCH_RATE "debug_pitch_rate"
 #define TOPIC_PUB_DEBUG_ROLL_RATE "debug_roll_rate"
 #define SERVICE_CHANGE_PARAMS "change_params"
-#define SERVICE_COURSE_CONTROL "course_control"
+#define SERVICE_COURSE_CONTROL "course_instead_of_yaw"
 
 enum ControllerType {
   SURGE = 0,
@@ -77,7 +76,6 @@ enum ControllerType {
 };
 
 // Use the reusable controller classes from farol_control namespace
-using farol_control::ControllerPI;
 using farol_control::ControllerPID;
 
 /**
@@ -94,8 +92,6 @@ struct ControllerConfig {
   ControllerType type;
   /** True for PID channels that require a state-rate input. */
   bool has_state_rate;
-  /** Required gain/limit parameter names for this channel. */
-  std::vector<std::string> required_params;
   /** Returns the current measured state for this channel. */
   std::function<double()> get_state;
   /** Returns the latest reference for this channel. */
@@ -180,7 +176,7 @@ class PID : public rclcpp::Node {
     std::map<std::string, rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr> reference_subscribers_;
 
     rclcpp::Service<farol2_inner_loop::srv::ChangeParams>::SharedPtr change_params_srv_;
-    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr course_control_srv_;
+    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr course_instead_of_yaw_srv_;
 
     /** @brief Store latest navigation state sample. */
     void navStateCallback(const farol2_interfaces::msg::NavigationState &msg);
@@ -280,7 +276,7 @@ class PID : public rclcpp::Node {
     double tau_;
 
         /** Selects yaw state source: heading (`false`) or course angle (`true`). */
-    bool course_control_{false}; // flag to switch between heading or course control
+    bool course_instead_of_yaw_{false}; // flag to switch between heading or course control
     bool use_heading_rate_as_yaw_rate_{false};
 
         /** Low-pass filter configuration passed to PID controllers. */
@@ -288,28 +284,22 @@ class PID : public rclcpp::Node {
     std::string lpf_method_, lpf_design_;
 
         /** Per-axis controller instances (allocated only when enabled). */
-    std::unique_ptr<ControllerPI> controller_surge_;
-    std::unique_ptr<ControllerPI> controller_sway_;
-    std::unique_ptr<ControllerPI> controller_heave_;
+    std::unique_ptr<ControllerPID> controller_surge_;
+    std::unique_ptr<ControllerPID> controller_sway_;
+    std::unique_ptr<ControllerPID> controller_heave_;
     std::unique_ptr<ControllerPID> controller_depth_;
     std::unique_ptr<ControllerPID> controller_altitude_;
     std::unique_ptr<ControllerPID> controller_yaw_;
     std::unique_ptr<ControllerPID> controller_pitch_;
     std::unique_ptr<ControllerPID> controller_roll_;
-    std::unique_ptr<ControllerPI> controller_yaw_rate_;
-    std::unique_ptr<ControllerPI> controller_pitch_rate_;
-    std::unique_ptr<ControllerPI> controller_roll_rate_;
+    std::unique_ptr<ControllerPID> controller_yaw_rate_;
+    std::unique_ptr<ControllerPID> controller_pitch_rate_;
+    std::unique_ptr<ControllerPID> controller_roll_rate_;
 
     /**
      * @brief Instantiate enabled controllers after parameter validation.
      */
     void createControllers();
-
-    /**
-     * @brief Validate the required numeric parameters for one controller.
-     */
-    bool validateControllerParams(const std::string &controller_name,
-                    const std::vector<std::string> &required_params);
 
     /**
      * @brief Build controller configuration entries for the generic runtime path.

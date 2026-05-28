@@ -35,8 +35,10 @@ struct State
   double course_over_ground{0.0};
   Eigen::Vector3d current_velocity_ned{Eigen::Vector3d::Zero()};
 
-  // Attitude
+  // Attitude as roll/pitch/yaw [deg] for convenience.
   Eigen::Vector3d attitude{Eigen::Vector3d::Zero()};
+  // Rotation from body frame to NED frame.
+  Eigen::Matrix3d rotation_bn{Eigen::Matrix3d::Identity()};
   Eigen::Vector3d angular_velocity{Eigen::Vector3d::Zero()};
 };
 
