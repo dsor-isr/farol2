@@ -24,6 +24,8 @@ Output routing:
 - surge -> `thrust_x`
 - sway -> `thrust_y`
 - heave -> `thrust_z`
+- depth -> `thrust_z`
+- altitude -> `thrust_z` (inverted to NED/down-positive force)
 - yaw/yaw_rate -> `torque_z`
 - pitch/pitch_rate -> `torque_y`
 - roll/roll_rate -> `torque_x`
@@ -41,7 +43,7 @@ Notes:
 - `course_control` (bool): if true yaw uses `course_angle`, else `orientation.z`.
 - `lpf_order`, `lpf_method`, `lpf_design`: low-pass filter settings passed to PID controllers.
 
-Per-controller block (for each of `surge`, `sway`, `heave`, `yaw`, `pitch`, `roll`, `yaw_rate`, `pitch_rate`, `roll_rate`):
+Per-controller block (for each of `surge`, `sway`, `heave`, `depth`, `altitude`, `yaw`, `pitch`, `roll`, `yaw_rate`, `pitch_rate`, `roll_rate`):
 - `enabled` (bool): activates controller creation/execution.
 - `debug` (bool, optional): enables debug publisher for that controller.
 - gains/limits depending on controller type:

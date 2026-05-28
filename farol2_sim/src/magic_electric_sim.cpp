@@ -202,8 +202,18 @@ void MagicElectricSim::initialisePublishers()
         TOPIC_PUB_RUDDER_ANGLE, 1);
   }
 
-  meas_pub_ = create_publisher<farol2_interfaces::msg::Measurement>(
-      TOPIC_PUB_MEASUREMENT, 1);
+  imu_pub_ = create_publisher<sensor_msgs::msg::Imu>(
+      TOPIC_PUB_IMU, 1);
+  gnss_pub_ = create_publisher<sensor_msgs::msg::NavSatFix>(
+      TOPIC_PUB_GNSS, 1);
+  utm_ned_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
+      TOPIC_PUB_UTM_NED, 1);
+  velocity_over_ground_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
+      TOPIC_PUB_VELOCITY_OVER_GROUND, 1);
+  velocity_through_water_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
+      TOPIC_PUB_VELOCITY_THROUGH_WATER, 1);
+  depth_pub_ = create_publisher<std_msgs::msg::Float32>(
+      TOPIC_PUB_DEPTH, 1);
 
   return;
 }
@@ -415,54 +425,86 @@ void MagicElectricSim::updateState()
 
 void MagicElectricSim::publishMeasurements()
 {
+  const auto stamp = rclcpp::Time(sim_time_ns_);
   // Current position in UTM (absolute)
   double north = position_[0] + northing_;
   double east  = position_[1] + easting_;
   double depth = position_[2];
 
-  if (gnss_activate_) {
-    farol2_interfaces::msg::Measurement pos_msg, vel_msg;
-    pos_msg.type = farol2_interfaces::msg::Measurement::MEAS_UTM_POSITION;
-    pos_msg.value = {
-      north + (noise_activate_ ? randn(pos_bias[0], pos_variance[0]) : 0.0),
-      east  + (noise_activate_ ? randn(pos_bias[1], pos_variance[1]) : 0.0),
-      static_cast<double>(utm_zone_)
-    };
-    meas_pub_->publish(pos_msg);
+  const Eigen::Vector3d current_ned(
+    curr_vel_ * std::cos(curr_dir_),
+    curr_vel_ * std::sin(curr_dir_),
+    0.0);
+  const Eigen::Vector3d velocity_over_ground_ned(position_dot_[0], position_dot_[1], position_dot_[2]);
+  const Eigen::Vector3d velocity_through_water_ned = velocity_over_ground_ned - current_ned;
+  const double yaw = orientation_[2];
+  const Eigen::Vector3d velocity_through_water_body(
+    velocity_through_water_ned.x() * std::cos(yaw) + velocity_through_water_ned.y() * std::sin(yaw),
+    -velocity_through_water_ned.x() * std::sin(yaw) + velocity_through_water_ned.y() * std::cos(yaw),
+    velocity_through_water_ned.z());
 
-    vel_msg.type = farol2_interfaces::msg::Measurement::MEAS_INERTIAL_VELOCITY;
-    vel_msg.value = {
-      body_velocity_[0] + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0),
-      body_velocity_[1] + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0),
-      body_velocity_[2] + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0)
-    };
-    meas_pub_->publish(vel_msg);
+  if (gnss_activate_) {
+    const double north_meas = north + (noise_activate_ ? randn(pos_bias[0], pos_variance[0]) : 0.0);
+    const double east_meas = east + (noise_activate_ ? randn(pos_bias[1], pos_variance[1]) : 0.0);
+
+    geometry_msgs::msg::Vector3Stamped utm_msg;
+    utm_msg.header.stamp = stamp;
+    utm_msg.vector.x = north_meas;
+    utm_msg.vector.y = east_meas;
+    utm_msg.vector.z = static_cast<double>(utm_zone_);
+    utm_ned_pub_->publish(utm_msg);
+
+    double latitude = 0.0;
+    double longitude = 0.0;
+    GeographicLib::UTMUPS::Reverse(utm_zone_, northp_, east_meas, north_meas, latitude, longitude);
+
+    sensor_msgs::msg::NavSatFix gnss_msg;
+    gnss_msg.header.stamp = stamp;
+    gnss_msg.latitude = latitude;
+    gnss_msg.longitude = longitude;
+    gnss_msg.altitude = -depth;
+    gnss_pub_->publish(gnss_msg);
   }
 
+  geometry_msgs::msg::Vector3Stamped vel_msg;
+  vel_msg.header.stamp = stamp;
+  vel_msg.vector.x = velocity_over_ground_ned.x() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0);
+  vel_msg.vector.y = velocity_over_ground_ned.y() + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0);
+  vel_msg.vector.z = velocity_over_ground_ned.z() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0);
+  velocity_over_ground_pub_->publish(vel_msg);
+
+  geometry_msgs::msg::Vector3Stamped fluid_vel_msg;
+  fluid_vel_msg.header.stamp = stamp;
+  fluid_vel_msg.vector.x = velocity_through_water_body.x() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0);
+  fluid_vel_msg.vector.y = velocity_through_water_body.y() + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0);
+  fluid_vel_msg.vector.z = velocity_through_water_body.z() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0);
+  velocity_through_water_pub_->publish(fluid_vel_msg);
+
   if (depth_sensor_activate_) {
-    farol2_interfaces::msg::Measurement depth_msg;
-    depth_msg.type = farol2_interfaces::msg::Measurement::MEAS_DEPTH;
-    depth_msg.value = {depth + (noise_activate_ ? randn(pos_bias[2], pos_variance[2]) : 0.0)};
-    meas_pub_->publish(depth_msg);
+    std_msgs::msg::Float32 depth_msg;
+    depth_msg.data = static_cast<float>(depth + (noise_activate_ ? randn(pos_bias[2], pos_variance[2]) : 0.0));
+    depth_pub_->publish(depth_msg);
   }
 
   if (imu_activate_) {
-    farol2_interfaces::msg::Measurement ori_msg, ori_rate_msg;
-    ori_msg.type = farol2_interfaces::msg::Measurement::MEAS_ATTITUDE;
-    ori_msg.value = {
-      orientation_[0] + (noise_activate_ ? randn(ori_bias[0], ori_variance[0]) : 0.0),
-      orientation_[1] + (noise_activate_ ? randn(ori_bias[1], ori_variance[1]) : 0.0),
-      orientation_[2] + (noise_activate_ ? randn(ori_bias[2], ori_variance[2]) : 0.0)
-    };
-    meas_pub_->publish(ori_msg);
+    const double roll = orientation_[0] + (noise_activate_ ? randn(ori_bias[0], ori_variance[0]) : 0.0);
+    const double pitch = orientation_[1] + (noise_activate_ ? randn(ori_bias[1], ori_variance[1]) : 0.0);
+    const double yaw_meas = orientation_[2] + (noise_activate_ ? randn(ori_bias[2], ori_variance[2]) : 0.0);
 
-    ori_rate_msg.type = farol2_interfaces::msg::Measurement::MEAS_ANGULAR_VELOCITY;
-    ori_rate_msg.value = {
-      orientation_rate_[0] + (noise_activate_ ? randn(ori_rate_bias[0], ori_rate_variance[0]) : 0.0),
-      orientation_rate_[1] + (noise_activate_ ? randn(ori_rate_bias[1], ori_rate_variance[1]) : 0.0),
-      orientation_rate_[2] + (noise_activate_ ? randn(ori_rate_bias[2], ori_rate_variance[2]) : 0.0)
-    };
-    meas_pub_->publish(ori_rate_msg);
+    tf2::Quaternion q;
+    q.setRPY(roll, pitch, yaw_meas);
+    q.normalize();
+
+    sensor_msgs::msg::Imu imu_msg;
+    imu_msg.header.stamp = stamp;
+    imu_msg.orientation = tf2::toMsg(q);
+    imu_msg.angular_velocity.x = orientation_rate_[0] + (noise_activate_ ? randn(ori_rate_bias[0], ori_rate_variance[0]) : 0.0);
+    imu_msg.angular_velocity.y = orientation_rate_[1] + (noise_activate_ ? randn(ori_rate_bias[1], ori_rate_variance[1]) : 0.0);
+    imu_msg.angular_velocity.z = orientation_rate_[2] + (noise_activate_ ? randn(ori_rate_bias[2], ori_rate_variance[2]) : 0.0);
+    imu_msg.linear_acceleration.x = body_acceleration_[0];
+    imu_msg.linear_acceleration.y = body_acceleration_[1];
+    imu_msg.linear_acceleration.z = body_acceleration_[2];
+    imu_pub_->publish(imu_msg);
   }
 }
 

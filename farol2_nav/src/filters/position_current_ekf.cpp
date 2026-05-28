@@ -226,9 +226,9 @@ void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & 
     s.northing = x_(0);
     s.easting = x_(1);
   }
-  s.current_velocity_inertial(0) = x_(2);
-  s.current_velocity_inertial(1) = x_(3);
-  s.current_velocity_inertial(2) = 0.0;
+  s.current_velocity_ned(0) = x_(2);
+  s.current_velocity_ned(1) = x_(3);
+  s.current_velocity_ned(2) = 0.0;
   // velocity through water using only the model 
   s.velocity_through_water_ned(0) = vx_model;
   s.velocity_through_water_ned(1) = vy_model;

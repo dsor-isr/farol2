@@ -74,6 +74,8 @@ Output mapping:
 - surge -> force.x
 - sway -> force.y
 - heave -> force.z
+- depth -> force.z
+- altitude -> force.z (inverted to NED/down-positive force)
 - yaw/yaw_rate -> torque.z
 - pitch/pitch_rate -> torque.y
 - roll/roll_rate -> torque.x

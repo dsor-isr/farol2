@@ -1,6 +1,6 @@
 #include "filter_node.hpp"
 
-#include <farol2_nav/filters/pass_through.hpp>
+#include <farol2_nav/filters/sample_and_hold.hpp>
 #include <farol2_nav/filters/position_current_ekf.hpp>
 #include <farol2_nav/filters/yaw_rate_ekf.hpp>
 
@@ -108,9 +108,9 @@ void FilterNode::build_pipeline()
 {
   pipeline_.clear();
 
-  auto pass_through = std::make_unique<farol2_nav::filters::PassThroughFilter>();
-  pass_through->configure(*this);
-  pipeline_.push_back(std::move(pass_through));
+  auto sample_and_hold = std::make_unique<farol2_nav::filters::SampleAndHoldFilter>();
+  sample_and_hold->configure(*this);
+  pipeline_.push_back(std::move(sample_and_hold));
 
   for (const auto & key : filters_) {
     std::unique_ptr<farol2_nav::filters::BaseFilter> filter;
@@ -193,6 +193,10 @@ void FilterNode::on_timer()
   // Final output is always published after the full pipeline is applied.
   fill_state_msg(tick_stamp);
   final_state_pub_->publish(msg_);
+
+  // Flush the consumed measurements so the next tick only sees new input.
+  snapshot_ = farol2_nav::filters::MeasurementSnapshot{};
+
 }
 
 void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
@@ -226,9 +230,9 @@ void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
   msg_.velocity_through_water_ned.y = state_.velocity_through_water_ned(1);
   msg_.velocity_through_water_ned.z = state_.velocity_through_water_ned(2);
   msg_.course_over_ground = state_.course_over_ground;
-  msg_.current_velocity_inertial.x = state_.current_velocity_inertial(0);
-  msg_.current_velocity_inertial.y = state_.current_velocity_inertial(1);
-  msg_.current_velocity_inertial.z = state_.current_velocity_inertial(2);
+  msg_.current_velocity_ned.x = state_.current_velocity_ned(0);
+  msg_.current_velocity_ned.y = state_.current_velocity_ned(1);
+  msg_.current_velocity_ned.z = state_.current_velocity_ned(2);
 
   msg_.attitude.x = state_.attitude(0);
   msg_.attitude.y = state_.attitude(1);

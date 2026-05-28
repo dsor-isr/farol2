@@ -24,7 +24,7 @@ geometry_msgs/Vector3 velocity_through_water_ned # velocity relative to the flui
 float32 course_over_ground # course over ground (deg)
 
 # Velocity of the current
-geometry_msgs/Vector3 current_velocity_inertial # estimated current velocity in inertial NED frame (m/s)
+geometry_msgs/Vector3 current_velocity_ned # estimated current velocity in inertial NED frame (m/s)
 
 # Attitude
 geometry_msgs/Vector3 attitude # [roll pitch yaw] (deg)

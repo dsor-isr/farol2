@@ -6,6 +6,7 @@ find_package(ament_cmake REQUIRED)
 
 # Install resources
 install(DIRECTORY
+  launch
   urdf
   DESTINATION share/${PROJECT_NAME}
 )

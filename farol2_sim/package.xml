@@ -17,8 +17,11 @@
   <depend>std_msgs</depend>
   <depend>farol2_interfaces</depend>
   <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
   <depend>rosgraph_msgs</depend>
   <depend>farol2_allocation</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
 
   <exec_depend>ros2launch</exec_depend>
 

@@ -15,6 +15,8 @@ find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(farol2_utils REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -33,29 +35,23 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 ament_export_dependencies(rosidl_default_runtime)
 
-add_executable(static_thruster_allocation src/static_thruster_allocation.cpp)
-add_executable(thruster_rudder_allocation src/thruster_rudder_allocation.cpp)
+
+add_executable(thruster_allocation src/thruster_allocation.cpp)
 add_executable(rpm_conversion src/rpm_conversion.cpp)
-add_executable(throttle_conversion src/throttle_conversion.cpp)
 add_executable(wrench_manager src/wrench_manager.cpp)
 
-ament_target_dependencies(
-  static_thruster_allocation
-  rclcpp
-  std_msgs
-  farol2_interfaces
-  Eigen3
-  eigen3_cmake_module
-)
 
 ament_target_dependencies(
-  thruster_rudder_allocation
+  thruster_allocation
   rclcpp
   std_msgs
+  geometry_msgs
   farol2_interfaces
   Eigen3
   eigen3_cmake_module
   farol2_utils
+  tf2
+  tf2_ros
 )
 
 ament_target_dependencies(
@@ -65,12 +61,6 @@ ament_target_dependencies(
   farol2_interfaces
 )
 
-ament_target_dependencies(
-  throttle_conversion
-  rclcpp
-  std_msgs
-  farol2_interfaces
-)
 
 ament_target_dependencies(
   wrench_manager
@@ -81,16 +71,11 @@ ament_target_dependencies(
 
 # Link generated service types
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
-target_link_libraries(static_thruster_allocation "${cpp_typesupport_target}")
-target_link_libraries(thruster_rudder_allocation "${cpp_typesupport_target}")
+target_link_libraries(thruster_allocation "${cpp_typesupport_target}")
 target_link_libraries(rpm_conversion "${cpp_typesupport_target}")
-target_link_libraries(throttle_conversion "${cpp_typesupport_target}")
 
-target_include_directories(static_thruster_allocation PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
-target_include_directories(thruster_rudder_allocation PUBLIC
+target_include_directories(thruster_allocation PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
@@ -98,31 +83,20 @@ target_include_directories(rpm_conversion PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
-target_include_directories(throttle_conversion PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
-  
-
 
 target_include_directories(wrench_manager PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
-target_compile_features(static_thruster_allocation PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-
-target_compile_features(thruster_rudder_allocation PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(thruster_allocation PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 target_compile_features(rpm_conversion PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-
-target_compile_features(throttle_conversion PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
   
 target_compile_features(wrench_manager PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 install(TARGETS
-  static_thruster_allocation
-  thruster_rudder_allocation
+  thruster_allocation
   rpm_conversion
-  throttle_conversion
   wrench_manager
   DESTINATION lib/${PROJECT_NAME}
 )

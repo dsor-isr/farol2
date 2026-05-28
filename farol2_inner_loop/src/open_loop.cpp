@@ -31,7 +31,11 @@ void OpenLoop::initialiseSubscribers() {
   surge_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
     TOPIC_SUB_SURGE_REF,
     rclcpp::QoS(1),
-    [this](std_msgs::msg::Float32::SharedPtr msg){ surge_ref_ = msg->data;});
+    [this](std_msgs::msg::Float32::SharedPtr msg){
+      surge_ref_ = msg->data;
+      last_surge_ref_time_ = this->now();
+      has_surge_ref_ = true;
+    });
     
   mission_status_sub_ = create_subscription<std_msgs::msg::Int8>(
     TOPIC_SUB_MISSION_STATUS,
@@ -56,6 +60,12 @@ void OpenLoop::initialiseServices() {}
 void OpenLoop::timerCallback() {
   /* If open loop for surge is not enabled */
   if (!surge_enabled_) return;
+
+  if (!has_surge_ref_ || (this->now() - last_surge_ref_time_).seconds() > 2) {
+    return;
+  }
+
+
   if(mission_status_ == 0){
      rpm_command_msg_.rpm = {};
     rpm_command_msg_.rpm.push_back(0.0);

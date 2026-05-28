@@ -1,0 +1,30 @@
+################################
+#   Parameters
+################################
+/**:
+  # Path Following configurations
+  # Be careful while changing values here, due to the way the PF code is implemented,
+  # the order of the following gains must be respected. This means you can't switch
+  # the lines k1 and k2 in lapierre, for example.
+  path_following:
+    ros__parameters:
+      node_frequency: 1.0
+      controller_gains:
+        pramod:
+          # wc = 0.03 (0.15/5) 
+          kp: 0.14
+          ki: 0.01
+          # kp: 0.02
+          # ki: 0.0001
+
+        ravi:
+          e_turn: 30.0 # meters at which to start turning, ends up being the same as a lookahead distance
+          xi: 1.0 # luis is afraid of overshoot
+          epsilon_current: 0.2 # confidence on current estimate 
+
+        breivik:
+          delta_h: 10.0
+        
+        ilos:
+          delta: 10.0  # lookahead distance (metres)
+          ki: 0.05     # integral gain
