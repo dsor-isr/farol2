@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import sys
-import signal
 import os
 import socket
 import traceback
@@ -25,6 +24,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.clock import Clock
 from rclpy.duration import Duration
+from rclpy.executors import ExternalShutdownException
 import importlib
 
 # Messages
@@ -1435,16 +1435,6 @@ class HTTP_Handler(BaseHTTPRequestHandler):
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
   """Handle requests in a separate thread."""
 
-# Dictionary to convert from signalnum to signal name (2 = SIGINT)
-SIGNALS_TO_NAMES_DICT = dict((getattr(signal, n), n) \
-  for n in dir(signal) if n.startswith('SIG') and '_' not in n )
-
-# Function to handle signals
-def signal_handler(signal, frame):
-  print('[HTTP Server] Handling %s, closing HTTP_Server'%(str(SIGNALS_TO_NAMES_DICT[signal])))
-  #sys.exit(0)
-  os._exit(0)
-
 class ConsoleServer(Node):
   def __init__(self):
     # Call the parent constructor
@@ -1454,8 +1444,9 @@ class ConsoleServer(Node):
 
     # initialise variables
     self.i = 0
-
-    signal.signal(signal.SIGINT, signal_handler) # handle SIGINT
+    self.server = None
+    self.server_thread = None
+    self.http_server_running = False
 
     # force command to launch console
     command = 'addons'
@@ -1488,10 +1479,10 @@ class ConsoleServer(Node):
     #   sys.exit(1)
     except ROSTopicException as e:
       sys.stderr.write("ERROR: %s\n"%str(e))
-      self.server.shutdown()
+      self.stop_http_server()
       sys.exit(1)
     except KeyboardInterrupt: 
-      self.server.shutdown()
+      self.stop_http_server()
     # except rospy.ROSInterruptException: 
     #   server.shutdown()
   
@@ -1499,12 +1490,26 @@ class ConsoleServer(Node):
     handler = HTTP_Handler
     handler.console_server = self
     self.server = ThreadedHTTPServer(('', server_port), handler)
+    self.server.timeout = 0.2
+    self.http_server_running = True
     sys.stdout.write("[HTTP Server] Try http://127.0.0.1:"+str(server_port)+"/\n")
     #server.serve_forever()
-    while rclpy.ok():
-      self.server.handle_request()
+    try:
+      while rclpy.ok() and self.http_server_running:
+        self.server.handle_request()
+    finally:
+      self.server.server_close()
 
-    self.server.shutdown()
+  def stop_http_server(self):
+    self.http_server_running = False
+    if self.server is not None:
+      self.server.server_close()
+    if self.server_thread is not None and self.server_thread.is_alive():
+      self.server_thread.join(timeout=1.0)
+
+  def destroy_node(self):
+    self.stop_http_server()
+    return super().destroy_node()
 
   ## Load parameters
   def loadParams(self):
@@ -1534,11 +1539,15 @@ def main(args=None):
   
   # Create console server node
   console_server = ConsoleServer()
-  rclpy.spin(console_server)
-
-  # Handle shutdown
-  console_server.destroy_node()
-  rclpy.shutdown()
+  try:
+    rclpy.spin(console_server)
+  except (KeyboardInterrupt, ExternalShutdownException):
+    pass
+  finally:
+    # Handle shutdown
+    console_server.destroy_node()
+    if rclpy.ok():
+      rclpy.shutdown()
 
 if __name__ == '__main__':
   main()

@@ -2,9 +2,7 @@ import os
 from datetime import datetime
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
-from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch.conditions import IfCondition, UnlessCondition
 
 def generate_launch_description():
@@ -12,10 +10,10 @@ def generate_launch_description():
   ####################
   # Launch arguments #
   ####################
-  vehicle_ns_arg = DeclareLaunchArgument(
-    'vehicle_ns',
-    default_value='vehicle0',
-    description='Vehicle namespace for topics, nodes, etc.'
+  vehicle_id_arg = DeclareLaunchArgument(
+    'vehicle_id',
+    default_value='0',
+    description='Vehicle ID'
   )
 
   vehicle_name_arg = DeclareLaunchArgument(
@@ -44,7 +42,7 @@ def generate_launch_description():
 
   launch_prefix_arg = DeclareLaunchArgument(
     'prefix',
-    default_value=LaunchConfiguration('vehicle_ns'),
+    default_value=PythonExpression(["'", LaunchConfiguration('vehicle_name'), "' + '", LaunchConfiguration('vehicle_id'), "'"]),
     description='Boolean to determine if compression is used in bag recording.'
   )
   
@@ -83,7 +81,7 @@ def generate_launch_description():
   ##########################################################
   return LaunchDescription([
     # launch arguments
-    vehicle_ns_arg,
+    vehicle_id_arg,
     vehicle_name_arg,
     config_package_path_share_arg,
     config_package_path_real_arg,

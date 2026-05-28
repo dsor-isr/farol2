@@ -25,7 +25,6 @@
 #include <farol2_utils/filters/low_pass_filter.hpp>
 #include <farol2_utils/angles.hpp>
 
-#include "farol2_inner_loop/controller_pi.hpp"
 #include "farol2_inner_loop/controller_pid.hpp"
 #include "farol2_inner_loop/reference_generator.hpp"
 
@@ -34,6 +33,8 @@
 #define TOPIC_SUB_SURGE_REF "surge_ref"
 #define TOPIC_SUB_SWAY_REF "sway_ref"
 #define TOPIC_SUB_HEAVE_REF "heave_ref"
+#define TOPIC_SUB_DEPTH_REF "depth_ref"
+#define TOPIC_SUB_ALTITUDE_REF "altitude_ref"
 #define TOPIC_SUB_YAW_REF "yaw_ref"
 #define TOPIC_SUB_PITCH_REF "pitch_ref"
 #define TOPIC_SUB_ROLL_REF "roll_ref"
@@ -49,6 +50,8 @@
 #define TOPIC_PUB_DEBUG_SURGE "debug_surge"
 #define TOPIC_PUB_DEBUG_SWAY "debug_sway"
 #define TOPIC_PUB_DEBUG_HEAVE "debug_heave"
+#define TOPIC_PUB_DEBUG_DEPTH "debug_depth"
+#define TOPIC_PUB_DEBUG_ALTITUDE "debug_altitude"
 #define TOPIC_PUB_DEBUG_YAW "debug_yaw"
 #define TOPIC_PUB_DEBUG_PITCH "debug_pitch"
 #define TOPIC_PUB_DEBUG_ROLL "debug_roll"
@@ -56,22 +59,23 @@
 #define TOPIC_PUB_DEBUG_PITCH_RATE "debug_pitch_rate"
 #define TOPIC_PUB_DEBUG_ROLL_RATE "debug_roll_rate"
 #define SERVICE_CHANGE_PARAMS "change_params"
-#define SERVICE_COURSE_CONTROL "course_control"
+#define SERVICE_COURSE_CONTROL "course_instead_of_yaw"
 
 enum ControllerType {
   SURGE = 0,
   SWAY = 1,
   HEAVE = 2,
-  YAW = 3,
-  PITCH = 4,
-  ROLL = 5,
-  YAW_RATE = 6,
-  PITCH_RATE = 7,
-  ROLL_RATE = 8,
+  DEPTH = 3,
+  ALTITUDE = 4,
+  YAW = 5,
+  PITCH = 6,
+  ROLL = 7,
+  YAW_RATE = 8,
+  PITCH_RATE = 9,
+  ROLL_RATE = 10,
 };
 
 // Use the reusable controller classes from farol_control namespace
-using farol_control::ControllerPI;
 using farol_control::ControllerPID;
 
 /**
@@ -88,8 +92,6 @@ struct ControllerConfig {
   ControllerType type;
   /** True for PID channels that require a state-rate input. */
   bool has_state_rate;
-  /** Required gain/limit parameter names for this channel. */
-  std::vector<std::string> required_params;
   /** Returns the current measured state for this channel. */
   std::function<double()> get_state;
   /** Returns the latest reference for this channel. */
@@ -174,7 +176,7 @@ class PID : public rclcpp::Node {
     std::map<std::string, rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr> reference_subscribers_;
 
     rclcpp::Service<farol2_inner_loop::srv::ChangeParams>::SharedPtr change_params_srv_;
-    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr course_control_srv_;
+    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr course_instead_of_yaw_srv_;
 
     /** @brief Store latest navigation state sample. */
     void navStateCallback(const farol2_interfaces::msg::NavigationState &msg);
@@ -203,6 +205,8 @@ class PID : public rclcpp::Node {
       {"surge", SURGE},
       {"sway", SWAY},
       {"heave", HEAVE},
+      {"depth", DEPTH},
+      {"altitude", ALTITUDE},
       {"yaw", YAW},
       {"pitch", PITCH},
       {"roll", ROLL},
@@ -264,6 +268,7 @@ class PID : public rclcpp::Node {
 
         /** Latest references for all channels (internally stored in SI units). */
     double surge_ref_ = 0.0, sway_ref_ = 0.0, heave_ref_ = 0.0,
+           depth_ref_ = 0.0, altitude_ref_ = 0.0,
            yaw_ref_ = 0.0, pitch_ref_ = 0.0, roll_ref_ = 0.0,
            yaw_rate_ref_ = 0.0, pitch_rate_ref_ = 0.0, roll_rate_ref_ = 0.0;
 
@@ -271,7 +276,7 @@ class PID : public rclcpp::Node {
     double tau_;
 
         /** Selects yaw state source: heading (`false`) or course angle (`true`). */
-    bool course_control_{false}; // flag to switch between heading or course control
+    bool course_instead_of_yaw_{false}; // flag to switch between heading or course control
     bool use_heading_rate_as_yaw_rate_{false};
 
         /** Low-pass filter configuration passed to PID controllers. */
@@ -279,26 +284,22 @@ class PID : public rclcpp::Node {
     std::string lpf_method_, lpf_design_;
 
         /** Per-axis controller instances (allocated only when enabled). */
-    std::unique_ptr<ControllerPI> controller_surge_;
-    std::unique_ptr<ControllerPI> controller_sway_;
-    std::unique_ptr<ControllerPI> controller_heave_;
+    std::unique_ptr<ControllerPID> controller_surge_;
+    std::unique_ptr<ControllerPID> controller_sway_;
+    std::unique_ptr<ControllerPID> controller_heave_;
+    std::unique_ptr<ControllerPID> controller_depth_;
+    std::unique_ptr<ControllerPID> controller_altitude_;
     std::unique_ptr<ControllerPID> controller_yaw_;
     std::unique_ptr<ControllerPID> controller_pitch_;
     std::unique_ptr<ControllerPID> controller_roll_;
-    std::unique_ptr<ControllerPI> controller_yaw_rate_;
-    std::unique_ptr<ControllerPI> controller_pitch_rate_;
-    std::unique_ptr<ControllerPI> controller_roll_rate_;
+    std::unique_ptr<ControllerPID> controller_yaw_rate_;
+    std::unique_ptr<ControllerPID> controller_pitch_rate_;
+    std::unique_ptr<ControllerPID> controller_roll_rate_;
 
     /**
      * @brief Instantiate enabled controllers after parameter validation.
      */
     void createControllers();
-
-    /**
-     * @brief Validate the required numeric parameters for one controller.
-     */
-    bool validateControllerParams(const std::string &controller_name,
-                    const std::vector<std::string> &required_params);
 
     /**
      * @brief Build controller configuration entries for the generic runtime path.

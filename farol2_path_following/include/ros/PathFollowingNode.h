@@ -27,6 +27,7 @@
 #include "Lapierre.h"
 #include "ILOS.h"
 #include "Pramod.h"
+#include "Ravi.hpp"
 #include "Samson.h"
 #include "PathFollowing.h"
 #include "States.h"
@@ -78,6 +79,7 @@
 #define SERVICE_ROMULO_PF "romulo_pf"
 #define SERVICE_LAPIERRE_PF "lapierre_pf"
 #define SERVICE_PRAMOD_PF "pramod_pf"
+#define SERVICE_RAVI_PF "ravi_pf"
 #define SERVICE_SAMSON_PF "samson_pf"
 #define SERVICE_RELATIVE_HEADING_PF "relative_heading_pf"
 #define SERVICE_ILOS_PF "ilos_pf"
@@ -149,6 +151,7 @@ class PathFollowingNode : public rclcpp::Node {
     rclcpp::Service<farol2_path_following::srv::SetPF>::SharedPtr pf_romulo_srv_;
     rclcpp::Service<farol2_path_following::srv::SetPF>::SharedPtr pf_lapierre_srv_;
     rclcpp::Service<farol2_path_following::srv::SetPF>::SharedPtr pf_pramod_srv_;
+    rclcpp::Service<farol2_path_following::srv::SetPF>::SharedPtr pf_ravi_srv_;
     rclcpp::Service<farol2_path_following::srv::SetPF>::SharedPtr pf_samson_srv_;
     rclcpp::Service<farol2_path_following::srv::SetPF>::SharedPtr pf_marcelo_srv_;
     rclcpp::Service<farol2_path_following::srv::SetPF>::SharedPtr pf_relative_heading_srv_;
@@ -266,6 +269,9 @@ class PathFollowingNode : public rclcpp::Node {
 
     void SetPramodService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                           std::shared_ptr<farol2_path_following::srv::SetPF::Response> res);
+
+    void SetRaviService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
+              std::shared_ptr<farol2_path_following::srv::SetPF::Response> res);
 
     void SetSamsonService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                           std::shared_ptr<farol2_path_following::srv::SetPF::Response> res);

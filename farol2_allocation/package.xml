@@ -17,10 +17,14 @@
   <depend>Eigen3</depend>
   <depend>farol2_interfaces</depend>
   <depend>farol2_utils</depend> 
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>farol2_bringup</depend>
 
   <build_depend>rosidl_default_generators</build_depend>
 
   <exec_depend>ros2launch</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>

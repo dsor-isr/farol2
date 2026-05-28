@@ -47,6 +47,7 @@ add_executable(path_following_node
   src/algorithms/Breivik.cpp
   src/algorithms/Lapierre.cpp
   src/algorithms/Pramod.cpp
+  src/algorithms/Ravi.cpp
   src/algorithms/Samson.cpp
   src/algorithms/Fossen.cpp
   src/algorithms/Marcelo.cpp

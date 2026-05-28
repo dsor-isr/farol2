@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mred">
+
+  <!-- Constants -->
+  <xacro:property name="M_PI" value="3.1415926535897931" />
+
+  <!-- Base -->
+  <link name="base_link"/>
+
+  <!-- Portside horizontal thruster -->
+  <link name="thruster_portside_horizontal_link"/>
+  <joint name="base_to_thruster_portside_horizontal" type="fixed">
+    <parent link="base_link"/>
+    <child link="thruster_portside_horizontal_link"/>
+    <origin xyz="-0.290 0.140 0.011" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Starboard horizontal thruster -->
+  <link name="thruster_starboard_horizontal_link"/>
+  <joint name="base_to_thruster_starboard_horizontal" type="fixed">
+    <parent link="base_link"/>
+    <child link="thruster_starboard_horizontal_link"/>
+    <origin xyz="-0.290 -0.140 0.011" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Portside vertical thruster -->
+  <link name="thruster_portside_vertical_link"/>
+  <joint name="base_to_thruster_portside_vertical" type="fixed">
+    <parent link="base_link"/>
+    <child link="thruster_portside_vertical_link"/>
+    <origin xyz="-0.012 -0.140 -0.107" rpy="0 -${0.5*M_PI} 0"/>
+  </joint>
+
+  <!-- Starboard vertical thruster -->
+  <link name="thruster_starboard_vertical_link"/>
+  <joint name="base_to_thruster_starboard_vertical" type="fixed">
+    <parent link="base_link"/>
+    <child link="thruster_starboard_vertical_link"/>
+    <origin xyz="-0.012 0.140 -0.107" rpy="0 -${0.5*M_PI} 0"/>
+  </joint>
+</robot>

@@ -8,13 +8,14 @@
  *    Controls:
  *      - yaw
  *      - surge
- *    Supports Cooperative Path Following - True
+ *    Supports Cooperative Path Following - True (i dont think it supports tho)
  *    Contains Currents Observers - False
  *
  * @author    Marcelo Jacinto
  * @author    Joao Quintas
  * @author    Joao Cruz
  * @author    Hung Tuan
+ * @author    Ravi Regalo
  * @version   1.0a
  * @date      2021
  * @copyright MIT
@@ -84,7 +85,9 @@ class Pramod : public PathFollowing {
     /**
      * @brief Controller paramter gains 
      */
-    std::vector<double> gains_;
+    double kp_;
+    double ki_;
+    double es_;
 
     /**
      * @brief Variables to store the desired references
@@ -92,8 +95,6 @@ class Pramod : public PathFollowing {
     double desired_surge_{0.0};
     double desired_yaw_{0.0};
     double sigma_{0.0};
-    bool first_ = true;
-    double vc_hat_ = 0.0;
 
     /**
      * @brief ROS publishers

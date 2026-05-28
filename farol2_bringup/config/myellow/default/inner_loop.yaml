@@ -1,0 +1,86 @@
+################################
+#   Override Parameters
+################################
+/**:
+  pid:
+    ros__parameters:
+      node_frequency: 10.0
+      course_instead_of_yaw: false   # set to true to control course angle instead of yaw
+      lpf_order: 2
+      lpf_method: "tustin"
+      lpf_design: "bessel"
+      
+      # Controllers gains and parameters
+      surge:
+        enabled: true
+        kp: 10.0
+        ki: 1.0
+        lpf_wc: 31.4 # rad/s
+        tau_min: -30.0 # N
+        tau_max: 30.0 # N
+      sway:
+        debug: false
+        enabled: false
+        kp: 10.0
+        ki: 1.0
+        lpf_wc: 31.4 # rad/s
+        tau_min: -30.0 # N
+        tau_max: 30.0 # N
+      heave:
+        debug: true
+        enabled: true
+        kp: 22.0
+        ki: 0.0
+        lpf_wc: 6.28 # rad/s
+        tau_min: -6.0 # N
+        tau_max: 6.0 # N
+      depth:
+        debug: false
+        enabled: false
+        delta_implementation: false
+        use_ref_lpf: false
+        use_rate_limiter: false
+        rate_limit: 0.5 # m/s
+        kp: 22.0
+        ki: 0.0
+        kd: 0.0
+        lpf_wc: 6.28 # rad/s
+        tau_min: -6.0 # N
+        tau_max: 6.0 # N
+      altitude:
+        debug: false
+        enabled: false
+        delta_implementation: false
+        use_ref_lpf: false
+        use_rate_limiter: false
+        rate_limit: 0.5 # m/s
+        kp: 22.0
+        ki: 0.0
+        kd: 0.0
+        lpf_wc: 6.28 # rad/s
+        tau_min: -6.0 # N
+        tau_max: 6.0 # N
+      yaw:
+        debug: true
+        enabled: true
+        delta_implementation: false
+        use_ref_lpf: false
+        use_rate_limiter: false
+        rate_limit: 6.0 # deg/s
+        kp: 22.0
+        ki: 0.0
+        kd: 0.0 #47.6
+        kffv_lin: 0.0
+        kffv_sq: 0.0
+        kffa: 0.0
+        lpf_wc: 6.28 # rad/s (2hz about the maximum possible given that sampling is 10hz)
+        # lpf_wc: 12.5664 # rad/s (2hz about the maximum possible given that sampling is 10hz)
+        tau_min: -6.0  # N.m (actual in simulation is 5.93)
+        tau_max: 6.0 # N.m
+      yaw_rate:
+        enabled: true
+        kp: 1.0
+        ki: 1.0
+        lpf_wc: 31.4 # rad/s
+        tau_min: -10.0 # N.m
+        tau_max: 10.0 # N.m

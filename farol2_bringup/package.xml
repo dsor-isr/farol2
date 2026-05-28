@@ -8,6 +8,8 @@
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>ament_cmake_python</build_depend>
+  <exec_depend>ament_cmake_python</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
 
