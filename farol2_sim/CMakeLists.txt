@@ -12,7 +12,6 @@ find_package(std_msgs REQUIRED)
 find_package(farol2_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(rosgraph_msgs REQUIRED)
 find_package(farol2_allocation REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
@@ -39,7 +38,6 @@ ament_target_dependencies(
   farol2_interfaces
   geometry_msgs
   sensor_msgs
-  rosgraph_msgs
   farol2_allocation
   tf2
   tf2_geometry_msgs
@@ -52,7 +50,6 @@ ament_target_dependencies(
   farol2_interfaces
   geometry_msgs
   sensor_msgs
-  rosgraph_msgs
   farol2_allocation
   tf2
   tf2_geometry_msgs

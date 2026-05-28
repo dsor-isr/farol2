@@ -7,7 +7,6 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/parameter.hpp"
-#include <rosgraph_msgs/msg/clock.hpp> 
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "farol2_allocation/msg/thruster_rpm.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
@@ -69,14 +68,6 @@ class AuvSim : public rclcpp::Node {
     /* Timer callback */
     void timerCallback();
 
-    void tickClock();
-
-    // wall-time callback: advance sim time & publish /clock
-    void onClockTick();     
-
-    // ROS-time callback: run one physics step and publish outputs
-    void onSimTick();
-
   private:
     /* Timer for node's callbacks */
 
@@ -89,7 +80,6 @@ class AuvSim : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr body_acceleration_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_acceleration_pub_;
 
-    rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr utm_ned_pub_;
@@ -100,9 +90,6 @@ class AuvSim : public rclcpp::Node {
     rclcpp::Subscription<farol2_allocation::msg::ThrusterRPM>::SharedPtr rpm_sub_;
     
     rclcpp::TimerBase::SharedPtr timer_;   
-    rclcpp::Clock::SharedPtr clock_;
-    uint64_t sim_time_ns_{0};
-    uint64_t dt_ns_{0};
   
 
     /* Callbacks */
@@ -110,7 +97,6 @@ class AuvSim : public rclcpp::Node {
 
     std::unique_ptr<AUV> auv_;
 
-    double speedup_;
     int freq_;
     double node_period_;
     Eigen::VectorXd rpm_; 

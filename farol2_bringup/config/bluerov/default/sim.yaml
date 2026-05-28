@@ -1,8 +1,12 @@
 /**:
-  auv_sim:
+  sim_clock:
     ros__parameters:
       node_frequency: 100
       speedup: 20.0
+
+  auv_sim:
+    ros__parameters:
+      node_frequency: 100
       initial_state:
         position: [38.690323, -9.211736, 0.0] # (lat, lon, depth) from expo   
         body_velocity: [0.0, 0.0, 0.0]
@@ -27,14 +31,14 @@
         actuators:
           # For each thruster [Fx, Fy, Fz, lx, ly, lz] where F = forces and l = moments arms
           # and each line of the matrix represents a thruster
-      allocation_matrix: [0.707, -0.707,  0.0,  0.1355,     0.1, 0.0725,     # Thruster 1
-                        0.707,  0.707,  0.0,  0.1355,    -0.1, 0.0725,     # Thruster 2
-                       -0.707, -0.707,  0.0, -0.1475,     0.1, 0.0725,     # Thruster 3
-                       -0.707,  0.707,  0.0, -0.1475,    -0.1, 0.0725,     # Thruster 4
-                        0.000,  0.000, -1.0,  0.1200,    0.22,  0.005,     # Thruster 5
-                        0.000,  0.000, -1.0,  0.1200,   -0.22,  0.005,     # Thruster 6
-                        0.000,  0.000, -1.0, -0.1200,    0.22,  0.005,     # Thruster 7
-                        0.000,  0.000, -1.0, -0.1200,   -0.22,  0.005]     # Thruster 8
+          allocation_matrix: [0.707, -0.707,  0.0,  0.1355,     0.1, 0.0725,     # Thruster 1
+                              0.707,  0.707,  0.0,  0.1355,    -0.1, 0.0725,     # Thruster 2
+                             -0.707, -0.707,  0.0, -0.1475,     0.1, 0.0725,     # Thruster 3
+                             -0.707,  0.707,  0.0, -0.1475,    -0.1, 0.0725,     # Thruster 4
+                              0.000,  0.000, -1.0,  0.1200,    0.22,  0.005,     # Thruster 5
+                              0.000,  0.000, -1.0,  0.1200,   -0.22,  0.005,     # Thruster 6
+                              0.000,  0.000, -1.0, -0.1200,    0.22,  0.005,     # Thruster 7
+                              0.000,  0.000, -1.0, -0.1200,   -0.22,  0.005]     # Thruster 8
 
           # Thrusters parameter
           lump_param_positive: [0.00000177778, 0.0, 0.0]  # (a*|x|^{2} + b*|x| + c)

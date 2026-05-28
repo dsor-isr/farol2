@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>farol2_clock</name>
+  <version>0.0.0</version>
+  <description>Simulation clock publisher for the Farol2 stack</description>
+
+  <maintainer email="andre.jose.diniz.carvalho@tecnico.ulisboa.pt">André Carvalho</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rosgraph_msgs</depend>
+
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

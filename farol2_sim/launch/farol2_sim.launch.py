@@ -43,9 +43,9 @@ def generate_launch_description():
     description='Launch the auv_sim node.'
   )
 
-  ############################################################
-  # Parameters — vehicle sim nodes always use wall-clock time #
-  ############################################################
+  ##############################################################
+  # Parameters — vehicle sim nodes are driven by the /clock pub #
+  ##############################################################
   params = [
     {'vehicle_name': LaunchConfiguration('vehicle_name')},
     {'vehicle_id': LaunchConfiguration('vehicle_id')},
@@ -67,8 +67,7 @@ def generate_launch_description():
     #   'sim.yaml'
     # ]),
 
-    # vehicle sim nodes are the /clock authority — they must NEVER use sim time
-    {'use_sim_time': False},
+    {'use_sim_time': True},
   ]
 
   ###################
