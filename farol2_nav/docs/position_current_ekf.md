@@ -77,6 +77,8 @@ Noise and covariance:
 - `measurement_noise_pos`
 - `init_cov_pos`
 - `init_cov_current`
+- `init_current_x`
+- `init_current_y`
 - `override_position_state`
 
 Surge model and propulsion constants:

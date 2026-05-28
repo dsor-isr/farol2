@@ -71,9 +71,6 @@ def generate_launch_description():
   # Nodes to launch #
   ###################
 
-
-
-
   thruster_allocation_node = Node(
     package='farol2_allocation',
     namespace=PathJoinSubstitution([vehicle_ns, 'allocation']),

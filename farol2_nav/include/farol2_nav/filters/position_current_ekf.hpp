@@ -36,6 +36,8 @@ private:
   double r_pos_{1.0};
   double p0_pos_{25.0};
   double p0_current_{1.0};
+  double init_current_x_{0.0};
+  double init_current_y_{0.0};
   bool override_position_state_{true};
 
   // Surge dynamics model parameters.

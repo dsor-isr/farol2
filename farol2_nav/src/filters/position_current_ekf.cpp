@@ -26,6 +26,8 @@ void PositionCurrentEkfFilter::configure(rclcpp::Node & node)
   r_pos_ = node.declare_parameter<double>("plugins.position_current_ekf.measurement_noise_pos", 1.0);
   p0_pos_ = node.declare_parameter<double>("plugins.position_current_ekf.init_cov_pos", 25.0);
   p0_current_ = node.declare_parameter<double>("plugins.position_current_ekf.init_cov_current", 1.0);
+  init_current_x_ = node.declare_parameter<double>("plugins.position_current_ekf.init_current_x", 0.0);
+  init_current_y_ = node.declare_parameter<double>("plugins.position_current_ekf.init_current_y", 0.0);
   override_position_state_ = node.declare_parameter<bool>("plugins.position_current_ekf.override_position_state", true);
 
   rpm_min_ = node.declare_parameter<double>("plugins.position_current_ekf.rpm_min", -2000.0);
@@ -162,6 +164,8 @@ void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & 
     x_.setZero();
     x_(0) = measured_x_m;
     x_(1) = measured_y_m;
+    x_(2) = init_current_x_;
+    x_(3) = init_current_y_;
 
     P_.setZero();
     P_(0, 0) = p0_pos_;

@@ -26,6 +26,8 @@
           measurement_noise_pos: 10000.0
           init_cov_pos: 25.0
           init_cov_current: 1.0
+          init_current_x: 0.0
+          init_current_y: 0.0
           rpm_min: -2000.0
           rpm_max: 2000.0
           rpm_rate_limit: 200.0

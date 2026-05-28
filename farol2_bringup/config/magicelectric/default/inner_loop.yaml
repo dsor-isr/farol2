@@ -6,7 +6,6 @@
     ros__parameters:
       node_frequency: 10.0
       course_instead_of_yaw: false   # set to true to control course angle instead of yaw
-      use_heading_rate_as_yaw_rate: true # set to true to use the heading rate from the nav filter as the yaw rate for feedforward and control, instead of the yaw rate from the IMU (which is typically much noisier)
       lpf_order: 2
       lpf_method: "tustin"
       lpf_design: "bessel"
