@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`sample_and_hold` is the first stage of the `farol2_nav` pipeline (implemented by `PassThroughFilter`).
+`sample_and_hold` is the first stage of the `farol2_nav` pipeline (implemented by `SampleAndHoldFilter`).
 
 Its role is to map raw measurements into the shared navigation state with minimal processing, so downstream filters can focus only on refinement.
 

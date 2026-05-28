@@ -15,12 +15,18 @@ class ControllerPID {
  public:
   ControllerPID() = default;
 
-  void configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa,
-   double tau_min, double tau_max, bool delta_implementation, bool wrapToPi);
+  void configure(double kp, double ki, double kd, 
+                  double kffv_lin, double kffv_sq, double kffa,
+                  double tau_min, double tau_max, 
+                  bool delta_implementation, bool wrapToPi,
+                  double state_rate_diff_wc = 1.0);
 
-  // Backward-compatible overload: defaults to delta implementation enabled.
-    void configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa,
-      double tau_min, double tau_max, bool wrapToPi);
+  void configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa, double tau_min, double tau_max, bool delta_implementation, bool wrapToPi);
+  void configure(double kp, double ki, double kd, double kffv_lin, double kffv_sq, double kffa, double tau_min, double tau_max, bool wrapToPi);
+  void configure(double kp, double ki, double kd, double tau_min, double tau_max, bool delta_implementation, bool wrapToPi);
+  void configure(double kp, double ki, double kd, double tau_min, double tau_max, bool wrapToPi);
+
+  double callController(double state, double state_ref, double dref, double ddref, double dt);
 
   double callController(double state, double state_ref, double state_rate,
         double dref, double ddref, double dt);
@@ -65,6 +71,7 @@ class ControllerPID {
   bool wrapToPi_;
   bool configured_ = false;
   bool delta_implementation_ = true;
+  double state_rate_diff_wc_ = 1.0;
 
   double error_ = 0.0;
   double error_rate_ = 0.0;
@@ -75,6 +82,7 @@ class ControllerPID {
   double ddref_dot_ = 0.0;
   double state_dot_ = 0.0;
   double state_prev_ = 0.0;
+  double state_rate_diff_prev_ = 0.0;
   double error_prev_ = 0.0;
   double error_rate_prev_ = 0.0;
   double state_rate_prev_ = 0.0;
@@ -89,6 +97,9 @@ class ControllerPID {
   double output_ = 0.0;
 
  private:
+  double callControllerImpl(double state, double state_ref, double state_rate,
+                            double dref, double ddref, double dt);
+  double differentiateState(double state, double dt);
 };
 
 }  // namespace farol_control

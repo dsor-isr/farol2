@@ -43,7 +43,7 @@ ament_export_dependencies(rosidl_default_runtime)
 # --------------------
 add_executable(filter_node
   src/filter_node.cpp
-  src/filters/pass_through.cpp
+  src/filters/sample_and_hold.cpp
   src/filters/position_current_ekf.cpp
   src/filters/yaw_rate_ekf.cpp
 )

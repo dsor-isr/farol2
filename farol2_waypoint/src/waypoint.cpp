@@ -123,7 +123,7 @@ void Waypoint::stateCallback(farol2_interfaces::msg::NavigationState::SharedPtr 
   // update vehicle state
   veh_state_.eta1[0] = msg->utm_position.northing;
   veh_state_.eta1[1] = msg->utm_position.easting;
-  veh_state_.eta2[2] = msg->attitude.z; // yaw
+  veh_state_.eta2[2] = msg->attitude.yaw; // yaw
   veh_state_.v1[0] = msg->velocity_over_ground_body.x;
   veh_state_.v1[1] = msg->velocity_over_ground_body.y;
 

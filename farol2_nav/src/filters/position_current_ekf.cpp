@@ -174,7 +174,7 @@ void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & 
 
   const double dt = std::max(0.0, dt_s);
 
-  const double psi = farol2_utils::deg2rad(s.attitude(2));
+  const double psi = std::atan2(s.rotation_bn(1, 0), s.rotation_bn(0, 0));
   const double vm_body = rpm_to_body_speed_mps(m, dt);
   const double vx_model = vm_body * std::cos(psi);
   const double vy_model = vm_body * std::sin(psi);

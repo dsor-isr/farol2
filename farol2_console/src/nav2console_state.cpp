@@ -67,9 +67,9 @@ void Nav2ConsoleState::nav_state_callback(const farol2_interfaces::msg::Navigati
   console_state_msg_.surge = msg.velocity_through_water_body.x;
 
   /* Orientation */
-  console_state_msg_.yaw = msg.attitude.z;
-  console_state_msg_.pitch = msg.attitude.y;
-  console_state_msg_.roll = msg.attitude.x;
+  console_state_msg_.yaw = msg.attitude.yaw;
+  console_state_msg_.pitch = msg.attitude.pitch;
+  console_state_msg_.roll = msg.attitude.roll;
 
   /* Orientation Rate */
   console_state_msg_.yaw_rate = msg.angular_velocity.z;

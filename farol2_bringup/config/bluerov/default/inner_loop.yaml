@@ -16,6 +16,7 @@
         enabled: true
         kp: 10.0
         ki: 1.0
+        kd: 0.0
         lpf_wc: 31.4 # rad/s
         tau_min: -30.0 # N
         tau_max: 30.0 # N
@@ -24,6 +25,7 @@
         enabled: false
         kp: 10.0
         ki: 1.0
+        kd: 0.0
         lpf_wc: 31.4 # rad/s
         tau_min: -30.0 # N
         tau_max: 30.0 # N
@@ -32,6 +34,7 @@
         enabled: true
         kp: 22.0
         ki: 0.0
+        kd: 0.0
         lpf_wc: 6.28 # rad/s
         tau_min: -6.0 # N
         tau_max: 6.0 # N
@@ -108,6 +111,7 @@
         enabled: true
         kp: 1.0
         ki: 1.0
+        kd: 0.0
         lpf_wc: 31.4 # rad/s
         tau_min: -10.0 # N.m
         tau_max: 10.0 # N.m

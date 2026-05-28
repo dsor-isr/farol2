@@ -36,7 +36,6 @@ ament_export_dependencies(farol2_utils)
 # Create reusable controller library as STATIC to work with farol2_utils
 # (farol2_utils is compiled as static library without PIC)
 add_library(${PROJECT_NAME}_controllers STATIC
-  src/controller_pi.cpp
   src/controller_pid.cpp
   src/reference_generator.cpp
 )
