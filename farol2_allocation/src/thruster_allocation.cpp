@@ -5,7 +5,12 @@ using namespace std::chrono_literals;
 ThrusterAllocation::ThrusterAllocation() : Node("thruster_allocation") {
   clock_ = this->get_clock();
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(clock_);
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(
+    *tf_buffer_,
+    get_node_base_interface(),
+    get_node_logging_interface(),
+    get_node_parameters_interface(),
+    get_node_topics_interface());
 
   loadParams();
   initialiseSubscribers();

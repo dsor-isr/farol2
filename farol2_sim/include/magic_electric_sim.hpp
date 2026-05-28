@@ -35,7 +35,7 @@
 #define TOPIC_PUB_BODY_ACCELERATION "body_acceleration"
 #define TOPIC_PUB_ANGULAR_ACCELERATION "angular_acceleration"
 #define TOPIC_PUB_RUDDER_ANGLE "rudder_angle"
-#define TOPIC_PUB_JOINT_STATES "/joint_states"
+#define TOPIC_PUB_JOINT_STATES "joint_states"
 #define TOPIC_PUB_IMU "imu"
 #define TOPIC_PUB_GNSS "gnss"
 #define TOPIC_PUB_UTM_NED "ned_utm"

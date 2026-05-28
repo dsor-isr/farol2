@@ -93,6 +93,7 @@ def generate_launch_description():
       ('orientation_rate', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/orientation_rate')]),
       ('body_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/body_acceleration')]),
       ('angular_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/angular_acceleration')]),
+      ('joint_states', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/joint_states')]),
       ('rudder_angle', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/rudder_angle')]),
       ('imu', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/imu')]),
       ('gnss', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/gnss')]),
