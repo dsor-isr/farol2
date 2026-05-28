@@ -2,7 +2,6 @@
 
 /* Constructor */
 AuvSim::AuvSim() : Node("auv_sim"){
-  clock_ = this->get_clock();
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
@@ -21,10 +20,8 @@ AuvSim::~AuvSim() {
  */
 void AuvSim::loadParams() {
 
-  speedup_ = declare_parameter<double>("speedup");
   freq_ = declare_parameter<int>("node_frequency");
   node_period_ = 1.0/freq_;
-  dt_ns_ = static_cast<uint64_t>(std::llround(node_period_ * 1e9));
 
   fluid_density = declare_parameter<double>("environment.fluid_density");
 
@@ -164,10 +161,6 @@ void AuvSim::initialiseSubscribers() {
  * @brief Initialise Publishers
  */
 void AuvSim::initialisePublishers() {
-  auto clock_qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local();
-  clock_pub_ = create_publisher<rosgraph_msgs::msg::Clock>("/clock", clock_qos);
-
-
   position_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
       TOPIC_PUB_POSITION, 1);
   body_velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
@@ -215,7 +208,9 @@ void AuvSim::initialiseServices() {
  */
 void AuvSim::initialiseTimers() {
 
-  timer_ = create_wall_timer(std::chrono::nanoseconds(int(node_period_ * 1e9 / speedup_)), std::bind(&AuvSim::timerCallback, this));
+  timer_ = create_timer(
+      std::chrono::nanoseconds(static_cast<int64_t>(std::llround(node_period_ * 1e9))),
+      std::bind(&AuvSim::timerCallback, this));
   
 }
 
@@ -233,8 +228,6 @@ void AuvSim::rpmCallback(const farol2_allocation::msg::ThrusterRPM::SharedPtr ms
 }
 
 void AuvSim::timerCallback() {
-  tickClock();
-
   RCLCPP_DEBUG(get_logger(), "Timer callback triggered");
   auv_->update(node_period_, rpm_);
 
@@ -277,7 +270,7 @@ void AuvSim::timerCallback() {
 
 void AuvSim::publishMeasurements()
 {
-  const auto stamp = rclcpp::Time(sim_time_ns_);
+  const auto stamp = get_clock()->now();
   double north = auv_->getX() + northing_;
   double east  = auv_->getY() + easting_;
   double depth = auv_->getZ();
@@ -370,14 +363,6 @@ double AuvSim::randn(double mu, double sigma)
   X1 = U1 * mult; X2 = U2 * mult;
   call = !call;
   return mu + sigma * X1;
-}
-
-void AuvSim::tickClock()
-{
-  sim_time_ns_ += dt_ns_;
-  rosgraph_msgs::msg::Clock clock_msg;
-  clock_msg.clock = rclcpp::Time(sim_time_ns_);
-  clock_pub_->publish(clock_msg);
 }
 
 /**

@@ -43,9 +43,9 @@ def generate_launch_description():
     description='Launch the auv_sim node.'
   )
 
-  ############################################################
-  # Parameters — vehicle sim nodes always use wall-clock time #
-  ############################################################
+  ##############################################################
+  # Parameters — vehicle sim nodes are driven by the /clock pub #
+  ##############################################################
   params = [
     {'vehicle_name': LaunchConfiguration('vehicle_name')},
     {'vehicle_id': LaunchConfiguration('vehicle_id')},
@@ -67,8 +67,7 @@ def generate_launch_description():
     #   'sim.yaml'
     # ]),
 
-    # vehicle sim nodes are the /clock authority — they must NEVER use sim time
-    {'use_sim_time': False},
+    {'use_sim_time': True},
   ]
 
   ###################
@@ -94,6 +93,7 @@ def generate_launch_description():
       ('orientation_rate', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/orientation_rate')]),
       ('body_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/body_acceleration')]),
       ('angular_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/angular_acceleration')]),
+      ('joint_states', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/joint_states')]),
       ('rudder_angle', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/rudder_angle')]),
       ('imu', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/imu')]),
       ('gnss', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/gnss')]),

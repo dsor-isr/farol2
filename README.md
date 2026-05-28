@@ -37,6 +37,7 @@ git submodule add --recursive git@github.com:dsor-isr/farol2.git
 
 ```
 sudo apt install libgeographiclib-dev
+sudo apt-get install -y ros-jazzy-xacro
 ```
 
 ## Using FAROL 2 QOL scripts and alias

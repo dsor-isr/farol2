@@ -25,12 +25,8 @@ void MagicElectricSim::loadParams()
 
   //////////////////////////////////////////////////////////////////////////////////////
 
-  // ==========================
-  // Load paramater speedup as int
-  speedup_ = declare_parameter<double>("speedup");
-  node_frequency_ = declare_parameter<double>("node_frequency");
+  node_frequency_ = declare_parameter<int>("node_frequency");
   node_period_ = (1.0 / static_cast<double>(node_frequency_));
-  dt_ns_ = static_cast<uint64_t>(std::llround(node_period_ * 1e9));
 
   // ==========================
   // INITIAL STATE
@@ -181,8 +177,6 @@ void MagicElectricSim::initialiseSubscribers()
  */
 void MagicElectricSim::initialisePublishers()
 {
-  auto clock_qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local();
-  clock_pub_ = create_publisher<rosgraph_msgs::msg::Clock>("/clock", clock_qos);
   position_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
       TOPIC_PUB_POSITION, 1);
   velocity_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
@@ -195,6 +189,8 @@ void MagicElectricSim::initialisePublishers()
       TOPIC_PUB_BODY_ACCELERATION, 1);
   angular_acceleration_pub_ = create_publisher<geometry_msgs::msg::Vector3>(
       TOPIC_PUB_ANGULAR_ACCELERATION, 1);
+  joint_states_pub_ = create_publisher<sensor_msgs::msg::JointState>(
+      TOPIC_PUB_JOINT_STATES, 1);
 
   if (rudder_actuation_sim_)
   {
@@ -239,7 +235,9 @@ void MagicElectricSim::initialiseTimers()
 {
 
   /* Create timer */
-  timer_ = create_wall_timer(std::chrono::nanoseconds(int(node_period_ * 1e9 / speedup_)), std::bind(&MagicElectricSim::timerCallback, this));
+  timer_ = create_timer(
+      std::chrono::nanoseconds(static_cast<int64_t>(std::llround(node_period_ * 1e9))),
+      std::bind(&MagicElectricSim::timerCallback, this));
 }
 
 /**
@@ -269,9 +267,6 @@ void MagicElectricSim::rpmCallback(const farol2_allocation::msg::ThrusterRPM::Sh
 
 void MagicElectricSim::timerCallback()
 {
-
-  tickClock();
-
   if (rudder_actuation_sim_)
   {
     updateRudder(rudder_command_, node_period_);
@@ -318,6 +313,12 @@ void MagicElectricSim::timerCallback()
     rudder_msg.data = static_cast<float>(rudder_angle_ * 180.0 / M_PI);
     rudder_pub_->publish(rudder_msg);
   }
+
+  sensor_msgs::msg::JointState joint_state_msg;
+  joint_state_msg.header.stamp = get_clock()->now();
+  joint_state_msg.name.push_back("base_to_rudder_middle");
+  joint_state_msg.position.push_back(rudder_angle_);
+  joint_states_pub_->publish(joint_state_msg);
 
   publishMeasurements();
 
@@ -425,7 +426,7 @@ void MagicElectricSim::updateState()
 
 void MagicElectricSim::publishMeasurements()
 {
-  const auto stamp = rclcpp::Time(sim_time_ns_);
+  const auto stamp = get_clock()->now();
   // Current position in UTM (absolute)
   double north = position_[0] + northing_;
   double east  = position_[1] + easting_;
@@ -524,14 +525,6 @@ double MagicElectricSim::randn(double mu, double sigma)
   X1 = U1 * mult; X2 = U2 * mult;
   call = !call;
   return mu + sigma * X1;
-}
-
-void MagicElectricSim::tickClock()
-{
-  sim_time_ns_ += dt_ns_;
-  rosgraph_msgs::msg::Clock clock_msg;
-  clock_msg.clock = rclcpp::Time(sim_time_ns_);
-  clock_pub_->publish(clock_msg);
 }
 
 int main(int argc, char **argv)

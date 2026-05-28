@@ -1,5 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, SetLaunchConfiguration
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
@@ -14,9 +15,23 @@ def _launch(context, *args, **kwargs):
   if not vehicle_id:
     vehicle_id = get_next_available_vehicle_id(vehicle_name)
 
+  use_magic_electric_sim = vehicle_name == 'magicelectric'
+
   ###################################################
   # Include simulation launch (before Farol stack) #
   ###################################################
+  clock = IncludeLaunchDescription(
+    PythonLaunchDescriptionSource([
+      PathJoinSubstitution([FindPackageShare('farol2_clock'), 'launch', 'farol2_clock.launch.py'])
+    ]),
+    launch_arguments={
+      'vehicle_name': vehicle_name,
+      'vehicle_id': vehicle_id,
+      'config_to_use': config_to_use,
+    }.items(),
+    condition=IfCondition(LaunchConfiguration('farol2_clock'))
+  )
+
   simulation = IncludeLaunchDescription(
     PythonLaunchDescriptionSource([
       PathJoinSubstitution([FindPackageShare('farol2_sim'), 'launch', 'farol2_sim.launch.py'])
@@ -25,8 +40,8 @@ def _launch(context, *args, **kwargs):
       'vehicle_name': vehicle_name,
       'vehicle_id': vehicle_id,
       'config_to_use': config_to_use,
-      'magic_electric_sim': 'false',
-      'auv_sim': 'true',
+      'magic_electric_sim': 'true' if use_magic_electric_sim else 'false',
+      'auv_sim': 'false' if use_magic_electric_sim else 'true',
     }.items()
   )
 
@@ -46,9 +61,7 @@ def _launch(context, *args, **kwargs):
   )
 
   # Keep vehicle_id in context so ros2 launch tooling can report it.
-  return [SetLaunchConfiguration('vehicle_id', vehicle_id), 
-          simulation, 
-          farol_stack]
+  return [SetLaunchConfiguration('vehicle_id', vehicle_id), clock, simulation, farol_stack]
 
 
 def generate_launch_description():
@@ -74,9 +87,16 @@ def generate_launch_description():
     description='Config to use.'
   )
 
+  farol2_clock_arg = DeclareLaunchArgument(
+    'farol2_clock',
+    default_value='true',
+    description='Launch the Farol2 simulation clock.'
+  )
+
   return LaunchDescription([
     vehicle_name_arg,
     vehicle_id_arg,
     config_to_use_arg,
+    farol2_clock_arg,
     OpaqueFunction(function=_launch),
   ])

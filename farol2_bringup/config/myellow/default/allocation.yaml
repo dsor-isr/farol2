@@ -14,8 +14,8 @@
           frames:
             - "thruster_portside_horizontal_back_link"
             - "thruster_starboard_horizontal_back_link"
-            - "thruster_portside_vertical_link"
             - "thruster_starboard_vertical_link"
+            - "thruster_portside_vertical_link"
             - "thruster_portside_horizontal_front_link"
             - "thruster_starboard_horizontal_front_link"
 

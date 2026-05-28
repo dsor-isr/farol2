@@ -83,6 +83,8 @@ def generate_launch_description():
     parameters=params,
     remappings=[
       # Subscribers
+      ('/tf', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/tf')]),
+      ('/tf_static', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/tf_static')]),
       ('body_wrench_request', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/body_wrench_request')]),
       ('nav_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
       ('mission_status', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/mission_status')]),
