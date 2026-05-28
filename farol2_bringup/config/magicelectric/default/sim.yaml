@@ -7,11 +7,11 @@
 /**:
   sim_clock:
     ros__parameters:
-      node_frequency: 10.0
+      node_frequency: 10
       speedup: 20.0
   magic_electric_sim:
     ros__parameters:
-      node_frequency: 10.0
+      node_frequency: 10
       initial_state:
         position: [38.690323, -9.211736, 0.0] # (lat, lon, depth) from expo   
         body_velocity: [1.78, 0.0, 0.0]

@@ -128,7 +128,7 @@ class MagicElectricSim : public rclcpp::Node {
     void updateState();
     double rudder_command_{0.0};
 
-    double node_frequency_;
+    int node_frequency_;
     double node_period_;
 
     double origin_latitude_, origin_longitude_;

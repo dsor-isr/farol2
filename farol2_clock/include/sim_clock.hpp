@@ -21,7 +21,7 @@ private:
   rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
 
-  double node_frequency_{10.0};
+  int node_frequency_{10};
   double node_period_{0.1};
   double speedup_{1.0};
   uint64_t sim_time_ns_{0};

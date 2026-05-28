@@ -16,12 +16,12 @@ SimClock::~SimClock()
 
 void SimClock::loadParams()
 {
-  node_frequency_ = declare_parameter<double>("node_frequency");
+  node_frequency_ = declare_parameter<int>("node_frequency");
   speedup_ = declare_parameter<double>("speedup");
 
-  if (node_frequency_ <= 0.0) {
-    RCLCPP_WARN(get_logger(), "node_frequency must be positive. Falling back to 10.0 Hz.");
-    node_frequency_ = 10.0;
+  if (node_frequency_ <= 0) {
+    RCLCPP_WARN(get_logger(), "node_frequency must be positive. Falling back to 10 Hz.");
+    node_frequency_ = 10;
   }
 
   if (speedup_ <= 0.0) {
@@ -29,7 +29,7 @@ void SimClock::loadParams()
     speedup_ = 1.0;
   }
 
-  node_period_ = 1.0 / node_frequency_;
+  node_period_ = 1.0 / static_cast<double>(node_frequency_);
   dt_ns_ = static_cast<uint64_t>(std::llround(node_period_ * 1e9));
 }
 

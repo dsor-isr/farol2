@@ -25,7 +25,7 @@ void MagicElectricSim::loadParams()
 
   //////////////////////////////////////////////////////////////////////////////////////
 
-  node_frequency_ = declare_parameter<double>("node_frequency");
+  node_frequency_ = declare_parameter<int>("node_frequency");
   node_period_ = (1.0 / static_cast<double>(node_frequency_));
 
   // ==========================
