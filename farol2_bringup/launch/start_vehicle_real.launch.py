@@ -32,11 +32,12 @@ def _launch(context, *args, **kwargs):
       'vehicle_name': vehicle_name,
       'vehicle_id': vehicle_id,
       'vn310': 'false',
-      'vn100': 'true',
-      'can_thrusters': 'true',
-      'can_instrumentation': 'true',
+      'vn100': 'false',
+      'can_thrusters': 'false',
+      'can_instrumentation': 'false',
       'airmar200wx': 'false',
       'airmardx900': 'false',
+      'ashtech': 'true',
     }.items()
   )
 
