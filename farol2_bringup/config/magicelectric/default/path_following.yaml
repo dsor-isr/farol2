@@ -8,7 +8,7 @@
   # the lines k1 and k2 in lapierre, for example.
   path_following:
     ros__parameters:
-      node_frequency: 1.0
+      node_frequency: 10.0
       controller_gains:
         pramod:
           # wc = 0.03 (0.15/5) 
