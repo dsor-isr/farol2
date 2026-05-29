@@ -33,7 +33,10 @@ private:
     double tau_r{0.0};
   };
 
-  double get_torque(double rudder_angle_rad, Eigen::Vector3d fluid_velocity) const;
+  double get_torque(
+    double rudder_angle_rad,
+    const Eigen::Vector3d & velocity_through_water_body,
+    double yaw_rate_rad_s) const;
   void predict(Eigen::Vector2d & x, Eigen::Matrix2d & P, double dt_s, double tau_r) const;
   void update(Eigen::Vector2d & x, Eigen::Matrix2d & P, double z_r) const;
   void on_tune_ekf(
@@ -57,6 +60,10 @@ private:
   double damping_quadratic_{260.675031};
   double Ks_{1.0};
   double rudder_cm_distance_{4.0};
+  double rudder_angle_limit_rad_{0.6283185307179586};
+  double K_L_{1.0};
+  double K_D0_{0.0};
+  double K_D1_{0.0};
 
   // IMU yaw-rate prefilter.
   std::size_t measurement_window_samples_{5U};

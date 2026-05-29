@@ -57,7 +57,9 @@ def _launch(context, *args, **kwargs):
   )
 
   # Keep vehicle_id in context so ros2 launch tooling can report it.
-  return [SetLaunchConfiguration('vehicle_id', vehicle_id), drivers, farol_stack]
+  return [SetLaunchConfiguration('vehicle_id', vehicle_id), 
+          # drivers, 
+          farol_stack]
 
 
 def generate_launch_description():

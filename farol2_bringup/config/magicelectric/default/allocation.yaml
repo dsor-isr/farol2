@@ -19,8 +19,8 @@
           K_D1: 0.0   # 0.0 -> drag induced by rudder is not accounted for
         rudder:
           limits:
-            max: 36.0 # [deg]
-            min: -36.0 # [deg]
+            max: 30.0 # [deg]
+            min: -30.0 # [deg]
           cm_distance: 4.0 # [m]
         thrusters:
           open_loop: true

@@ -51,5 +51,5 @@
           inertia: 88.478840
           damping: 14.334052
           damping_quadratic: 260.675031
-          torque_gain: 0.8
+          torque_gain: 0.7
           rudder_arm: 4.0

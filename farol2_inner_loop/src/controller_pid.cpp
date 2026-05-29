@@ -146,8 +146,9 @@ double ControllerPID::callControllerImpl(double state, double state_ref, double 
     d_term_ = -kd_ * error_rate_;
     
     // add all pid terms
-    tau_ =  p_term_ + i_term_ + d_term_;
-    
+    tau_ =  p_term_;// + i_term_ + d_term_;
+
+    std::cout << "P: " << p_term_ << " I: " << i_term_ << " D: " << d_term_ << std::endl;
     // antiwindup saturation
     tau_sat_ = std::clamp(tau_, tau_min_, tau_max_);
   }

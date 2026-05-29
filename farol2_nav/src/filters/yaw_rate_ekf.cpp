@@ -43,6 +43,12 @@ void YawRateEkfFilter::configure(rclcpp::Node & node)
   // parameters for the rudder_angle to torque model
   Ks_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.torque_gain", 1.0);
   rudder_cm_distance_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.rudder_arm", 4.0);
+  const double rudder_angle_limit_deg =
+    node.declare_parameter<double>("plugins.yaw_rate_ekf.rudder_angle_limit_deg", 36.0);
+  rudder_angle_limit_rad_ = farol2_utils::deg2rad(std::abs(rudder_angle_limit_deg));
+  K_L_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.K_L", Ks_);
+  K_D0_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.K_D0", 0.0);
+  K_D1_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.K_D1", 0.0);
 
   // parameters for the moving average prefilter on the IMU yaw-rate measurements.
   const int64_t measurement_window_samples = node.declare_parameter<int64_t>("plugins.yaw_rate_ekf.measurement_window_samples", 50);
@@ -85,11 +91,29 @@ void YawRateEkfFilter::on_tune_ekf(
   res->message = "Yaw-rate EKF noise parameters updated.";
 }
 
-double YawRateEkfFilter::get_torque(double rudder_angle_rad, Eigen::Vector3d fluid_velocity) const
+double YawRateEkfFilter::get_torque(
+  double rudder_angle_rad,
+  const Eigen::Vector3d & velocity_through_water_body,
+  double yaw_rate_rad_s) const
 {
-  // TODO: upgrade to the other model
-  // Simple rudder-induced yaw torque model
-  return rudder_angle_rad * (Ks_ * rudder_cm_distance_ * fluid_velocity.squaredNorm());
+  // Internal torque model uses radians consistently.
+  const double delta_rud = std::clamp(rudder_angle_rad, -rudder_angle_limit_rad_, rudder_angle_limit_rad_);
+
+  const double u = velocity_through_water_body(0);
+  const double v = velocity_through_water_body(1);
+
+  Eigen::Vector2d V_s;
+  V_s(0) = u;
+  V_s(1) = v - yaw_rate_rad_s * rudder_cm_distance_;
+
+  const double gamma = farol2_utils::wrapToPi(std::atan2(V_s(1), V_s(0)));
+  const double alpha = farol2_utils::wrapToPi(delta_rud + gamma);
+  const double V_sq = V_s.squaredNorm();
+
+  const double lift = K_L_ * alpha * V_sq;
+  const double drag = (K_D0_ + K_D1_ * alpha * alpha) * V_sq;
+
+  return rudder_cm_distance_ * (lift * std::cos(gamma) + drag * std::sin(gamma));
 }
 
 void YawRateEkfFilter::predict(Eigen::Vector2d & x, Eigen::Matrix2d & P, double dt_s, double tau_r) const
@@ -166,7 +190,8 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
   if (m.rudder_angle != nullptr) {
     rudder_angle = farol2_utils::deg2rad(m.rudder_angle->data);
   }
-  const double tau_r = get_torque(rudder_angle, s.velocity_through_water_ned);
+  const double yaw_rate_rad_s = farol2_utils::deg2rad(s.angular_velocity(2));
+  const double tau_r = get_torque(rudder_angle, s.velocity_through_water_body, yaw_rate_rad_s);
 
   if (!initialized_) {
     x_.setZero();
