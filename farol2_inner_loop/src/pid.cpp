@@ -369,19 +369,6 @@ void PID::referenceCallback(const std::string &controller_name, double raw_value
   }
 
   const auto now = clock_->now();
-  double dt_ref = 0.0;
-  if (controller_has_reference_[controller_name]) {
-    dt_ref = (now - controller_last_reference_[controller_name]).seconds();
-    if (dt_ref > 20.0 / node_frequency_) {
-      dt_ref = 0.0;
-    }
-  }
-
-  auto rg_it = reference_generators_.find(controller_name);
-  if (rg_it != reference_generators_.end() && rg_it->second) {
-    reference_outputs_[controller_name] = rg_it->second->update(ref_value, dt_ref);
-  }
-
   controller_has_reference_[controller_name] = true;
   controller_last_reference_[controller_name] = now;
 }
@@ -435,7 +422,7 @@ void PID::createControllers() {
     const double lpf_wc = get_controller_param(name, "lpf_wc", 1.0);
 
     reference_generators_[name] = std::make_unique<farol_control::ReferenceGenerator>();
-    reference_generators_[name]->configure(true,
+    reference_generators_[name]->configure(wrap_to_pi,
                                            use_rate_limiter,
                                            rate_limit,
                                            use_ref_lpf,
@@ -1002,6 +989,11 @@ void PID::callControllers(double dt) {
 
     auto it = controller_configs_.find(name);
     if (it != controller_configs_.end()) {
+      auto rg_it = reference_generators_.find(name);
+      if (rg_it != reference_generators_.end() && rg_it->second) {
+        // Use control-loop dt to make reference derivatives deterministic and less noisy.
+        reference_outputs_[name] = rg_it->second->update(it->second.get_ref(), dt);
+      }
       executeController(it->second, dt);
     }
   }
