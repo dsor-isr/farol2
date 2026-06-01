@@ -55,14 +55,6 @@ def generate_launch_description():
               'default',
               'cpf_controller.yaml'
             ]),
-            # override config — same path as default when config_to_use == 'default'
-            PathJoinSubstitution([
-              FindPackageShare('farol2_bringup'),
-              'config',
-              LaunchConfiguration('vehicle_name'),
-              LaunchConfiguration('config_to_use'),
-              'cpf_controller.yaml'
-            ]),
           ]
 
 
