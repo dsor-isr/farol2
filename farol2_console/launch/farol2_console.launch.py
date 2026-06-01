@@ -103,6 +103,9 @@ def generate_launch_description():
     executable='console_server',
     name='console_server',
     output='screen',
+    additional_env={
+      'PYTHONWARNINGS': "ignore:'cgi' is deprecated and slated for removal in Python 3.13:DeprecationWarning,ignore:'cgitb' is deprecated and slated for removal in Python 3.13:DeprecationWarning",
+    },
     parameters=params,
     remappings=[
       # Services
