@@ -96,17 +96,30 @@ void WrenchManager::initialiseTimers() {
  */
 void WrenchManager::timerCallback() {
   rclcpp::Time now = clock_.now();
+  const double freshness_timeout = 2.0 / static_cast<double>(node_frequency_);
+
+  const bool thrust_x_recent = (now - last_received_[0]).seconds() < freshness_timeout;
+  const bool thrust_y_recent = (now - last_received_[1]).seconds() < freshness_timeout;
+  const bool thrust_z_recent = (now - last_received_[2]).seconds() < freshness_timeout;
+  const bool torque_x_recent = (now - last_received_[3]).seconds() < freshness_timeout;
+  const bool torque_y_recent = (now - last_received_[4]).seconds() < freshness_timeout;
+  const bool torque_z_recent = (now - last_received_[5]).seconds() < freshness_timeout;
+
+  // Publish only while at least one input stream is active.
+  if (!(thrust_x_recent || thrust_y_recent || thrust_z_recent || torque_x_recent || torque_y_recent || torque_z_recent)) {
+    return;
+  }
 
   /* Fill header stamp with current time */
   body_wrench_request_msg_.header.stamp = now;
 
   /* Only fill the body wrench request message if a value has been received for that DOF recently */
-  body_wrench_request_msg_.wrench.force.x = ((now - last_received_[0]).seconds() < 2.0/(double)node_frequency_) ? wrench_[0] : 0.0;
-  body_wrench_request_msg_.wrench.force.y = ((now - last_received_[1]).seconds() < 2.0/(double)node_frequency_) ? wrench_[1] : 0.0;
-  body_wrench_request_msg_.wrench.force.z = ((now - last_received_[2]).seconds() < 2.0/(double)node_frequency_) ? wrench_[2] : 0.0;
-  body_wrench_request_msg_.wrench.torque.x = ((now - last_received_[3]).seconds() < 2.0/(double)node_frequency_) ? wrench_[3] : 0.0;
-  body_wrench_request_msg_.wrench.torque.y = ((now - last_received_[4]).seconds() < 2.0/(double)node_frequency_) ? wrench_[4] : 0.0;
-  body_wrench_request_msg_.wrench.torque.z = ((now - last_received_[5]).seconds() < 2.0/(double)node_frequency_) ? wrench_[5] : 0.0;
+  body_wrench_request_msg_.wrench.force.x = thrust_x_recent ? wrench_[0] : 0.0;
+  body_wrench_request_msg_.wrench.force.y = thrust_y_recent ? wrench_[1] : 0.0;
+  body_wrench_request_msg_.wrench.force.z = thrust_z_recent ? wrench_[2] : 0.0;
+  body_wrench_request_msg_.wrench.torque.x = torque_x_recent ? wrench_[3] : 0.0;
+  body_wrench_request_msg_.wrench.torque.y = torque_y_recent ? wrench_[4] : 0.0;
+  body_wrench_request_msg_.wrench.torque.z = torque_z_recent ? wrench_[5] : 0.0;
 
   /* Publish message */
   body_wrench_request_pub_->publish(body_wrench_request_msg_);
