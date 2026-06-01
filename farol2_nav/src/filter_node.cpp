@@ -28,10 +28,16 @@ void FilterNode::load_params()
   publish_all_steps_ = declare_parameter<bool>("publish_all_steps", true);
   filters_ = declare_parameter<std::vector<std::string>>("filters", std::vector<std::string>{});
 
-  imu_timeout_s_ = declare_parameter<double>("timeouts.imu", 1.0);
-  navsat_timeout_s_ = declare_parameter<double>("timeouts.navsat", 2.0);
-  utm_timeout_s_ = declare_parameter<double>("timeouts.utm", 2.0);
-  rpm_timeout_s_ = declare_parameter<double>("timeouts.rpm", 1.0);
+  enable_gnss_ = declare_parameter<bool>("measurements.gnss", true);
+  enable_imu_ = declare_parameter<bool>("measurements.imu", true);
+  enable_utm_ned_ = declare_parameter<bool>("measurements.utm_ned", true);
+  enable_velocity_over_ground_ = declare_parameter<bool>("measurements.velocity_over_ground", true);
+  enable_velocity_through_water_ =
+    declare_parameter<bool>("measurements.velocity_through_water", true);
+  enable_depth_ = declare_parameter<bool>("measurements.depth", true);
+  enable_altimeter_ = declare_parameter<bool>("measurements.altimeter", true);
+  enable_rudder_angle_ = declare_parameter<bool>("measurements.rudder_angle", true);
+  enable_rpm_command_ = declare_parameter<bool>("measurements.rpm_command", true);
 }
 
 void FilterNode::initialise_publishers()
@@ -42,68 +48,86 @@ void FilterNode::initialise_publishers()
 
 void FilterNode::initialise_subscribers()
 {
-  imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
-    TOPIC_SUB_IMU, rclcpp::QoS(10),
-    [this](sensor_msgs::msg::Imu::SharedPtr msg) {
-      snapshot_.imu = std::move(msg);
-      snapshot_.imu_stamp = now();
-    });
+  if (enable_imu_) {
+    imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
+      TOPIC_SUB_IMU, rclcpp::QoS(10),
+      [this](sensor_msgs::msg::Imu::SharedPtr msg) {
+        snapshot_.imu = std::move(msg);
+        snapshot_.imu_stamp = now();
+      });
+  }
 
-  gnss_sub_ = create_subscription<sensor_msgs::msg::NavSatFix>(
-    TOPIC_SUB_GNSS, rclcpp::QoS(10),
-    [this](sensor_msgs::msg::NavSatFix::SharedPtr msg) {
-      snapshot_.gnss = std::move(msg);
-      snapshot_.gnss_stamp = now();
-    });
+  if (enable_gnss_) {
+    gnss_sub_ = create_subscription<sensor_msgs::msg::NavSatFix>(
+      TOPIC_SUB_GNSS, rclcpp::QoS(10),
+      [this](sensor_msgs::msg::NavSatFix::SharedPtr msg) {
+        snapshot_.gnss = std::move(msg);
+        snapshot_.gnss_stamp = now();
+      });
+  }
 
-  utm_ned_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
-    TOPIC_SUB_UTM_NED, rclcpp::QoS(10),
-    [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
-      snapshot_.utm_ned = std::move(msg);
-      snapshot_.utm_ned_stamp = now();
-    });
+  if (enable_utm_ned_) {
+    utm_ned_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
+      TOPIC_SUB_UTM_NED, rclcpp::QoS(10),
+      [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
+        snapshot_.utm_ned = std::move(msg);
+        snapshot_.utm_ned_stamp = now();
+      });
+  }
 
-  velocity_over_ground_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
-    TOPIC_SUB_VELOCITY_OVER_GROUND, rclcpp::QoS(10),
-    [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
-      snapshot_.velocity_over_ground = std::move(msg);
-      snapshot_.velocity_over_ground_stamp = now();
-    });
+  if (enable_velocity_over_ground_) {
+    velocity_over_ground_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
+      TOPIC_SUB_VELOCITY_OVER_GROUND, rclcpp::QoS(10),
+      [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
+        snapshot_.velocity_over_ground = std::move(msg);
+        snapshot_.velocity_over_ground_stamp = now();
+      });
+  }
 
-  velocity_through_water_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
-    TOPIC_SUB_VELOCITY_THROUGH_WATER, rclcpp::QoS(10),
-    [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
-      snapshot_.velocity_through_water = std::move(msg);
-      snapshot_.velocity_through_water_stamp = now();
-    });
+  if (enable_velocity_through_water_) {
+    velocity_through_water_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
+      TOPIC_SUB_VELOCITY_THROUGH_WATER, rclcpp::QoS(10),
+      [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
+        snapshot_.velocity_through_water = std::move(msg);
+        snapshot_.velocity_through_water_stamp = now();
+      });
+  }
 
-  depth_sub_ = create_subscription<std_msgs::msg::Float32>(
-    TOPIC_SUB_DEPTH, rclcpp::QoS(10),
-    [this](std_msgs::msg::Float32::SharedPtr msg) {
-      snapshot_.depth = std::move(msg);
-      snapshot_.depth_stamp = now();
-    });
+  if (enable_depth_) {
+    depth_sub_ = create_subscription<std_msgs::msg::Float32>(
+      TOPIC_SUB_DEPTH, rclcpp::QoS(10),
+      [this](std_msgs::msg::Float32::SharedPtr msg) {
+        snapshot_.depth = std::move(msg);
+        snapshot_.depth_stamp = now();
+      });
+  }
 
-  altimeter_sub_ = create_subscription<std_msgs::msg::Float32>(
-    TOPIC_SUB_ALTIMETER, rclcpp::QoS(10),
-    [this](std_msgs::msg::Float32::SharedPtr msg) {
-      snapshot_.altimeter = std::move(msg);
-      snapshot_.altimeter_stamp = now();
-    });
+  if (enable_altimeter_) {
+    altimeter_sub_ = create_subscription<std_msgs::msg::Float32>(
+      TOPIC_SUB_ALTIMETER, rclcpp::QoS(10),
+      [this](std_msgs::msg::Float32::SharedPtr msg) {
+        snapshot_.altimeter = std::move(msg);
+        snapshot_.altimeter_stamp = now();
+      });
+  }
 
-  rudder_sub_ = create_subscription<std_msgs::msg::Float32>(
-    TOPIC_SUB_RUDDER_ANGLE, rclcpp::QoS(10),
-    [this](std_msgs::msg::Float32::SharedPtr msg) {
-      snapshot_.rudder_angle = std::move(msg);
-      snapshot_.rudder_stamp = now();
-    });
+  if (enable_rudder_angle_) {
+    rudder_sub_ = create_subscription<std_msgs::msg::Float32>(
+      TOPIC_SUB_RUDDER_ANGLE, rclcpp::QoS(10),
+      [this](std_msgs::msg::Float32::SharedPtr msg) {
+        snapshot_.rudder_angle = std::move(msg);
+        snapshot_.rudder_stamp = now();
+      });
+  }
 
-  rpm_sub_ = create_subscription<farol2_allocation::msg::ThrusterRPM>(
-    TOPIC_SUB_RPM_COMMAND, rclcpp::QoS(10),
-    [this](farol2_allocation::msg::ThrusterRPM::SharedPtr msg) {
-      snapshot_.rpm_command = std::move(msg);
-      snapshot_.rpm_stamp = now();
-    });
+  if (enable_rpm_command_) {
+    rpm_sub_ = create_subscription<farol2_allocation::msg::ThrusterRPM>(
+      TOPIC_SUB_RPM_COMMAND, rclcpp::QoS(10),
+      [this](farol2_allocation::msg::ThrusterRPM::SharedPtr msg) {
+        snapshot_.rpm_command = std::move(msg);
+        snapshot_.rpm_stamp = now();
+      });
+  }
 }
 
 void FilterNode::build_pipeline()
@@ -147,33 +171,12 @@ void FilterNode::initialise_timer()
   timer_ = create_wall_timer(period_ns, [this]() { on_timer(); });
 }
 
-bool FilterNode::is_fresh(const rclcpp::Time & stamp, double timeout_s) const
-{
-  if (stamp.nanoseconds() == 0) {
-    return false;
-  }
-  return (now() - stamp).seconds() <= timeout_s;
-}
-
 void FilterNode::on_timer()
 {
   const auto tick_stamp = now();
   const double now_s = tick_stamp.seconds();
   const double dt_s = (last_tick_s_ > 0.0) ? (now_s - last_tick_s_) : (1.0 / std::max(0.1, node_frequency_));
   last_tick_s_ = now_s;
-
-  if (!is_fresh(snapshot_.imu_stamp, imu_timeout_s_)) {
-    snapshot_.imu.reset();
-  }
-  if (!is_fresh(snapshot_.gnss_stamp, navsat_timeout_s_)) {
-    snapshot_.gnss.reset();
-  }
-  if (!is_fresh(snapshot_.utm_ned_stamp, utm_timeout_s_)) {
-    snapshot_.utm_ned.reset();
-  }
-  if (!is_fresh(snapshot_.rpm_stamp, rpm_timeout_s_)) {
-    snapshot_.rpm_command.reset();
-  }
 
   // Every cycle starts from a clean state. sample_and_hold runs first and repopulates it.
   state_ = farol2_nav::filters::State{};
@@ -243,7 +246,7 @@ void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
 
   msg_.attitude.roll = farol2_utils::rad2deg(roll_rad);
   msg_.attitude.pitch = farol2_utils::rad2deg(pitch_rad);
-  msg_.attitude.yaw = farol2_utils::rad2deg(yaw_rad);
+  msg_.attitude.yaw = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(yaw_rad));
   msg_.angular_velocity.x = state_.angular_velocity(0);
   msg_.angular_velocity.y = state_.angular_velocity(1);
   msg_.angular_velocity.z = state_.angular_velocity(2);

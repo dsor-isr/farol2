@@ -12,11 +12,16 @@
         - "" ## this is needed because ROS2 is stupid and doesnt understand this an empty array of strings... might be fixed in the future 
         # - "position_current_ekf"
         # - "yaw_rate_ekf"
-      timeouts:
-        imu: 1.0
-        navsat: 2.0
-        utm: 2.0
-        rpm: 1.0
+      measurements:
+        gnss: true
+        imu: true
+        utm_ned: false
+        velocity_over_ground: false
+        velocity_through_water: false
+        depth: false
+        altimeter: true
+        rudder_angle: false
+        rpm_command: true
       # plugins:
         # position_current_ekf:
         #   override_position_state: true

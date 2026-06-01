@@ -8,16 +8,22 @@
     ros__parameters:
       node_frequency: 10.0
       publish_all_steps: true
-      # sample_and_hold is always applied first implicitly.
+      
+      measurements:
+        gnss: true
+        imu: true
+        utm_ned: false
+        velocity_over_ground: false
+        velocity_through_water: false
+        depth: false
+        altimeter: false
+        rudder_angle: true
+        rpm_command: true
+      
       filters: 
-        - "" ## this is needed because ROS2 is stupid and doesnt understand this an empty array of strings... might be fixed in the future 
         - "position_current_ekf"
         - "yaw_rate_ekf"
-      timeouts:
-        imu: 1.0
-        navsat: 2.0
-        utm: 2.0
-        rpm: 1.0
+      
       plugins:
         position_current_ekf:
           override_position_state: false
@@ -41,6 +47,7 @@
           override_velocity: 1.618
           override_rpms: 600.0
           override_timeout_s: 15.0
+
         yaw_rate_ekf:
           process_noise_yaw_rate: 0.02
           process_noise_bias: 0.01

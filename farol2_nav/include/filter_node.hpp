@@ -42,17 +42,21 @@ private:
   void initialise_subscribers();
   void build_pipeline();
   void initialise_timer();
-  bool is_fresh(const rclcpp::Time & stamp, double timeout_s) const;
   void on_timer();
   void fill_state_msg(const rclcpp::Time & stamp);
 
   double node_frequency_{10.0};
   bool publish_all_steps_{true};
   std::vector<std::string> filters_{};
-  double imu_timeout_s_{1.0};
-  double navsat_timeout_s_{2.0};
-  double utm_timeout_s_{2.0};
-  double rpm_timeout_s_{1.0};
+  bool enable_gnss_{true};
+  bool enable_imu_{true};
+  bool enable_utm_ned_{true};
+  bool enable_velocity_over_ground_{true};
+  bool enable_velocity_through_water_{true};
+  bool enable_depth_{true};
+  bool enable_altimeter_{true};
+  bool enable_rudder_angle_{true};
+  bool enable_rpm_command_{true};
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_sub_;
