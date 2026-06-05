@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
 namespace farol2_nav
 {
@@ -38,12 +39,18 @@ void PositionCurrentEkfFilter::configure(rclcpp::Node & node)
   prop_diameter_ = node.declare_parameter<double>("plugins.position_current_ekf.prop_diameter", 0.4318);
   k_t_bp_ = node.declare_parameter<double>("plugins.position_current_ekf.k_t_bp", 0.061461915);
   m_u_ = node.declare_parameter<double>("plugins.position_current_ekf.m_u", 3100.0);
+  if (m_u_ <= 0.0) {
+    throw std::invalid_argument("plugins.position_current_ekf.m_u must be > 0");
+  }
+  m_uv_ = node.declare_parameter<double>("plugins.position_current_ekf.m_uv", -2.967651);
+  m_v_ = m_u_ - m_uv_;
+  if (m_v_ <= 0.0) {
+    throw std::invalid_argument("plugins.position_current_ekf.m_v (computed as m_u - m_uv) must be > 0");
+  }
   x_u_ = node.declare_parameter<double>("plugins.position_current_ekf.x_u", 0.0);
   x_uu_ = node.declare_parameter<double>("plugins.position_current_ekf.x_uu", -96.2270);
-
-  override_velocity_ = node.declare_parameter<double>("plugins.position_current_ekf.override_velocity", 0.0);
-  override_rpms_ = node.declare_parameter<double>("plugins.position_current_ekf.override_rpms", 600.0);
-  override_timeout_s_ = node.declare_parameter<double>("plugins.position_current_ekf.override_timeout_s", 5.0);
+  Y_v_ = node.declare_parameter<double>("plugins.position_current_ekf.Y_v", -500.0);
+  Y_vv_ = node.declare_parameter<double>("plugins.position_current_ekf.Y_vv", -1500.0);
 
   H_.setZero();
   H_(0, 0) = 1.0;
@@ -83,16 +90,11 @@ void PositionCurrentEkfFilter::on_tune_ekf(
   res->message = "Position-current EKF noise parameters updated.";
 }
 
-// TODO: fix this to get surge and sway (when we know Y_v and Y_vv and m_uv)
-double PositionCurrentEkfFilter::rpm_to_body_speed_mps(const MeasurementSnapshot & m, double dt_s)
+Eigen::Vector2d PositionCurrentEkfFilter::rpm_to_body_velocity_mps(
+  const MeasurementSnapshot & m, const State & s, double dt_s)
 {
   if (dt_s <= 0.0) {
-    return u_estimated_;
-  }
-
-  if (m.rpm_command == nullptr || m.rpm_command->rpm.empty()) {
-    // If RPM is stale, force command to zero and reset override timer.
-    time_in_override_zone_s_ = 0.0;
+    return {u_estimated_, v_estimated_};
   }
 
   double rpm_cmd = 0.0;
@@ -104,31 +106,15 @@ double PositionCurrentEkfFilter::rpm_to_body_speed_mps(const MeasurementSnapshot
   if (!rpm_model_initialized_) {
     rpm_model_state_ = rpm_cmd;
     u_estimated_ = 0.0;
+    v_estimated_ = 0.0;
     rpm_model_initialized_ = true;
   }
 
   const double max_rpm_step = std::max(0.0, rpm_rate_limit_) * dt_s;
   rpm_model_state_ = std::clamp(rpm_cmd, rpm_model_state_ - max_rpm_step, rpm_model_state_ + max_rpm_step);
 
-  const double rpm_threshold = std::abs(override_rpms_) * 0.01;
-  const bool in_override_zone = (std::abs(rpm_model_state_ - override_rpms_) <= rpm_threshold);
-
-  if (m.rpm_command == nullptr || m.rpm_command->rpm.empty()) {
-    time_in_override_zone_s_ = 0.0;
-  } else if (in_override_zone) {
-    time_in_override_zone_s_ += dt_s;
-  } else {
-    time_in_override_zone_s_ = 0.0;
-  }
-
-  if (override_timeout_s_ >= 0.0 && time_in_override_zone_s_ >= override_timeout_s_ &&
-    std::abs(override_velocity_) > 1e-6)
-  {
-    u_estimated_ = override_velocity_;
-    return u_estimated_;
-  }
-
   const double u = u_estimated_;
+  const double v = v_estimated_;
   const double rps = rpm_model_state_ / 60.0;
   double tau_u = 0.0;
   if (std::abs(rps * prop_pitch_) >= 1e-6) {
@@ -139,11 +125,15 @@ double PositionCurrentEkfFilter::rpm_to_body_speed_mps(const MeasurementSnapshot
     }
   }
 
-  const double m_u_safe = (std::abs(m_u_) < 1e-6) ? 1e-6 : m_u_;
-  const double u_dot = (1.0 / m_u_safe) * (tau_u + x_u_ * u + x_uu_ * std::abs(u) * u);
-  u_estimated_ += dt_s * u_dot;
+  const double r = farol2_utils::deg2rad(s.angular_velocity(2));
 
-  return u_estimated_;
+  const double u_dot = (1.0 / m_u_) * (tau_u + m_v_* v * r + x_u_ * u + x_uu_ * std::abs(u) * u);
+  const double v_dot = (1.0 / m_v_) * (0.0   - m_u_* u * r + Y_v_ * v + Y_vv_ * std::abs(v) * v);
+
+  u_estimated_ += dt_s * u_dot;
+  v_estimated_ += dt_s * v_dot;
+
+  return {u_estimated_, v_estimated_};
 }
 
 void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State & s)
@@ -179,9 +169,11 @@ void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & 
   const double dt = std::max(0.0, dt_s);
 
   const double psi = std::atan2(s.rotation_bn(1, 0), s.rotation_bn(0, 0));
-  const double vm_body = rpm_to_body_speed_mps(m, dt);
-  const double vx_model = vm_body * std::cos(psi);
-  const double vy_model = vm_body * std::sin(psi);
+  const Eigen::Vector2d vm_body = rpm_to_body_velocity_mps(m, s, dt);
+  const double u_model = vm_body(0);
+  const double v_model = vm_body(1);
+  const double vx_model = u_model * std::cos(psi) - v_model * std::sin(psi);
+  const double vy_model = u_model * std::sin(psi) + v_model * std::cos(psi);
 
   // ---------------------------
   // EKF prediction step (model)
@@ -233,11 +225,6 @@ void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & 
   s.current_velocity_ned(0) = x_(2);
   s.current_velocity_ned(1) = x_(3);
   s.current_velocity_ned(2) = 0.0;
-  // velocity through water using only the model 
-  s.velocity_through_water_ned(0) = vx_model;
-  s.velocity_through_water_ned(1) = vy_model;
-  s.velocity_through_water_body(0) = vm_body;
-  s.velocity_through_water_body(1) = 0.0; // assuming no sway in the model
 }
 
 }  // namespace filters

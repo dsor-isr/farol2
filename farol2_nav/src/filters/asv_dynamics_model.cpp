@@ -82,7 +82,7 @@ double AsvDynamicsModelFilter::get_tau_r(double rudder_angle_rad, double u, doub
   return rudder_cm_distance_ * (lift * std::cos(gamma) + drag * std::sin(gamma));
 }
 
-void AsvDynamicsModelFilter::compute(double dt_s, const MeasurementSnapshot & m, State &)
+void AsvDynamicsModelFilter::compute(double dt_s, const MeasurementSnapshot & m, State & s)
 {
   const double dt = std::max(0.0, dt_s);
   if (dt <= 0.0) {
@@ -134,6 +134,11 @@ void AsvDynamicsModelFilter::compute(double dt_s, const MeasurementSnapshot & m,
   u_model_ += dt * u_dot;
   v_model_ += dt * v_dot;
   r_model_ += dt * r_dot;
+
+  // Feed the modeled through-water velocity into the shared state for downstream filters.
+  const Eigen::Vector3d vtw_body(u_model_, v_model_, 0.0);
+  s.velocity_through_water_body = vtw_body;
+  s.velocity_through_water_ned = s.rotation_bn * vtw_body;
 
   uvr_msg_.x = u_model_;
   uvr_msg_.y = v_model_;
