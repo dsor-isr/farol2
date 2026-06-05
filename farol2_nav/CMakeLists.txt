@@ -46,6 +46,7 @@ add_executable(filter_node
   src/filters/sample_and_hold.cpp
   src/filters/position_current_ekf.cpp
   src/filters/yaw_rate_ekf.cpp
+  src/filters/asv_dynamics_model.cpp
 )
 
 

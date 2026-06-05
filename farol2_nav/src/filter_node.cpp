@@ -3,6 +3,7 @@
 #include <farol2_nav/filters/sample_and_hold.hpp>
 #include <farol2_nav/filters/position_current_ekf.hpp>
 #include <farol2_nav/filters/yaw_rate_ekf.hpp>
+#include <farol2_nav/filters/asv_dynamics_model.hpp>
 #include <farol2_utils/angles.hpp>
 
 #include <algorithm>
@@ -144,6 +145,8 @@ void FilterNode::build_pipeline()
       filter = std::make_unique<farol2_nav::filters::PositionCurrentEkfFilter>();
     } else if (key == "yaw_rate_ekf") {
       filter = std::make_unique<farol2_nav::filters::YawRateEkfFilter>();
+    } else if (key == "asv_dynamics_model") {
+      filter = std::make_unique<farol2_nav::filters::AsvDynamicsModelFilter>();
     // Here add additional filters with else if blocks, following the pattern above. For example:
     // } else if (key == "your_filter_name") {
     //   filter = std::make_unique<farol2_nav::filters::YourFilter>();
