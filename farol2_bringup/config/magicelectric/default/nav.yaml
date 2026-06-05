@@ -21,9 +21,9 @@
         rpm_command: true
       
       filters: 
+        - "asv_dynamics_model"
         - "position_current_ekf"
         - "yaw_rate_ekf"
-        - "asv_dynamics_model"
       
       plugins:
         position_current_ekf:
@@ -49,11 +49,13 @@
         yaw_rate_ekf:
           process_noise_yaw_rate: 0.02
           process_noise_bias: 0.01
+          process_noise_gain: 0.1
           # measurement_noise_yaw_rate: 0.1
-          measurement_noise_yaw_rate: 100000000.0
+          measurement_noise_yaw_rate: 0.1
           measurement_window_samples: 30 
           init_cov_yaw_rate: 1.0
           init_cov_bias: 1.0
+          init_cov_gain: 1.0
           inertia: 88.478840
           damping: 14.334052
           # damping: 28.0

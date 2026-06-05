@@ -27,8 +27,8 @@ private:
   struct HistoryEntry
   {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    Eigen::Vector2d x_post{Eigen::Vector2d::Zero()};
-    Eigen::Matrix2d P_post{Eigen::Matrix2d::Identity()};
+    Eigen::Vector3d x_post{Eigen::Vector3d::Zero()};
+    Eigen::Matrix3d P_post{Eigen::Matrix3d::Identity()};
     double dt_s{0.0};
     double tau_r{0.0};
   };
@@ -37,25 +37,28 @@ private:
     double rudder_angle_rad,
     const Eigen::Vector3d & velocity_through_water_body,
     double yaw_rate_rad_s) const;
-  void predict(Eigen::Vector2d & x, Eigen::Matrix2d & P, double dt_s, double tau_r) const;
-  void update(Eigen::Vector2d & x, Eigen::Matrix2d & P, double z_r) const;
+  void predict(Eigen::Vector3d & x, Eigen::Matrix3d & P, double dt_s, double tau_r, const State & s) const;
+  void update(Eigen::Vector3d & x, Eigen::Matrix3d & P, double z_r) const;
   void on_tune_ekf(
     const std::shared_ptr<farol2_nav::srv::TuneYawRateEkf::Request> req,
     std::shared_ptr<farol2_nav::srv::TuneYawRateEkf::Response> res);
 
   bool initialized_{false};
-  Eigen::Vector2d x_{Eigen::Vector2d::Zero()};   // [r, b]
-  Eigen::Matrix2d P_{Eigen::Matrix2d::Identity()};
+  Eigen::Vector3d x_{Eigen::Vector3d::Zero()};   // [r, b, g]
+  Eigen::Matrix3d P_{Eigen::Matrix3d::Identity()};
 
   // EKF parameters.
   double q_r_{0.02};
   double q_b_{0.01};
+  double q_g_{1e-3};
   double r_meas_{0.1};
   double p0_r_{1.0};
   double p0_b_{1.0};
+  double p0_g_{1.0};
 
   // Yaw dynamics parameters.
-  double inertia_{88.478840};
+  double m_r_{88.478840};
+  double m_uv_{-2.967651};
   double damping_linear_{14.334052};
   double damping_quadratic_{260.675031};
   double Ks_{1.0};
@@ -78,10 +81,14 @@ private:
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr current_yaw_rate_pub_{};
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr innovation_pub_{};
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr delayed_yaw_rate_pub_{};
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr tau_r_pub_{};
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_gain_pub_{};
   std_msgs::msg::Float32 torque_bias_msg_{};
+  std_msgs::msg::Float32 torque_gain_msg_{};
   std_msgs::msg::Float32 yaw_rate_filtered_msg_{};
   std_msgs::msg::Float32 current_yaw_rate_msg_{};
   std_msgs::msg::Float32 delayed_yaw_rate_msg_{};
+  std_msgs::msg::Float32 tau_r_msg_{};
 };
 
 }  // namespace filters

@@ -13,11 +13,13 @@ namespace filters
 void YawRateEkfFilter::configure(rclcpp::Node & node)
 {
   // Configure torque bias publisher for external monitoring.
-  torque_bias_pub_ = node.create_publisher<std_msgs::msg::Float32>("torque_bias", rclcpp::QoS(10));
-  yaw_rate_filtered_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_filtered", rclcpp::QoS(10));
+  torque_bias_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/torque_bias", rclcpp::QoS(10));
+  yaw_rate_filtered_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/yaw_rate_filtered", rclcpp::QoS(10));
   current_yaw_rate_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/current_yaw_rate", rclcpp::QoS(10));
   innovation_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/innovation", rclcpp::QoS(10));
   delayed_yaw_rate_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/delayed_yaw_rate", rclcpp::QoS(10));
+  tau_r_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/tau_r", rclcpp::QoS(10));
+  torque_gain_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/torque_gain", rclcpp::QoS(10));
   tune_ekf_srv_ = node.create_service<farol2_nav::srv::TuneYawRateEkf>(
     "yaw_rate_ekf/tune",
     [this](
@@ -29,26 +31,27 @@ void YawRateEkfFilter::configure(rclcpp::Node & node)
 
   // EKF parameters
   q_r_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.process_noise_yaw_rate", 0.02);
-  q_b_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.process_noise_bias", 0.01);
+  q_b_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.process_noise_bias", 10.0);
+  q_g_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.process_noise_gain", 1e-3);
   r_meas_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.measurement_noise_yaw_rate", 0.1);
   p0_r_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.init_cov_yaw_rate", 1.0);
   p0_b_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.init_cov_bias", 1.0);
+  p0_g_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.init_cov_gain", 1.0);
 
   // parameter for yaw_rate dynamical model
-  inertia_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.inertia", 88.478840);
-  if (std::abs(inertia_) < 1e-9) 
+  m_r_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.inertia", 88.478840);
+  if (std::abs(m_r_) < 1e-9) 
     throw std::invalid_argument("plugins.yaw_rate_ekf.inertia must satisfy |inertia| >= 1e-9");
+  m_uv_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.m_uv", -2.967651);
   damping_linear_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.damping", 14.334052);
   damping_quadratic_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.damping_quadratic", 260.675031);
+
   // parameters for the rudder_angle to torque model
   Ks_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.torque_gain", 1.0);
   rudder_cm_distance_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.rudder_arm", 4.0);
-  const double rudder_angle_limit_deg =
-    node.declare_parameter<double>("plugins.yaw_rate_ekf.rudder_angle_limit_deg", 36.0);
-  rudder_angle_limit_rad_ = farol2_utils::deg2rad(std::abs(rudder_angle_limit_deg));
-  K_L_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.K_L", Ks_);
-  K_D0_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.K_D0", 0.0);
-  K_D1_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.K_D1", 0.0);
+  K_L_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.K_L", 1.398093);
+  K_D0_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.K_D0", 0.000575);
+  K_D1_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.K_D1", 0.520834);
 
   // parameters for the moving average prefilter on the IMU yaw-rate measurements.
   const int64_t measurement_window_samples = node.declare_parameter<int64_t>("plugins.yaw_rate_ekf.measurement_window_samples", 50);
@@ -65,6 +68,7 @@ void YawRateEkfFilter::configure(rclcpp::Node & node)
   P_.setZero();
   P_(0, 0) = std::max(1e-9, p0_r_);
   P_(1, 1) = std::max(1e-9, p0_b_);
+  P_(2, 2) = std::max(1e-9, p0_g_);
   initialized_ = false;
   history_.clear();
 }
@@ -94,20 +98,18 @@ void YawRateEkfFilter::on_tune_ekf(
 double YawRateEkfFilter::get_torque(
   double rudder_angle_rad,
   const Eigen::Vector3d & velocity_through_water_body,
-  double yaw_rate_rad_s) const
+  double r) const
 {
-  // Internal torque model uses radians consistently.
-  const double delta_rud = std::clamp(rudder_angle_rad, -rudder_angle_limit_rad_, rudder_angle_limit_rad_);
-
   const double u = velocity_through_water_body(0);
   const double v = velocity_through_water_body(1);
+  
 
   Eigen::Vector2d V_s;
   V_s(0) = u;
-  V_s(1) = v - yaw_rate_rad_s * rudder_cm_distance_;
+  V_s(1) = v - r * rudder_cm_distance_;
 
   const double gamma = farol2_utils::wrapToPi(std::atan2(V_s(1), V_s(0)));
-  const double alpha = farol2_utils::wrapToPi(delta_rud + gamma);
+  const double alpha = farol2_utils::wrapToPi(rudder_angle_rad + gamma);
   const double V_sq = V_s.squaredNorm();
 
   const double lift = K_L_ * alpha * V_sq;
@@ -116,7 +118,8 @@ double YawRateEkfFilter::get_torque(
   return rudder_cm_distance_ * (lift * std::cos(gamma) + drag * std::sin(gamma));
 }
 
-void YawRateEkfFilter::predict(Eigen::Vector2d & x, Eigen::Matrix2d & P, double dt_s, double tau_r) const
+void YawRateEkfFilter::predict(
+  Eigen::Vector3d & x, Eigen::Matrix3d & P, double dt_s, double tau_r, const State & s) const
 {
   const double dt = std::max(0.0, dt_s);
   if (dt <= 0.0) {
@@ -124,47 +127,54 @@ void YawRateEkfFilter::predict(Eigen::Vector2d & x, Eigen::Matrix2d & P, double 
   }
 
   // Nonlinear model:
-  // r_dot = (tau_r + b - d1*r - d2*r*|r|) / I
+  // r_dot = (g*tau_r + b + m_uv*u*v - d1*r - d2*r*|r|) / I
   // b_dot = 0
+  // g_dot = 0
   const double r = x(0);
   const double b = x(1);
+  const double g = x(2);
   const double r_abs = std::abs(r);
-  const double r_dot = (tau_r  - damping_linear_ * r - damping_quadratic_ * r * r_abs) / inertia_;
-  // const double r_dot = (tau_r - b - damping_linear_ * r - damping_quadratic_ * r * r_abs) / inertia_;
+  const double u = s.velocity_through_water_body(0);
+  const double v = s.velocity_through_water_body(1);
+  const double r_dot = (g * tau_r + b + m_uv_ * u * v - damping_linear_ * r - damping_quadratic_ * r * r_abs) / m_r_;
 
   x(0) = r + dt * r_dot;
   x(1) = b;
+  x(2) = g;
 
   // Jacobian of the discrete dynamics for EKF covariance prediction.
   // d(r*|r|)/dr = 2|r| for r != 0; using 2|r| also at r=0 is acceptable.
-  const double df_dr = (-damping_linear_ - 2.0 * damping_quadratic_ * r_abs) / inertia_;
-  const double df_db = 1.0 / inertia_;
+  const double df_dr = (-damping_linear_ - 2.0 * damping_quadratic_ * r_abs) / m_r_;
+  const double df_db = 1.0 / m_r_;
+  const double df_dg = tau_r / m_r_;
 
-  Eigen::Matrix2d F = Eigen::Matrix2d::Identity();
+  Eigen::Matrix3d F = Eigen::Matrix3d::Identity();
   F(0, 0) += dt * df_dr;
   F(0, 1) += dt * df_db;
+  F(0, 2) += dt * df_dg;
 
-  Eigen::Matrix2d Q = Eigen::Matrix2d::Zero();
+  Eigen::Matrix3d Q = Eigen::Matrix3d::Zero();
   Q(0, 0) = std::max(1e-12, q_r_) * dt;
   Q(1, 1) = std::max(1e-12, q_b_) * dt;
+  Q(2, 2) = std::max(1e-12, q_g_) * dt;
   P = F * P * F.transpose() + Q;
 }
 
-void YawRateEkfFilter::update(Eigen::Vector2d & x, Eigen::Matrix2d & P, double z_r) const
+void YawRateEkfFilter::update(Eigen::Vector3d & x, Eigen::Matrix3d & P, double z_r) const
 {
-  Eigen::RowVector2d H;
-  H << 1.0, 0.0;
+  Eigen::RowVector3d H;
+  H << 1.0, 0.0, 0.0;
 
   const double y = z_r - (H * x)(0);
   std_msgs::msg::Float32 innovation_msg;
   innovation_msg.data = static_cast<float>(y);
   innovation_pub_->publish(innovation_msg);
   const double S_cov = (H * P * H.transpose())(0, 0) + std::max(1e-12, r_meas_);
-  const Eigen::Vector2d K = P * H.transpose() / S_cov;
+  const Eigen::Vector3d K = P * H.transpose() / S_cov;
 
   x += K * y;
 
-  const Eigen::Matrix2d I = Eigen::Matrix2d::Identity();
+  const Eigen::Matrix3d I = Eigen::Matrix3d::Identity();
   P = (I - K * H) * P;
 }
 
@@ -190,21 +200,23 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
   if (m.rudder_angle != nullptr) {
     rudder_angle = farol2_utils::deg2rad(m.rudder_angle->data);
   }
-  const double yaw_rate_rad_s = farol2_utils::deg2rad(s.angular_velocity(2));
-  const double tau_r = get_torque(rudder_angle, s.velocity_through_water_body, yaw_rate_rad_s);
+  const double tau_r = get_torque(rudder_angle, s.velocity_through_water_body, x_(0));
+  tau_r_msg_.data = static_cast<float>(tau_r);
+  tau_r_pub_->publish(tau_r_msg_);
 
   if (!initialized_) {
     x_.setZero();
     x_(0) = has_imu ? z_r : farol2_utils::deg2rad(s.angular_velocity(2));
     x_(1) = 0.0;
+    x_(2) = 1.0;
     initialized_ = true;
     history_.clear();
   }
 
   // 1) Predict current step and append to history.
-  Eigen::Vector2d x_pred = x_;
-  Eigen::Matrix2d P_pred = P_;
-  predict(x_pred, P_pred, dt, tau_r);
+  Eigen::Vector3d x_pred = x_;
+  Eigen::Matrix3d P_pred = P_;
+  predict(x_pred, P_pred, dt, tau_r, s);
   history_.push_back(HistoryEntry{x_pred, P_pred, dt, tau_r});
   while (history_.size() > history_max_samples_) {
     history_.pop_front();
@@ -220,9 +232,9 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
     update(history_.front().x_post, history_.front().P_post, z_r);
 
     for (std::size_t i = 1U; i < history_.size(); ++i) {
-      Eigen::Vector2d x_reprop = history_[i - 1U].x_post;
-      Eigen::Matrix2d P_reprop = history_[i - 1U].P_post;
-      predict(x_reprop, P_reprop, history_[i].dt_s, history_[i].tau_r);
+      Eigen::Vector3d x_reprop = history_[i - 1U].x_post;
+      Eigen::Matrix3d P_reprop = history_[i - 1U].P_post;
+      predict(x_reprop, P_reprop, history_[i].dt_s, history_[i].tau_r, s);
       history_[i].x_post = x_reprop;
       history_[i].P_post = P_reprop;
     }
@@ -235,6 +247,8 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
   s.angular_velocity(2) = farol2_utils::rad2deg(x_(0));
   torque_bias_msg_.data = static_cast<float>(x_(1));
   torque_bias_pub_->publish(torque_bias_msg_);
+  torque_gain_msg_.data = static_cast<float>(x_(2));
+  torque_gain_pub_->publish(torque_gain_msg_);
 }
 
 }  // namespace filters

@@ -6,7 +6,7 @@
     ros__parameters:
       node_frequency: 10.0
       course_instead_of_yaw: false   # set to true to control course angle instead of yaw
-      lpf_order: 2
+      lpf_order: 3
       lpf_method: "tustin"
       lpf_design: "bessel"
       
@@ -30,7 +30,7 @@
         # kffv_lin: 0.0
         # kffv_sq: 0.0
         kffa: 0.0
-        lpf_wc: 6.28 # rad/s (2hz about the maximum possible given that sampling is 10hz)
+        lpf_wc: 1.0 # 6.28 # rad/s (2hz about the maximum possible given that sampling is 10hz)
         # lpf_wc: 12.5664 # rad/s (2hz about the maximum possible given that sampling is 10hz)
         tau_min: -6.0  # N.m (actual in simulation is 5.93)
         tau_max: 6.0 # N.m
