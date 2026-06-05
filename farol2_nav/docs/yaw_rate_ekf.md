@@ -100,6 +100,7 @@ Request fields:
 
 - `process_noise_yaw_rate`
 - `process_noise_bias`
+- `process_noise_gain`
 - `measurement_noise_yaw_rate`
 
 All values must be positive.

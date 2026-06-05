@@ -79,16 +79,18 @@ void YawRateEkfFilter::on_tune_ekf(
 {
   if (req->process_noise_yaw_rate <= 0.0 ||
     req->process_noise_bias <= 0.0 ||
+    req->process_noise_gain <= 0.0 ||
     req->measurement_noise_yaw_rate <= 0.0)
   {
     res->success = false;
     res->message =
-      "All EKF noise parameters must be > 0 (process_noise_yaw_rate, process_noise_bias, measurement_noise_yaw_rate).";
+      "All EKF noise parameters must be > 0 (process_noise_yaw_rate, process_noise_bias, process_noise_gain, measurement_noise_yaw_rate).";
     return;
   }
 
   q_r_ = req->process_noise_yaw_rate;
   q_b_ = req->process_noise_bias;
+  q_g_ = req->process_noise_gain;
   r_meas_ = req->measurement_noise_yaw_rate;
 
   res->success = true;
