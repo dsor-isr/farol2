@@ -94,8 +94,10 @@ This node manages the PF properties discussed in the [implementation](implementa
 ### Ravi Algorithm
 | Parameters | type | Default |
 | --- | --- | --- |
-| kp | float | 0.02 |
-| ki | float | 0.0005 |
+| e_turn | float | 45.0 |
+| xi | float | 1.0 |
+| epsilon_current | float | 0.2 |
+| w0_min | float | 0.01 |
 
 ### Samson Algorithm
 | Parameters | type | Default |

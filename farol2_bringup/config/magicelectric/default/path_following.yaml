@@ -21,6 +21,7 @@
           e_turn: 45.0 # meters at which to start turning, ends up being the same as a lookahead distance
           xi: 1.0 # luis is afraid of overshoot
           epsilon_current: 0.2 # confidence on current estimate 
+          w0_min: 0.08
 
         breivik:
           delta_h: 10.0
