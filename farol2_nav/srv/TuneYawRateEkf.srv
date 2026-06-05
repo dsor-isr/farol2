@@ -1,7 +1,9 @@
 float64 process_noise_yaw_rate
 float64 process_noise_bias
 float64 process_noise_gain
+float64 process_noise_yaw
 float64 measurement_noise_yaw_rate
+float64 measurement_noise_yaw
 ---
 bool success
 string message
