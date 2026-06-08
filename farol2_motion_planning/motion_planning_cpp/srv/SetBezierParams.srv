@@ -1,0 +1,10 @@
+# Request
+int32 bezier_degree
+int32 guess_degree
+int32[] nSplit
+uint8[] constr_flags
+int32 number_sample_Pts
+---
+# Response
+bool success
+string message

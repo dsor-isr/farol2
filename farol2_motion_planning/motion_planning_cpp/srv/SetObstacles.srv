@@ -1,0 +1,7 @@
+# Request
+float64[] circ_obs  # [E1, N1, r1, E2, N2, r2, ...]
+float64[] line_obs  # [Watever...] 
+---
+# Response
+bool success
+string message
