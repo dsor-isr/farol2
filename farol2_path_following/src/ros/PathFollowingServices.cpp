@@ -635,7 +635,7 @@ void PathFollowingNode::SetRaviService(const std::shared_ptr<farol2_path_followi
                                 TOPIC_PUB_RABBIT, 1));
 
   /* Variables to store the gains of the controller */
-  double e_turn, xi, epsilon_current;
+  double e_turn, xi, epsilon_current, w0_min;
   std::vector<double> controller_gains;
 
   try {
@@ -644,10 +644,12 @@ void PathFollowingNode::SetRaviService(const std::shared_ptr<farol2_path_followi
     e_turn = get_parameter("controller_gains.ravi.e_turn").as_double();
     xi = get_parameter("controller_gains.ravi.xi").as_double();
     epsilon_current = get_parameter("controller_gains.ravi.epsilon_current").as_double();
+    w0_min = get_parameter("controller_gains.ravi.w0_min").as_double();
 
     controller_gains.push_back(e_turn);
     controller_gains.push_back(xi);
     controller_gains.push_back(epsilon_current);
+    controller_gains.push_back(w0_min);
 
     /* Assign the new controller */
     this->pf_algorithm_ = new Ravi(controller_gains, this->publishers_[0],

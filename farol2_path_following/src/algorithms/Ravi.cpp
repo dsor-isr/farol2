@@ -1,5 +1,7 @@
 #include "Ravi.hpp"
 
+#include <limits>
+
 Ravi::Ravi(std::vector<double> gains,
            rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr surge_pub,
            rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_pub,
@@ -17,11 +19,12 @@ Ravi::Ravi(std::vector<double> gains,
 bool Ravi::setPFGains(std::vector<double> gains) {
 
   /* Handle the case where the number of gains received is not correct */
-  if(gains.size() != 3) return false;
+  if(gains.size() != 4) return false;
 
   this->e_turn_ = gains[0];
   this->xi_ = gains[1];
   this->epsilon_current_ = gains[2];
+  this->w0_min_ = gains[3];
   return true;
 }
 
@@ -46,7 +49,7 @@ void Ravi::callPFController(double dt) {
   /* Get the vehicle parameters */
   Eigen::Vector2d veh_p;
   veh_p << this->vehicle_state_.eta1[0], this->vehicle_state_.eta1[1];
-  double veh_surge = 1.618;//this->vehicle_state_.v1[0];
+  double veh_surge = 1.72;//this->vehicle_state_.v1[0];
 
   /* Compute the rotation matrix */
   Eigen::Matrix2d RI_F;
@@ -57,7 +60,7 @@ void Ravi::callPFController(double dt) {
   double cross_track = pos_error[1];
 
   double w0 = veh_surge/e_turn_;
-  double min_corridor = 1.5; // minimum corridor for integral action
+  double min_corridor = 4; // minimum corridor for integral action
 
   // compute current velocity orthogonal to the path
   double vc_x_I = vehicle_state_.vc_inertial(0);
@@ -69,13 +72,17 @@ void Ravi::callPFController(double dt) {
   double ki = 0.0;
   // compute integral corridor based on uncertainty of current estimate
   double integral_corridor = std::max(min_corridor, vc_y_P*epsilon_current_/kp);
-  if (abs(cross_track) < integral_corridor) {
+  if (abs(cross_track) < integral_corridor) { 
+    w0 = w0_min_;
     kp = 2.0*xi_*w0;
     ki = std::pow(w0, 2);
   }
 
   // hard cap on integral term based on maximum expected current disturbance
-  double sigma_max = veh_surge/ki *sin( acos(vc_y_P*epsilon_current_/veh_surge) );
+  double sigma_max = std::numeric_limits<double>::infinity();
+  if (ki > 1e-12) {
+    sigma_max = veh_surge / ki * std::sin(std::acos(vc_y_P * epsilon_current_ / veh_surge));
+  }
 
 //   std::cout << "integral_corridor: " << integral_corridor << std::endl;
 //   std::cout << "w0: " << w0 << std::endl;

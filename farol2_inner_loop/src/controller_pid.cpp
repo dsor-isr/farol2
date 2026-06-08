@@ -102,7 +102,8 @@ double ControllerPID::callControllerImpl(double state, double state_ref, double 
   error_ = state_for_control - ref_for_control;
   if (wrapToPi_)  // Wrap to [-pi, pi] if needed
     error_ = farol2_utils::wrapToPi(error_);
-  error_rate_ = state_rate_used_ - dref_;
+  // error_rate_ = state_rate_used_ - dref_;
+  error_rate_ =  0.0- dref_;
   
   // Manual derivaties of everything because delta implementation
   error_dot_ = (error_ - error_prev_) / dt; // this is outside so we dont miss the initial step so that delta behaves more like tradition pid
@@ -137,16 +138,14 @@ double ControllerPID::callControllerImpl(double state, double state_ref, double 
     tau_d_ = -ki_*error_;
     Ka_ = 1.0/dt;
     tau_dot_ = tau_d_ - Ka_*(tau_prev_ - tau_sat_prev_);
-    if(abs(tau_)<tau_max_)
+    if(abs(tau_)<tau_max_/2)
       i_term_ = i_term_ + tau_dot_*dt ;
     
-    i_term_ = i_term_ + tau_dot_*dt ;
-
     p_term_ = -kp_ * error_;
     d_term_ = -kd_ * error_rate_;
     
     // add all pid terms
-    tau_ =  p_term_;// + i_term_ + d_term_;
+    tau_ =  p_term_ + i_term_ + d_term_;
 
     std::cout << "P: " << p_term_ << " I: " << i_term_ << " D: " << d_term_ << std::endl;
     // antiwindup saturation
@@ -173,6 +172,7 @@ void ControllerPID::setGains(double kp, double ki, double kd, double kffv_lin, d
   kffv_lin_ = kffv_lin;
   kffv_sq_ = kffv_sq;
   kffa_ = kffa;
+  i_term_ = 0.0; // reset integral term when gains are changed to avoid spikes
 }
 
 }  // namespace farol_control

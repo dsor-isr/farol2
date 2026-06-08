@@ -4,6 +4,17 @@
 
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
+
+namespace
+{
+double yaw_from_quaternion(const geometry_msgs::msg::Quaternion & q)
+{
+  const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
+  const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+  return std::atan2(siny_cosp, cosy_cosp);
+}
+}  // namespace
 
 namespace farol2_nav
 {
@@ -33,10 +44,13 @@ void YawRateEkfFilter::configure(rclcpp::Node & node)
   q_r_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.process_noise_yaw_rate", 0.02);
   q_b_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.process_noise_bias", 10.0);
   q_g_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.process_noise_gain", 1e-3);
-  r_meas_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.measurement_noise_yaw_rate", 0.1);
+  q_yaw_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.process_noise_yaw", 1e-3);
+  r_yaw_rate_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.measurement_noise_yaw_rate", 0.1);
+  r_yaw_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.measurement_noise_yaw", 0.1);
   p0_r_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.init_cov_yaw_rate", 1.0);
   p0_b_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.init_cov_bias", 1.0);
   p0_g_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.init_cov_gain", 1.0);
+  p0_yaw_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.init_cov_yaw", 1.0);
 
   // parameter for yaw_rate dynamical model
   m_r_ = node.declare_parameter<double>("plugins.yaw_rate_ekf.inertia", 88.478840);
@@ -58,17 +72,29 @@ void YawRateEkfFilter::configure(rclcpp::Node & node)
   if (measurement_window_samples < 1) 
     throw std::invalid_argument("plugins.yaw_rate_ekf.measurement_window_samples must be >= 1");
   measurement_window_samples_ = static_cast<std::size_t>(measurement_window_samples);
+  const int64_t yaw_measurement_window_samples = node.declare_parameter<int64_t>(
+    "plugins.yaw_rate_ekf.yaw_measurement_window_samples", static_cast<int64_t>(measurement_window_samples_));
+  if (yaw_measurement_window_samples < 1) {
+    throw std::invalid_argument("plugins.yaw_rate_ekf.yaw_measurement_window_samples must be >= 1");
+  }
+  yaw_measurement_window_samples_ = static_cast<std::size_t>(yaw_measurement_window_samples);
+  if (yaw_measurement_window_samples_ != measurement_window_samples_) {
+    throw std::invalid_argument(
+            "plugins.yaw_rate_ekf.yaw_measurement_window_samples must match measurement_window_samples when using joint delayed updates.");
+  }
   measurement_delay_samples_ = (measurement_window_samples_ - 1U) / 2U;
   history_max_samples_ = std::max<std::size_t>(2U, measurement_delay_samples_ + 1U); // Keep exactly the lag horizon plus the current step so delayed update index exists.
 
   // Yaw-rate is linear (no wrap). Sample-window MAF smooths IMU noise before EKF correction.
   yaw_rate_maf_.configure(measurement_window_samples_, false, false, 0.0);
+  yaw_maf_.configure(yaw_measurement_window_samples_, true, false, 0.0);
     
   // Initialize state and covariance.
   P_.setZero();
   P_(0, 0) = std::max(1e-9, p0_r_);
   P_(1, 1) = std::max(1e-9, p0_b_);
   P_(2, 2) = std::max(1e-9, p0_g_);
+  P_(3, 3) = std::max(1e-9, p0_yaw_);
   initialized_ = false;
   history_.clear();
 }
@@ -79,20 +105,26 @@ void YawRateEkfFilter::on_tune_ekf(
 {
   if (req->process_noise_yaw_rate <= 0.0 ||
     req->process_noise_bias <= 0.0 ||
-    req->measurement_noise_yaw_rate <= 0.0)
+    req->process_noise_gain <= 0.0 ||
+    req->process_noise_yaw <= 0.0 ||
+    req->measurement_noise_yaw_rate <= 0.0 ||
+    req->measurement_noise_yaw <= 0.0)
   {
     res->success = false;
     res->message =
-      "All EKF noise parameters must be > 0 (process_noise_yaw_rate, process_noise_bias, measurement_noise_yaw_rate).";
+      "All EKF noise parameters must be > 0 (process_noise_yaw_rate, process_noise_bias, process_noise_gain, process_noise_yaw, measurement_noise_yaw_rate, measurement_noise_yaw).";
     return;
   }
 
   q_r_ = req->process_noise_yaw_rate;
   q_b_ = req->process_noise_bias;
-  r_meas_ = req->measurement_noise_yaw_rate;
+  q_g_ = req->process_noise_gain;
+  q_yaw_ = req->process_noise_yaw;
+  r_yaw_rate_ = req->measurement_noise_yaw_rate;
+  r_yaw_ = req->measurement_noise_yaw;
 
   res->success = true;
-  res->message = "Yaw-rate EKF noise parameters updated.";
+  res->message = "Yaw-rate/yaw EKF noise parameters updated.";
 }
 
 double YawRateEkfFilter::get_torque(
@@ -119,7 +151,7 @@ double YawRateEkfFilter::get_torque(
 }
 
 void YawRateEkfFilter::predict(
-  Eigen::Vector3d & x, Eigen::Matrix3d & P, double dt_s, double tau_r, const State & s) const
+  Eigen::Vector4d & x, Eigen::Matrix4d & P, double dt_s, double tau_r, const State & s) const
 {
   const double dt = std::max(0.0, dt_s);
   if (dt <= 0.0) {
@@ -130,9 +162,11 @@ void YawRateEkfFilter::predict(
   // r_dot = (g*tau_r + b + m_uv*u*v - d1*r - d2*r*|r|) / I
   // b_dot = 0
   // g_dot = 0
+  // yaw_dot = r
   const double r = x(0);
   const double b = x(1);
   const double g = x(2);
+  const double yaw = x(3);
   const double r_abs = std::abs(r);
   const double u = s.velocity_through_water_body(0);
   const double v = s.velocity_through_water_body(1);
@@ -141,6 +175,7 @@ void YawRateEkfFilter::predict(
   x(0) = r + dt * r_dot;
   x(1) = b;
   x(2) = g;
+  x(3) = farol2_utils::wrapToPi(yaw + dt * r);
 
   // Jacobian of the discrete dynamics for EKF covariance prediction.
   // d(r*|r|)/dr = 2|r| for r != 0; using 2|r| also at r=0 is acceptable.
@@ -148,33 +183,43 @@ void YawRateEkfFilter::predict(
   const double df_db = 1.0 / m_r_;
   const double df_dg = tau_r / m_r_;
 
-  Eigen::Matrix3d F = Eigen::Matrix3d::Identity();
+  Eigen::Matrix4d F = Eigen::Matrix4d::Identity();
   F(0, 0) += dt * df_dr;
   F(0, 1) += dt * df_db;
   F(0, 2) += dt * df_dg;
+  F(3, 0) = dt;
 
-  Eigen::Matrix3d Q = Eigen::Matrix3d::Zero();
+  Eigen::Matrix4d Q = Eigen::Matrix4d::Zero();
   Q(0, 0) = std::max(1e-12, q_r_) * dt;
   Q(1, 1) = std::max(1e-12, q_b_) * dt;
   Q(2, 2) = std::max(1e-12, q_g_) * dt;
+  Q(3, 3) = std::max(1e-12, q_yaw_) * dt;
   P = F * P * F.transpose() + Q;
 }
 
-void YawRateEkfFilter::update(Eigen::Vector3d & x, Eigen::Matrix3d & P, double z_r) const
+void YawRateEkfFilter::update(Eigen::Vector4d & x, Eigen::Matrix4d & P, const Eigen::Vector2d & z) const
 {
-  Eigen::RowVector3d H;
-  H << 1.0, 0.0, 0.0;
+  Eigen::Matrix<double, 2, 4> H = Eigen::Matrix<double, 2, 4>::Zero();
+  H(0, 0) = 1.0;  // yaw-rate
+  H(1, 3) = 1.0;  // yaw
 
-  const double y = z_r - (H * x)(0);
+  Eigen::Vector2d y = z - H * x;
+  y(1) = farol2_utils::wrapToPi(y(1));
   std_msgs::msg::Float32 innovation_msg;
-  innovation_msg.data = static_cast<float>(y);
+  innovation_msg.data = static_cast<float>(y(0));
   innovation_pub_->publish(innovation_msg);
-  const double S_cov = (H * P * H.transpose())(0, 0) + std::max(1e-12, r_meas_);
-  const Eigen::Vector3d K = P * H.transpose() / S_cov;
+
+  Eigen::Matrix2d R = Eigen::Matrix2d::Zero();
+  R(0, 0) = std::max(1e-12, r_yaw_rate_);
+  R(1, 1) = std::max(1e-12, r_yaw_);
+
+  const Eigen::Matrix2d S_cov = H * P * H.transpose() + R;
+  const Eigen::Matrix<double, 4, 2> K = P * H.transpose() * S_cov.inverse();
 
   x += K * y;
+  x(3) = farol2_utils::wrapToPi(x(3));
 
-  const Eigen::Matrix3d I = Eigen::Matrix3d::Identity();
+  const Eigen::Matrix4d I = Eigen::Matrix4d::Identity();
   P = (I - K * H) * P;
 }
 
@@ -188,9 +233,15 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
   // Measurement: IMU yaw-rate (rad/s).
   const bool has_imu = (m.imu != nullptr);
   double z_r = 0.0;
+  double z_yaw = 0.0;
   if (has_imu) {
     yaw_rate_maf_.step(m.imu->angular_velocity.z);
     z_r = yaw_rate_maf_.y();
+
+    const double yaw_meas = yaw_from_quaternion(m.imu->orientation);
+    yaw_maf_.step(yaw_meas);
+    z_yaw = farol2_utils::wrapToPi(yaw_maf_.y());
+
     yaw_rate_filtered_msg_.data = static_cast<float>(z_r);
     yaw_rate_filtered_pub_->publish(yaw_rate_filtered_msg_);
   }
@@ -209,13 +260,14 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
     x_(0) = has_imu ? z_r : farol2_utils::deg2rad(s.angular_velocity(2));
     x_(1) = 0.0;
     x_(2) = 1.0;
+    x_(3) = has_imu ? z_yaw : farol2_utils::deg2rad(s.attitude(2));
     initialized_ = true;
     history_.clear();
   }
 
   // 1) Predict current step and append to history.
-  Eigen::Vector3d x_pred = x_;
-  Eigen::Matrix3d P_pred = P_;
+  Eigen::Vector4d x_pred = x_;
+  Eigen::Matrix4d P_pred = P_;
   predict(x_pred, P_pred, dt, tau_r, s);
   history_.push_back(HistoryEntry{x_pred, P_pred, dt, tau_r});
   while (history_.size() > history_max_samples_) {
@@ -229,11 +281,13 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
   // 2) Apply correction at the oldest buffered state and re-roll forward.
   // With history size tied to delay+1, the oldest entry is the delayed state.
   if (has_imu && !history_.empty()) {
-    update(history_.front().x_post, history_.front().P_post, z_r);
+    Eigen::Vector2d z;
+    z << z_r, z_yaw;
+    update(history_.front().x_post, history_.front().P_post, z);
 
     for (std::size_t i = 1U; i < history_.size(); ++i) {
-      Eigen::Vector3d x_reprop = history_[i - 1U].x_post;
-      Eigen::Matrix3d P_reprop = history_[i - 1U].P_post;
+      Eigen::Vector4d x_reprop = history_[i - 1U].x_post;
+      Eigen::Matrix4d P_reprop = history_[i - 1U].P_post;
       predict(x_reprop, P_reprop, history_[i].dt_s, history_[i].tau_r, s);
       history_[i].x_post = x_reprop;
       history_[i].P_post = P_reprop;
@@ -243,8 +297,10 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
   x_ = history_.back().x_post;
   P_ = history_.back().P_post;
 
-  // This module only outputs yaw-rate; all other state channels are untouched.
+  // Expose yaw-rate (deg/s) and yaw estimate (deg) to downstream state consumers.
   s.angular_velocity(2) = farol2_utils::rad2deg(x_(0));
+  // s.attitude(2) = farol2_utils::rad2deg(z_yaw);
+  // s.attitude(2) = farol2_utils::rad2deg(x_(3));
   torque_bias_msg_.data = static_cast<float>(x_(1));
   torque_bias_pub_->publish(torque_bias_msg_);
   torque_gain_msg_.data = static_cast<float>(x_(2));

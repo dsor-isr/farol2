@@ -242,14 +242,9 @@ void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
   msg_.current_velocity_ned.y = state_.current_velocity_ned(1);
   msg_.current_velocity_ned.z = state_.current_velocity_ned(2);
 
-  const double pitch_arg = std::clamp(-state_.rotation_bn(2, 0), -1.0, 1.0);
-  const double roll_rad = std::atan2(state_.rotation_bn(2, 1), state_.rotation_bn(2, 2));
-  const double pitch_rad = std::asin(pitch_arg);
-  const double yaw_rad = std::atan2(state_.rotation_bn(1, 0), state_.rotation_bn(0, 0));
-
-  msg_.attitude.roll = farol2_utils::rad2deg(roll_rad);
-  msg_.attitude.pitch = farol2_utils::rad2deg(pitch_rad);
-  msg_.attitude.yaw = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(yaw_rad));
+  msg_.attitude.roll = state_.attitude(0);
+  msg_.attitude.pitch = state_.attitude(1);
+  msg_.attitude.yaw = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(farol2_utils::deg2rad( state_.attitude(2))));
   msg_.angular_velocity.x = state_.angular_velocity(0);
   msg_.angular_velocity.y = state_.angular_velocity(1);
   msg_.angular_velocity.z = state_.angular_velocity(2);

@@ -27,8 +27,8 @@ private:
   struct HistoryEntry
   {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    Eigen::Vector3d x_post{Eigen::Vector3d::Zero()};
-    Eigen::Matrix3d P_post{Eigen::Matrix3d::Identity()};
+    Eigen::Vector4d x_post{Eigen::Vector4d::Zero()};
+    Eigen::Matrix4d P_post{Eigen::Matrix4d::Identity()};
     double dt_s{0.0};
     double tau_r{0.0};
   };
@@ -37,24 +37,27 @@ private:
     double rudder_angle_rad,
     const Eigen::Vector3d & velocity_through_water_body,
     double yaw_rate_rad_s) const;
-  void predict(Eigen::Vector3d & x, Eigen::Matrix3d & P, double dt_s, double tau_r, const State & s) const;
-  void update(Eigen::Vector3d & x, Eigen::Matrix3d & P, double z_r) const;
+  void predict(Eigen::Vector4d & x, Eigen::Matrix4d & P, double dt_s, double tau_r, const State & s) const;
+  void update(Eigen::Vector4d & x, Eigen::Matrix4d & P, const Eigen::Vector2d & z) const;
   void on_tune_ekf(
     const std::shared_ptr<farol2_nav::srv::TuneYawRateEkf::Request> req,
     std::shared_ptr<farol2_nav::srv::TuneYawRateEkf::Response> res);
 
   bool initialized_{false};
-  Eigen::Vector3d x_{Eigen::Vector3d::Zero()};   // [r, b, g]
-  Eigen::Matrix3d P_{Eigen::Matrix3d::Identity()};
+  Eigen::Vector4d x_{Eigen::Vector4d::Zero()};   // [r, b, g, yaw]
+  Eigen::Matrix4d P_{Eigen::Matrix4d::Identity()};
 
   // EKF parameters.
   double q_r_{0.02};
   double q_b_{0.01};
   double q_g_{1e-3};
-  double r_meas_{0.1};
+  double q_yaw_{1e-3};
+  double r_yaw_rate_{0.1};
+  double r_yaw_{0.1};
   double p0_r_{1.0};
   double p0_b_{1.0};
   double p0_g_{1.0};
+  double p0_yaw_{1.0};
 
   // Yaw dynamics parameters.
   double m_r_{88.478840};
@@ -70,9 +73,11 @@ private:
 
   // IMU yaw-rate prefilter.
   std::size_t measurement_window_samples_{5U};
+  std::size_t yaw_measurement_window_samples_{5U};
   std::size_t measurement_delay_samples_{2U};
   std::size_t history_max_samples_{300U};
   farol2_utils::MovingAverageFilter yaw_rate_maf_{};
+  farol2_utils::MovingAverageFilter yaw_maf_{};
 
   std::deque<HistoryEntry, Eigen::aligned_allocator<HistoryEntry>> history_{};
   rclcpp::Service<farol2_nav::srv::TuneYawRateEkf>::SharedPtr tune_ekf_srv_{};
