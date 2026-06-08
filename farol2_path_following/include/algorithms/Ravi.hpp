@@ -23,7 +23,8 @@ class Ravi : public PathFollowing {
     /**
      * @brief Constructor method for the Path Following class
      *
-    * @param gains A vector with the gains of the controller (4 gains: e_turn, xi, epsilon_current, w0_min)
+    * @param gains A vector with the gains of the controller
+    * (5 gains: e_turn, min_corridor, xi, w0_min, epsilon_current)
      * @param surge_pub The ROS surge publisher
      * @param yaw_pub The ROS yaw publisher
      * @param mode_client The ROS service client to change the mode of operation of the path (to the closest point)
@@ -37,7 +38,8 @@ class Ravi : public PathFollowing {
     /**
      * @brief  Method that given an array of doubles, updates the gains of the controller
      *
-    * @param gains A vector of gains of the controller (4 gains: e_turn, xi, epsilon_current, w0_min)
+    * @param gains A vector of gains of the controller
+    * (5 gains: e_turn, min_corridor, xi, w0_min, epsilon_current)
      *
      * @return a boolean which represents the success of the operation
      */
@@ -82,9 +84,10 @@ class Ravi : public PathFollowing {
      * @brief Controller paramter gains
      */
     double e_turn_;
+    double min_corridor_;
     double xi_;
-    double epsilon_current_;
     double w0_min_;
+    double epsilon_current_;
 
     /**
      * @brief Variables to store the desired references
