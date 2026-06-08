@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>motion_planning_cpp</name>
+  <version>1.0.0</version>
+  <description>
+    Node for interactive multi-robot motion planning with Bezier optimization.
+  </description>
+
+  <license>MIT</license>
+  <author email="dsor.isr@gmail.com">#DSORTeam</author>
+  <maintainer email="dsor.isr@gmail.com">#DSORTeam</maintainer>
+
+  <!-- Build tool -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- ROS dependencies -->
+  <depend>roscpp</depend>
+  <depend>farol_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <!-- For generating custom messages and services -->
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+</package>

@@ -1,0 +1,8 @@
+string vehicle_name
+float64 E
+float64 N
+float64 theta
+float64 v
+---
+bool success
+string message

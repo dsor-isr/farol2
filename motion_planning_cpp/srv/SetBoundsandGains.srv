@@ -1,0 +1,19 @@
+# Request
+float64 vel_min
+float64 vel_max
+float64 acc_min
+float64 acc_max
+float64 ang_vel_min
+float64 ang_vel_max
+float64 ang_acc_min
+float64 ang_acc_max
+float64 obs_min
+float64 obs_max
+float64 radius
+float64 alpha
+float64 beta
+float64 gamma
+---
+# Response
+bool success
+string message

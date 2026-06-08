@@ -1,0 +1,439 @@
+addons/console_server:
+    PORT: 7080
+
+cooperative/cpf_wifi_server:
+    broadcast_port: 2808
+
+cooperative/cpf_wifi_client:
+    broadcast_port: 2808
+
+ExampleCppNode:
+    topics:
+        subscribers:
+            pause: "/mblack3/example_cpp/pause"
+        publishers:
+            count: "/mblack3/example_cpp/count"
+
+## --------------------------- ## 
+#  farol_addons                #
+## --------------------------- ## 
+addons/console_path_parser:
+    node_frequency: 5
+    topics:
+        subscribers: 
+            Mission_String: "/mblack3/addons/Mission_String"
+            state: "/mblack3/nav/filter/state"
+            flag: "/mblack3/Flag"
+        publishers:
+            Path_Section: "/mblack3/addons/path_section"
+            Formation: "/mblack3/addons/formation"
+            biased_formation: "/mblack3/addons/biased_formation"
+            WPRef: "/mblack3/addons/WPRef"
+            DepthRef: "/mblack3/ref/depth"
+            AltRef: "/mblack3/ref/altitude"
+            FullMission: "/mblack3/addons/full_mission"
+        services:
+            reset_path: "/mblack3/ResetPath"
+            arc2d_path: "/mblack3/SpawnArc2DPath"
+            line_path: "/mblack3/SpawnLinePath"
+            bezier_path: "/mblack3/SpawnBezierPath"
+            pf_start: "/mblack3/PFStart"
+            pf_stop: "/mblack3/PFStop"
+            set_speed: "/mblack3/SetConstVdVehicle"
+            set_bezier_speed: "/mblack3/SetBezierVdVehicle"
+
+addons/console_server:
+    PORT: 7080
+    topics:
+      services:
+          wp_standard: "/mblack3/controls/send_wp_standard"
+          wp_loose: "/mblack3/controls/send_wp_loose"
+          wp_heading: "/mblack3/controls/send_wp_heading"
+      console:
+          waypoint: "wp_standard"
+    
+addons/aggregator:
+    pub_rate: 2.0
+
+addons/remote_controller:
+    node_frequency: 10 #Hz
+    topics:
+        publishers:
+            # Linear velocity inner-loops
+            surge: "/mblack3/ref/surge"
+            sway: "/mblack3/ref/sway"
+            heave: "/mblack3/ref/heave"
+
+            # Angular speed references
+            yaw_rate: "/mblack3/ref/yaw_rate"
+
+            # Orientation references
+            yaw: "/mblack3/ref/yaw"
+
+            # Depth references
+            depth: "/mblack3/ref/depth"
+
+        subscribers:
+            state: "/mblack3/nav/filter/state"
+
+## --------------------------- ## 
+#  farol_sim                   #
+## --------------------------- ## 
+## dynamic model
+sim/auv_sim:
+    frame_id: "mblack3"
+    node_frequency: 100 # (Hz)
+    topics:
+        subscribers:
+            thrusters: "/mblack3/thrusters/rpm_command"
+        publishers:
+            odometry: "/mblack3/sim/dynamics/position"
+        services:
+            start_pause: "/mblack3/sim/pause_start"
+
+## sensor simulator
+sim/sensors:
+    node_frequency: 10
+    topics:
+        subscribers: 
+            position: "/mblack3/sim/dynamics/position"
+        publishers: 
+            position: "/mblack3/measurement/position"
+            velocity: "/mblack3/measurement/velocity"
+            orientation: "/mblack3/measurement/orientation"
+            gnss: "/mblack3/sensors/gnss"
+            range: "/mblack3/sensors/range"
+            state: "/mblack3/sim/model/state"
+    services:
+      enable_dvl: "/mblack3/sim/enable_dvl"
+      enable_altimeter: "/mblack3/sim/enable_altimeter"
+
+## --------------------------- ## 
+#  farol_nav                   #
+## --------------------------- ## 
+nav/filter:
+    node_frequency: 10      # ROS node rate
+    topics:
+        subscribers:
+            reset: "/mblack3/nav/filter/reset"
+            position: "/mblack3/measurement/position"
+            velocity: "/mblack3/measurement/velocity"
+            orientation: "/mblack3/measurement/orientation"
+        publishers:
+            state: "/mblack3/nav/filter/state"
+            state_acomms: "/mblack3/nav/filter/state_acomms"
+            currents: "/mblack3/nav/filter/currents"
+            state_sensors: "/mblack3/nav/filter/State_sensors"
+            vc_meas_velocity: "/mblack3/nav/filter/vc_meas_velocity"
+            vc_meas_position: "/mblack3/nav/filter/vc_meas_position"
+            biased_heading: "/mblack3/nav/filter/biased_heading"
+            
+
+    topics_dr:
+       velocity: "/mblack3/measurement/velocity"
+       orientation: "/mblack3/measurement/orientation"
+       true_state: "/mblack3/nav/filter/state"
+       flag: "/mblack3/Flag"
+       dead_reckoning: "/mblack3/nav/filter/state_dr"
+       dead_reckoning_console: "/mblack3/State_dr"
+    services_dr:
+       reset_filter_dr: "/mblack3/nav/reset_filter_dr"
+    services:
+       set_vcurrent_velocity: "/mblack3/nav/set_vcurrent_velocity"
+       reset_vcurrent: "/mblack3/nav/reset_vcurrent"
+       set_bias_heading: "/mblack3/nav/set_bias_heading"
+       reset_bias_heading: "/mblack3/nav/reset_bias_heading"
+
+
+
+nav/gnss2utm:
+    node_frequency: 10
+    topics:
+        subscribers:
+            gnss: "/mblack3/sensors/gnss" 
+        publishers: 
+            position: "/mblack3/measurement/position"
+            ground_truth: "/mblack3/State_gt"
+    services:
+        enable_gps: "/mblack3/sensor/enable_gps"
+
+nav/gnss2utmoutlier:
+    node_frequency: 10
+    topics:
+        subscribers:
+            gnss: "/mblack3/sensors/gnss" 
+        publishers: 
+            position: "/mblack3/measurement/position"
+    services:
+        enable_gps_outlier: "/mblack3/sensor/fake/enable_gps_outlier"
+        enable_usbl_delay: "/mblack3/sensor/fake/enable_usbl_delay"
+
+nav/usbl2pos:
+    node_frequency: 10
+    topics:
+        subscribers:
+            usbl_fix: "/mblack3/sensors/usbl_fix"
+            acomms_state: "/mblack3/acomms/nav/filter/state"
+            state: "/mblack3/nav/filter/state"
+        publishers:
+            position: "/mblack3/measurement/position"
+            console_state_usbl_estimation: "/mblack3/State_usbl_est"
+            state_usbl_estimation: "/mblack3/nav/filter/usbl_est"
+
+nav/auvstate2mstate:
+    node_frequency: 10
+    topics:
+        subscribers:
+            state: "/mblack3/nav/filter/state"
+            gnss: "/mblack3/sensors/gnss"
+            inside_pressure_filter: "/mblack3/drivers/inside_pressure_filter/data"
+            inside_pressure_rate: "/mblack3/drivers/inside_pressure_filter/data_dot"
+        publishers:  
+            console_state: "/mblack3/State"
+
+## --------------------------- ## 
+#  farol_control               #
+## --------------------------- ## 
+controls/static_thruster_allocation:
+    topics:
+        subscribers:
+            thrust_body_request: "/mblack3/thrust_body_request"
+        publishers:
+            thrusters: "/mblack3/thrusters/rpm_command"
+
+controls/inner_loops_pid:
+    node_frequency: 10.0 
+    topics:
+        subscribers:
+            yaw: "/mblack3/ref/yaw"
+            pitch: "/mblack3/ref/pitch"
+            roll: "/mblack3/ref/roll"
+            yaw_rate: "/mblack3/ref/yaw_rate"
+            pich_rate: "/mblack3/ref/pitch_rate"
+            roll_rate: "/mblack3/ref/roll_rate"
+            surge: "/mblack3/ref/surge"
+            sway: "/mblack3/ref/sway"
+            heave: "/mblack3/ref/heave"
+            depth: "/mblack3/ref/depth"
+            altitude: "/mblack3/ref/altitude"
+            altitude_safety: "/mblack3/ref/altitude_safety"
+            depth_safety: "/mblack3/ref/depth_safety"
+            state: "/mblack3/nav/filter/state"
+            force_bypass: "/mblack3/force_bypass"
+            turn_radius_speed: "/mblack3/nav/filter/state"
+        publishers:
+            thrust_body_request: "/mblack3/thrust_body_request"
+            turn_radius_flag: "/mblack3/turn_radius_flag"
+        services: 
+            change_ff_gains: "/mblack3/inner_forces/change_ff_gains"
+            change_inner_gains: "/mblack3/inner_forces/change_inner_gains"
+            change_inner_limits: "/mblack3/inner_forces/change_inner_limits"
+            turning_radius_limiter: "/mblack3/inner_forces/turning_radius_limiter"
+
+controls/waypoint:
+    node_frequency: 10.0
+    topics:
+        publishers:
+            yaw_ref: "/mblack3/ref/yaw"
+            yaw_rate_ref: "/mblack3/ref/yaw_rate"
+            u_ref: "/mblack3/ref/surge"
+            v_ref: "/mblack3/ref/sway"
+            flag: "/mblack3/Flag"
+        subscribers:
+            flag: "/mblack3/Flag"
+            state: "/mblack3/nav/filter/state"
+            turn_radius_flag: "/mblack3/turn_radius_flag"
+        services:
+            wp_standard: "/mblack3/controls/send_wp_standard"
+            wp_loose: "/mblack3/controls/send_wp_loose"
+            wp_heading: "/mblack3/controls/send_wp_heading"
+
+controls/path_following:
+    node_frequency: 10.0
+    flag: "/mblack3/Flag"
+    topics:
+        subscribers:
+            state: "/mblack3/nav/filter/state"
+            path: "/mblack3/PathData"
+            vc: "/mblack3/PF/vc"
+        publishers:
+            surge: "/mblack3/ref/surge"
+            sway: "/mblack3/ref/sway"
+            heave: "/mblack3/ref/heave"
+            roll: "/mblack3/ref/roll"
+            roll_rate: "/mblack3/ref/roll_rate"
+            pitch: "/mblack3/ref/pitch"
+            pitch_rate: "/mblack3/ref/pitch_rate"
+            yaw: "/mblack3/ref/yaw"
+            yaw_rate: "/mblack3/ref/yaw_rate"
+    
+            # Publishers for the virtual target
+            rabbit: "/mblack3/Gamma"
+            
+            # Observer for the currents
+            observer:
+                x: "/mblack3/current/x"
+                y: "/mblack3/current/y"
+
+            # Publish info for plots
+            pfollowing_debug: "/mblack3/pfollowing/debug"
+        
+        services:
+            # Service names to start and stop the path following algorithm
+            start_pf: "/mblack3/PFStart"
+            stop_pf: "/mblack3/PFStop"
+            updates_gains_pf: "/mblack3/PFUpdateGains"
+            reset_vt_pf: "/mblack3/ResetVT"
+    
+            # Service names to switch the path following algorithm
+            relative_heading_pf: "/mblack3/PFSetRelativeHeading"
+            marcelo_pf: "/mblack3/PFSetMarcelo"
+            aguiar_pf: "/mblack3/PFSetAguiar"
+            brevik_pf: "/mblack3/PFSetBrevik"
+            fossen_pf: "/mblack3/PFSetFossen"
+            romulo_pf: "/mblack3/PFSetRomulo"
+            lapierre_pf: "/mblack3/PFSetLapierre"
+            pramod_pf: "/mblack3/PFSetPramod"
+            samson_pf: "/mblack3/PFSetSamson"
+            gorka_pf: "/mblack3/PFSetGorka"
+            # Service names related to the path
+            reset_path: "/mblack3/ResetPath"
+            set_path_mode: "/mblack3/SetMode"
+            # Service names related to the waypoint
+            wp_standard: "/mblack3/controls/send_wp_standard"
+
+controls/vehicle_stabilizer:
+  topics:
+    publishers:
+      surge: "/mblack3/ref/surge"
+      sway: "/mblack3/ref/sway"
+      heave: "/mblack3/ref/heave"
+
+      roll_rate: "/mblack3/ref/roll_rate"
+      pitch_rate: "/mblack3/ref/pitch_rate"
+      yaw_rate: "/mblack3/ref/yaw_rate"
+
+      roll: "/mblack3/ref/roll"
+      pitch: "/mblack3/ref/pitch"
+      yaw: "/mblack3/ref/yaw"
+
+      depth: "/mblack3/ref/depth"
+      altitude: "/mblack3/ref/altitude"
+   
+### Cooperative control law
+cooperative/cpf_control:
+    node_frequency: 10
+    topics:
+        publishers: 
+            vc: "/mblack3/PF/vc"
+            cpf_server_input: "/mblack3/Internal/Gamma"
+        subscribers:
+            internal_gamma: "/mblack3/PathData"
+            external_gamma: "/mblack3/External/Gamma"
+        services:
+        # Service names to start and stop the path following algorithm
+            start_cpf: "/mblack3/CPFStart"
+            stop_cpf: "/mblack3/CPFStop"
+            change_topology: "/mblack3/CPFChangeTopology"
+
+cooperative/cpf_wifi_server:
+    broadcast_port: 2808
+    node_frequency: 10
+    topics:
+      subscribers:
+        internal_gamma: "/mblack3/Internal/Gamma"
+      publishers:
+        cpf_gamma: "/mblack3/External/Gamma"
+        
+cooperative/cpf_wifi_client:
+    broadcast_port: 2808
+    node_frequency: 10
+    topics:
+      subscribers:
+        internal_gamma: "/mblack3/Internal/Gamma"
+      publishers:
+        cpf_gamma: "/mblack3/External/Gamma"
+
+## --------------------------- ## 
+#  farol_planning              #
+## --------------------------- ##
+planning/dsor_paths:
+    node_frequency: 10.0
+    frame_id: "Path_frame"
+    topics:
+        subscribers:
+            gamma: "/mblack3/Gamma"
+            vehicle_state: "/mblack3/nav/filter/state"
+        publishers:
+            path_data: "/mblack3/PathData"
+            virtual_target_state: "/mblack3/Virtual/State"
+        # Services for constructing a path
+        services:
+            reset_path: "/mblack3/ResetPath"
+            set_mode: "/mblack3/SetMode"
+            arc2d_path: "/mblack3/SpawnArc2DPath"
+            bernoulli_path: "/mblack3/SpawnBernoulliPath"
+            circle2d_path: "/mblack3/SpawnCircle2DPath"
+            line_path: "/mblack3/SpawnLinePath"
+            bezier_path: "/mblack3/SpawnBezierPath"
+            speed:
+                const_rabbit_speed: "/mblack3/SetConstVdRabbit"
+                const_vehicle_speed: "/mblack3/SetConstVdVehicle"
+                bezier_rabbit_speed: "/mblack3/SetBezierVdRabbit"
+                bezier_vehicle_speed: "/mblack3/SetBezierVdVehicle"
+
+## --------------------------- ## 
+#  farol_comms                #
+## --------------------------- ## 
+acomms/pinger:
+    topics:
+        publishers:
+            modem_send: "/mblack3/acomms/modem/send"
+            meas_usbl_fix: "/mblack3/sensors/usbl_fix"
+            trigger_serialization: "/mblack3/acomms/scheme/trigger_serialization"
+            deserialize: "/mblack3/acomms/scheme/payload_to_deserialize"
+        subscribers:
+            enable: "/mblack3/acomms/scheme/enable"
+            modem_recv: "/mblack3/acomms/modem/recv"
+            payload: "/mblack3/acomms/serializer/payload_to_transmit"
+
+acomms/replier:
+    topics:
+        publishers:
+            modem_send: "/mblack3/acomms/modem/send"
+            meas_usbl_fix: "/mblack3/sensors/usbl_fix"
+            trigger_serialization: "/mblack3/acomms/scheme/trigger_serialization"
+            deserialize: "/mblack3/acomms/scheme/payload_to_deserialize"
+        subscribers:
+            modem_recv: "/mblack3/acomms/modem/recv"
+            payload: "/mblack3/acomms/serializer/payload_to_transmit"
+
+acomms/data_serializer:
+    topics:
+        publishers:
+            to_modem: "/mblack3/acomms/serializer/payload_to_transmit"
+        subscribers:
+            from_modem: "/mblack3/acomms/scheme/payload_to_deserialize"
+            trigger: "/mblack3/acomms/scheme/trigger_serialization"
+        
+acomms/dmac2farol:
+    topics:
+        publishers:
+            farol_fix: "/mblack3/sensors/usbl_fix"
+        subscribers:
+            dmac_fix: "/mblack3/acomms/modem/measurement/usbl_fix"
+            state: "/mblack3/nav/filter/state"
+
+acomms/gnss2state:
+    topics:
+        subscribers:
+            gnss: "/mblack3/acomms/nav/filter/gnss"
+        publishers:
+            state: "/mblack3/acomms/nav/filter/state"
+            utmzone: "/mblack3/state/utmzone"
+
+acomms/pos2sim_modem:
+    topics:
+        subscribers:
+            position_sim: "/mblack3/sim/dynamics/position"
+            position_gazebo: "/gazebo/model_states"
