@@ -61,7 +61,7 @@ void OpenLoop::timerCallback() {
   /* If open loop for surge is not enabled */
   if (!surge_enabled_) return;
 
-  if (!has_surge_ref_ || (this->now() - last_surge_ref_time_).seconds() > 2) {
+  if (!has_surge_ref_ || (this->now() - last_surge_ref_time_).seconds() > 0.2) {
     return;
   }
 
