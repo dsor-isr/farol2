@@ -12,13 +12,43 @@ nuke_ros2() {
         "/install/.*/lib/"
     )
 
+    # Anything matching these will be protected.
+    local exclude_patterns=(
+        "plotjuggler"
+        "PlotJuggler"
+        "rqt"
+        "foxglove_bridge"
+        "foxglove[-_ ]bridge"
+        "bag_record"
+    )
+
     local self_pid="$$"
     local pids=""
+
+    is_excluded_pid() {
+        local pid="$1"
+        local cmdline
+
+        cmdline="$(ps -p "$pid" -o args= 2>/dev/null || true)"
+
+        for exclude in "${exclude_patterns[@]}"; do
+            if [[ "$cmdline" =~ $exclude ]]; then
+                return 0
+            fi
+        done
+
+        return 1
+    }
 
     for pattern in "${patterns[@]}"; do
         while read -r pid; do
             [[ -z "$pid" ]] && continue
             [[ "$pid" == "$self_pid" ]] && continue
+
+            if is_excluded_pid "$pid"; then
+                continue
+            fi
+
             pids="$pids $pid"
         done < <(pgrep -f "$pattern" || true)
     done
@@ -30,8 +60,12 @@ nuke_ros2() {
         return 0
     fi
 
-    echo "Found ROS 2-related processes:"
+    echo "Found ROS 2-related processes to kill:"
     ps -fp $pids || true
+
+    echo
+    echo "Protected processes matching:"
+    printf '  - %s\n' "${exclude_patterns[@]}"
 
     echo
     echo "Sending SIGINT..."

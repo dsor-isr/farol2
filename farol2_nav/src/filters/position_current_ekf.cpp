@@ -98,8 +98,8 @@ Eigen::Vector2d PositionCurrentEkfFilter::rpm_to_body_velocity_mps(
   }
 
   double rpm_cmd = 0.0;
-  if (m.rpm_command != nullptr && !m.rpm_command->rpm.empty()) {
-    rpm_cmd = m.rpm_command->rpm[0];
+  if (m.thruster_rpm != nullptr && !m.thruster_rpm->rpm.empty()) {
+    rpm_cmd = m.thruster_rpm->rpm[0];
   }
   rpm_cmd = std::clamp(rpm_cmd, rpm_min_, rpm_max_);
 

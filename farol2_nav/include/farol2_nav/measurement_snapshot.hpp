@@ -22,7 +22,7 @@ struct MeasurementSnapshot
   std_msgs::msg::Float32::SharedPtr depth{};
   std_msgs::msg::Float32::SharedPtr altimeter{};
   std_msgs::msg::Float32::SharedPtr rudder_angle{};
-  farol2_allocation::msg::ThrusterRPM::SharedPtr rpm_command{};
+  farol2_allocation::msg::ThrusterRPM::SharedPtr thruster_rpm{};
 
   rclcpp::Time imu_stamp{};
   rclcpp::Time gnss_stamp{};
@@ -31,8 +31,8 @@ struct MeasurementSnapshot
   rclcpp::Time velocity_through_water_stamp{};
   rclcpp::Time depth_stamp{};
   rclcpp::Time altimeter_stamp{};
-  rclcpp::Time rudder_stamp{};
-  rclcpp::Time rpm_stamp{};
+  rclcpp::Time rudder_angle_stamp{};
+  rclcpp::Time thruster_rpm_stamp{};
 };
 
 }  // namespace filters

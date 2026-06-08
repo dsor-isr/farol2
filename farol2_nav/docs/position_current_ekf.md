@@ -60,7 +60,7 @@ $$
 - Position measurements from shared state (`northing`, `easting`) populated by `sample_and_hold`.
 - Yaw from shared attitude state.
 - Yaw rate from shared angular-velocity state.
-- RPM command (`rpm_command`) for surge model.
+- Thruster RPM (`thruster_rpm`) for surge model.
 
 ## Outputs written to shared state
 

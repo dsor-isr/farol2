@@ -81,4 +81,4 @@
     ros__parameters:
       surge:
         enabled: true
-        gain: 2000.0 # surge m/s to rpms
+        gain: 2200.0 # surge m/s to rpms (basically max_rpms)

@@ -1,4 +1,7 @@
-  # Path Following configurations
+  ##################################
+  #     Example configuration      #
+  ##################################
+  
   # Be careful while changing values here, due to the way the PF code is implemented,
   # the order of the following gains must be respected. This means you can't switch
   # the lines k1 and k2 in lapierre, for example.
@@ -7,13 +10,25 @@
       ros__parameters:
         node_frequency: 10.0
         default_algorithm: breivik
+
         controller_gains:
-          lapierre:
-            k1: 1.0
-            k2: 0.3
-            k3: 0.3
-            theta: 0.8
-            k_delta: 1.0
+          breivik:
+            delta_h: 10.0
+         
+          pramod:
+            kp: 0.02
+            ki: 0.0005
+
+          ravi:
+            e_turn: 45.0            # meters at which to start turning, equivalent to lookahead distance
+            xi: 1.0                 # ξ of the final system with integral
+            w0_min: 0.08            # ω0 of the final system with integral
+            epsilon_current: 0.2    # confidence on current estimate 
+
+          ilos:
+            delta: 10.0  # lookahead distance (metres)
+            ki: 0.05     # integral gain
+          
           marcelo:
             delta: -1.0
             kx: 0.5
@@ -23,6 +38,14 @@
             k_currents: 0.2
             rd: [0.0, 0.0, 1.0]
             d: [0.0, 0.0, 0.0]
+          
+          lapierre:
+            k1: 1.0
+            k2: 0.3
+            k3: 0.3
+            theta: 0.8
+            k_delta: 1.0
+          
           aguiar:
             delta: -1.0
             kx: 0.5
@@ -30,29 +53,21 @@
             kz: 0.5
             k_pos: 0.5
             k_currents: 0.5
+          
           romulo:
             ke: [0.05, 0.0, 0.0, 0.05]
             kz: 0.2
-          pramod:
-            kp: 0.02
-            ki: 0.0005
-          ravi:
-            e_turn: 45.0            # meters at which to start turning, equivalent to lookahead distance
-            min_corridor: 45.0      # minimum hlaf-width of inner corridor where integral action is applied
-            xi: 1.0                 # ξ of the final system with integral
-            w0_min: 0.08            # ω0 of the final system with integral
-            epsilon_current: 0.2    # confidence on current estimate
+          
           samson:
             k1: 1.0
             k2: 0.3
             k3: 0.3
             theta: 0.8
             k_delta: 1.0
+          
           relative_heading:
             kx: 0.5
             ky: 0.1
             kz: 0.2
             yaw_offset: 0.785
             p_sat: [1.0, 1.0] #x, y
-          breivik:
-            delta_h: 10.0

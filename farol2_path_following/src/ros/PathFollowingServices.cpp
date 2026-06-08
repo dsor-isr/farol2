@@ -89,6 +89,7 @@ void PathFollowingNode::initialiseServices() {
  * previously */
 void PathFollowingNode::StartPFService(const std::shared_ptr<farol2_path_following::srv::StartPF::Request> req,
                                        std::shared_ptr<farol2_path_following::srv::StartPF::Response> res) {
+  (void)req;
 
   /* Check if we have a path following algorithm allocated. If so, start the
    * timer callbacks */
@@ -124,6 +125,7 @@ void PathFollowingNode::StartPFService(const std::shared_ptr<farol2_path_followi
 /* Service to stop the path following algorithm that was running */
 void PathFollowingNode::StopPFService(const std::shared_ptr<farol2_path_following::srv::StopPF::Request> req,
                                       std::shared_ptr<farol2_path_following::srv::StopPF::Response> res) {
+  (void)req;
 
   /* Stop the path following only if it was already running */
   if (!this->timer_->is_canceled()) {
@@ -190,583 +192,77 @@ void PathFollowingNode::UpdateGainsPFService(const std::shared_ptr<farol2_path_f
 /* Service to switch to the RelativeHeading Path Following method */
 void PathFollowingNode::SetRelativeHeadingService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                                                   std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
-
-    /* Don't change if the algorithm is running */
-    if (!this->timer_->is_canceled()) {
-        RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
-        res->success = false;
-        return;
-    }
-
-    /* Clear the memory used by the previous controller */
-    this->deleteCurrentController();
-
-    /* Create the publishers for the node */
-    this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                  TOPIC_PUB_SURGE, 1));
-    this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                  TOPIC_PUB_SWAY, 1));
-    this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                  TOPIC_PUB_YAW, 1));
-    this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                  TOPIC_PUB_RABBIT, 1));
-
-    /* Read the control gains from the parameter server */
-    double kx, ky, kz, yaw_offset;
-    std::vector<double> p_sat;
-
-    try {
-
-        /* Read the gains for the controller */
-        kx = get_parameter("controller_gains.relative_heading.kx").as_double();
-        ky = get_parameter("controller_gains.relative_heading.ky").as_double();
-        kz = get_parameter("controller_gains.relative_heading.kz").as_double();
-        yaw_offset = get_parameter("controller_gains.relative_heading.yaw_offset").as_double();
-        p_sat = get_parameter("controller_gains.relative_heading.p_sat").as_double_array();
-
-        /* Assign the new controller */
-        this->pf_algorithm_ = new RelativeHeading(kx, ky, kz, Eigen::Vector2d(p_sat.data()), yaw_offset, this->publishers_[0], this->publishers_[1], this->publishers_[2], this->publishers_[3]);
-
-        /* Path the debug variables publisher to the class*/
-        pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                    TOPIC_PUB_PFOLLOWING_DEBUG, 1));
-
-        /* Return success */
-        res->success = true;
-
-    } catch (...) {
-        RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
-        res->success = false;
-        return;
-    }
-
-    /* Return success */
-    RCLCPP_INFO(this->get_logger(), "PF controller switched to RelativeHeading");
-    return;
+  (void)req;
+  res->success = this->switchController("relative_heading");
 }
 
 /* Service to switch to the Marcelo Path Following method */
 void PathFollowingNode::SetMarceloService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                                           std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
-
-  /* Don't change if the algorithm is running */
-  if (!this->timer_->is_canceled()) {
-    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
-    res->success = false;
-    return;
-  }
-
-  /* Clear the memory used by the previous controller */
-  this->deleteCurrentController();
-
-  /* Create the publishers for the node */
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_SURGE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_YAW_RATE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_RABBIT, 1));
-
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_OBSERVER_X, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_OBSERVER_Y, 1));
-
-  double delta, kz;
-  double kk[2];
-  double k_pos;
-  double k_currents;
-  std::vector<double> rd;
-  std::vector<double> d;
-
-  try {
-
-    /* Read the gains for the controller */
-    delta = get_parameter("controller_gains.marcelo.delta").as_double();
-    kk[0] = get_parameter("controller_gains.marcelo.kx").as_double();
-    kk[1] = get_parameter("controller_gains.marcelo.ky").as_double();
-    kz = get_parameter("controller_gains.marcelo.kz").as_double();
-    k_pos = get_parameter("controller_gains.marcelo.k_pos").as_double();
-    k_currents = get_parameter("controller_gains.marcelo.k_currents").as_double();
-    rd = get_parameter("controller_gains.marcelo.rd").as_double_array();
-    d = get_parameter("controller_gains.marcelo.d").as_double_array();
-
-    /* Assign the new controller */
-    this->pf_algorithm_ =
-      new Marcelo(delta, kk, kz, k_pos, k_currents, rd.data(), d.data(), this->publishers_[0],
-          this->publishers_[1], this->publishers_[2], this->publishers_[3], this->publishers_[4]);
-
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
-    
-    res->success = true;
-
-  } catch (...) {
-    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
-    res->success = false;
-    return;
-  }
-
-  /* Return success */
-  RCLCPP_INFO(this->get_logger(), "PF controller switched to Marcelo");
-  return;
+  (void)req;
+  res->success = this->switchController("marcelo");
 }
 
 /* Service to switch to the Aguiar Path Following method */
 void PathFollowingNode::SetAguiarService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                                          std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
-
-  /* Don't change if the algorithm is running */
-  if (!this->timer_->is_canceled()) {
-    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
-    res->success = false;
-    return;
-  }
-
-  /* Clear the memory used by the previous controller */
-  this->deleteCurrentController();
-
-  /* Create the publishers for the node */
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_SURGE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_YAW_RATE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_RABBIT, 1));
-
-  double delta, kz;
-  double kk[2];
-  double k_pos;
-  double k_currents;
-
-  try {
-
-    /* Read the gains for the controller */
-    delta = get_parameter("controller_gains.aguiar.delta").as_double();
-    kk[0] = get_parameter("controller_gains.aguiar.kx").as_double();
-    kk[1] = get_parameter("controller_gains.aguiar.ky").as_double();
-    kz = get_parameter("controller_gains.aguiar.kz").as_double();
-    k_pos = get_parameter("controller_gains.aguiar.k_pos").as_double();
-    k_currents = get_parameter("controller_gains.aguiar.k_currents").as_double();
-
-    /* Assign the new controller */
-    this->pf_algorithm_ =
-      new Aguiar(delta, kk, kz, k_pos, k_currents, this->publishers_[0],
-          this->publishers_[1], this->publishers_[2]);
-
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
-    
-    res->success = true;
-
-  } catch (...) {
-    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
-    res->success = false;
-    return;
-  }
-
-  /* Return success */
-  RCLCPP_INFO(this->get_logger(), "PF controller switched to Aguiar");
-  return;
+  (void)req;
+  res->success = this->switchController("aguiar");
 }
 
 /* Service to switch to the Breivik Path Following method */
 void PathFollowingNode::SetBreivikService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                                           std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
-
-  /* Don't change if the algorithm is running */
-  if (!this->timer_->is_canceled()) {
-    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
-    res->success = false;
-    return;
-  }
-
-  /* Clear the memory used by the previous controller */
-  this->deleteCurrentController();
-
-  /* Create the publishers for the node */
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_SURGE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_YAW, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_RABBIT, 1));
-  
-  /* Read the gains for the controller */
-  double delta_h;
-  delta_h = get_parameter("controller_gains.breivik.delta_h").as_double();
- 
-  try {
-
-    /* Assign the new controller */
-    this->pf_algorithm_ = new Breivik(this->publishers_[0], 
-        this->publishers_[1], this->publishers_[2], delta_h);
-    res->success = true;
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
-
-  } catch (...) {
-    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
-    res->success = false;
-    return;
-  }
-
-  /* Return success */
-  RCLCPP_INFO(this->get_logger(), "PF controller switched to Breivik");
-  return;
+  (void)req;
+  res->success = this->switchController("breivik");
 }
 
 /* Service to switch to the Fossen Path Following method */
 void PathFollowingNode::SetFossenService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                                          std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
-
-  /* Don't change if the algorithm is running */
-  if (!this->timer_->is_canceled()) {
-    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
-    res->success = false;
-    return;
-  }
-
-  /* Clear the memory used by the previous controller */
-  this->deleteCurrentController();
-
-  /* Create the publishers for the node */
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_SURGE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_YAW, 1));
-   
-  try {
-
-    /* Assign the new controller */
-    this->pf_algorithm_ = new Fossen(this->publishers_[0], this->publishers_[1], this->set_path_mode_client_);
-    res->success = true;
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
-
-  } catch (...) {
-    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
-    res->success = false;
-    return;
-  }
-
-  /* Return success */
-  RCLCPP_INFO(this->get_logger(), "PF controller switched to Fossen. This algorithm uses the path closest point to make the computations");
-  return;
+  (void)req;
+  res->success = this->switchController("fossen");
 }
 
 /* Service to switch to the Romulo Path Following method */
 void PathFollowingNode::SetRomuloService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                                          std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
-
-  /* Don't change if the algorithm is running */
-  if (!this->timer_->is_canceled()) {
-    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
-    res->success = false;
-    return;
-  }
-
-  /* Clear the memory used by the previous controller */
-  this->deleteCurrentController();
-
-  /* Create the publishers for the node */
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_SURGE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_SWAY, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_RABBIT, 1));
-
-  /* Variables to store the gains of the controller */
-  std::vector<double> controller_gains;
-  double kz;
-
-  try {
-
-    /* Read the gains for the controller */
-    controller_gains = get_parameter("controller_gains.romulo.ke").as_double_array();
-    kz = get_parameter("controller_gains.romulo.kz").as_double();
-
-    controller_gains.push_back(kz);
-
-    /* Assign the new controller */
-    this->pf_algorithm_ =
-      new Romulo(controller_gains, this->publishers_[0],
-          this->publishers_[1], this->publishers_[2]);
-    res->success = true;
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
-
-  } catch (...) {
-    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
-    res->success = false;
-    return;
-  }
-
-  /* Return success */
-  RCLCPP_INFO(this->get_logger(), "PF controller switched to Romulo");
-  return;
+  (void)req;
+  res->success = this->switchController("romulo");
 }
 
 /* Service to switch to the Lapierre Path Following method */
 void PathFollowingNode::SetLapierreService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                                            std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
-
-  /* Don't change if the algorithm is running */
-  if (!this->timer_->is_canceled()) {
-    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
-    res->success = false;
-    return;
-  }
-
-  /* Clear the memory used by the previous controller */
-  this->deleteCurrentController();
-
-  /* Create the publishers for the node */
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_SURGE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_YAW_RATE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_RABBIT, 1));
-
-  /* Variables to store the gains of the controller */
-  double k1, k2, k3, theta, k_delta;
-
-  try {
-
-    /* Read the gains for the controller */
-    k1 = get_parameter("controller_gains.lapierre.k1").as_double();
-    k2 = get_parameter("controller_gains.lapierre.k2").as_double();
-    k3 = get_parameter("controller_gains.lapierre.k3").as_double();
-    theta = get_parameter("controller_gains.lapierre.theta").as_double();
-    k_delta = get_parameter("controller_gains.lapierre.k_delta").as_double();
-
-    /* Assign the new controller */
-    this->pf_algorithm_ = new Lapierre(k1, k2, k3, theta, k_delta, this->publishers_[0], this->publishers_[1], this->publishers_[2]);
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
-    res->success = true;
-
-  } catch (...) {
-    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
-    res->success = false;
-    return;
-  }
-
-  /* Return success */
-  RCLCPP_INFO(this->get_logger(), "PF controller switched to Lapierre");
-  return;
+  (void)req;
+  res->success = this->switchController("lapierre");
 }
 
 /* Service to switch to the Pramod Path Following method */
 void PathFollowingNode::SetPramodService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                                          std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
-
-  /* Don't change if the algorithm is running */
-  if (!this->timer_->is_canceled()) {
-    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
-    res->success = false;
-    return;
-  }
-
-  /* Clear the memory used by the previous controller */
-  this->deleteCurrentController();
-
-  /* Create the publishers for the node */
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_SURGE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_YAW, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_RABBIT, 1));
-
-  /* Variables to store the gains of the controller */
-  double kp, ki;
-  std::vector<double> controller_gains;
-
-  try {
-
-    /* Read the gains for the controller */
-    kp = get_parameter("controller_gains.pramod.kp").as_double();
-    ki = get_parameter("controller_gains.pramod.ki").as_double();
-
-    controller_gains.push_back(kp);
-    controller_gains.push_back(ki);
-
-    /* Assign the new controller */
-    this->pf_algorithm_ = new Pramod(controller_gains, this->publishers_[0],
-        this->publishers_[1], this->publishers_[2], this->set_path_mode_client_);
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
-    res->success = true;
-
-  } catch (...) {
-    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
-    res->success = false;
-    return;
-  }
-
-  /* Return success */
-  RCLCPP_INFO(this->get_logger(), "PF controller switched to Pramod. This algorithm uses the path closest point to make the computations");
-  return;
+  (void)req;
+  res->success = this->switchController("pramod");
 }
 
 /* Service to switch to the Samson Path Following method */
 void PathFollowingNode::SetRaviService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                                        std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
-
-  /* Don't change if the algorithm is running */
-  if (!this->timer_->is_canceled()) {
-    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
-    res->success = false;
-    return;
-  }
-
-  /* Clear the memory used by the previous controller */
-  this->deleteCurrentController();
-
-  /* Create the publishers for the node */
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_SURGE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_YAW, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_RABBIT, 1));
-
-  /* Variables to store the gains of the controller */
-  double e_turn, xi, epsilon_current, w0_min;
-  std::vector<double> controller_gains;
-
-  try {
-
-    /* Read the gains for the controller */
-    e_turn = get_parameter("controller_gains.ravi.e_turn").as_double();
-    xi = get_parameter("controller_gains.ravi.xi").as_double();
-    epsilon_current = get_parameter("controller_gains.ravi.epsilon_current").as_double();
-    w0_min = get_parameter("controller_gains.ravi.w0_min").as_double();
-
-    controller_gains.push_back(e_turn);
-    controller_gains.push_back(xi);
-    controller_gains.push_back(epsilon_current);
-    controller_gains.push_back(w0_min);
-
-    /* Assign the new controller */
-    this->pf_algorithm_ = new Ravi(controller_gains, this->publishers_[0],
-        this->publishers_[1], this->publishers_[2], this->set_path_mode_client_);
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
-    res->success = true;
-
-  } catch (...) {
-    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
-    res->success = false;
-    return;
-  }
-
-  /* Return success */
-  RCLCPP_INFO(this->get_logger(), "PF controller switched to Ravi. This algorithm uses the path closest point to make the computations");
-  return;
+  (void)req;
+  res->success = this->switchController("ravi");
 }
 
 /* Service to switch to the Samson Path Following method */
 void PathFollowingNode::SetSamsonService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                                          std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
-
-  /* Don't change if the algorithm is running */
-  if (!this->timer_->is_canceled()) {
-    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
-    res->success = false;
-    return;
-  }
-
-  /* Clear the memory used by the previous controller */
-  this->deleteCurrentController();
-
-  /* Create the publishers for the node */
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_SURGE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_YAW_RATE, 1));
-
-  /* Variables to store the gains of the controller */
-  double k1, k2, k3, theta, k_delta;
-
-  try {
-
-    /* Read the gains for the controller */
-    k1 = get_parameter("controller_gains.samson.k1").as_double();
-    k2 = get_parameter("controller_gains.samson.k2").as_double();
-    k3 = get_parameter("controller_gains.samson.k3").as_double();
-    theta = get_parameter("controller_gains.samson.theta").as_double();
-    k_delta = get_parameter("controller_gains.samson.k_delta").as_double();
-
-    /* Assign the new controller */
-    this->pf_algorithm_ = new Samson(k1, k2, k3, theta, k_delta, this->publishers_[0], this->publishers_[1], this->set_path_mode_client_ );
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
-    res->success = true;
-
-  } catch (...) {
-    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
-    res->success = false;
-    return;
-  }
-
-  /* Return success */
-  RCLCPP_INFO(this->get_logger(), "PF controller switched to Samson. This algorithm uses the path closest point to make the computations");
-  return;
+  (void)req;
+  res->success = this->switchController("samson");
 }
 
 /* Service to switch to the ILOS Path Following method */
 void PathFollowingNode::SetIlosService(const std::shared_ptr<farol2_path_following::srv::SetPF::Request> req,
                                        std::shared_ptr<farol2_path_following::srv::SetPF::Response> res) {
-
-  /* Don't change if the algorithm is running */
-  if (!this->timer_->is_canceled()) {
-    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
-    res->success = false;
-    return;
-  }
-
-  /* Clear the memory used by the previous controller */
-  this->deleteCurrentController();
-
-  /* Create the publishers for the node */
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_SURGE, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_YAW, 1));
-  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
-                                TOPIC_PUB_RABBIT, 1));
-
-  /* Variables to store the gains of the controller */
-  double delta, ki;
-
-  try {
-
-    /* Read the gains for the controller */
-    delta = get_parameter("controller_gains.ilos.delta").as_double();
-    ki    = get_parameter("controller_gains.ilos.ki").as_double();
-
-    /* Assign the new controller */
-    this->pf_algorithm_ = new ILOS(delta, ki,
-                                   this->publishers_[0],
-                                   this->publishers_[1],
-                                   this->publishers_[2],
-                                   this->set_path_mode_client_);
-    pf_algorithm_->setPFollowingDebugPublisher(create_publisher<farol2_interfaces::msg::PFDebug>(
-                                                TOPIC_PUB_PFOLLOWING_DEBUG, 1));
-    res->success = true;
-
-  } catch (...) {
-    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
-    res->success = false;
-    return;
-  }
-
-  /* Return success */
-  RCLCPP_INFO(this->get_logger(), "PF controller switched to ILOS. This algorithm uses the path closest point to make the computations");
-  return;
+  (void)req;
+  res->success = this->switchController("ilos");
 }
 

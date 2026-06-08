@@ -27,7 +27,7 @@
 #define TOPIC_SUB_DEPTH "depth"
 #define TOPIC_SUB_ALTIMETER "altimeter"
 #define TOPIC_SUB_RUDDER_ANGLE "rudder_angle"
-#define TOPIC_SUB_RPM_COMMAND "rpm_command"
+#define TOPIC_SUB_THRUSTER_RPM "thruster_rpm"
 // Publishers
 #define TOPIC_PUB_STATE "state"
 
@@ -48,15 +48,7 @@ private:
   double node_frequency_{10.0};
   bool publish_all_steps_{true};
   std::vector<std::string> filters_{};
-  bool enable_gnss_{true};
-  bool enable_imu_{true};
-  bool enable_utm_ned_{true};
-  bool enable_velocity_over_ground_{true};
-  bool enable_velocity_through_water_{true};
-  bool enable_depth_{true};
-  bool enable_altimeter_{true};
-  bool enable_rudder_angle_{true};
-  bool enable_rpm_command_{true};
+  std::vector<std::string> measurements_{};
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_sub_;
@@ -65,8 +57,8 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_through_water_sub_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr depth_sub_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr altimeter_sub_;
-  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rudder_sub_;
-  rclcpp::Subscription<farol2_allocation::msg::ThrusterRPM>::SharedPtr rpm_sub_;
+  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rudder_angle_sub_;
+  rclcpp::Subscription<farol2_allocation::msg::ThrusterRPM>::SharedPtr thruster_rpm_sub_;
 
   rclcpp::Publisher<farol2_interfaces::msg::NavigationState>::SharedPtr final_state_pub_;
   std::vector<rclcpp::Publisher<farol2_interfaces::msg::NavigationState>::SharedPtr> stage_pubs_{};

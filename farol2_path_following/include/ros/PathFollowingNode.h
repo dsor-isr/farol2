@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string>
 #include <vector>
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/parameter.hpp"
@@ -190,11 +191,21 @@ class PathFollowingNode : public rclcpp::Node {
     double node_frequency_;
 
     /**
-     * @brief Method to allocate memory for a default PF controller class 
+     * @brief Switch controller by name. Optionally allow switching while PF is running.
      */
-    PathFollowing *getDefaultControllerLapierre();
-    PathFollowing *getDefaultControllerBreivik();
-    PathFollowing *getDefaultControllerAguiar();
+    bool switchController(const std::string &algorithm_name, bool allow_when_running = false);
+
+    PathFollowing *createControllerRelativeHeading();
+    PathFollowing *createControllerMarcelo();
+    PathFollowing *createControllerAguiar();
+    PathFollowing *createControllerBreivik();
+    PathFollowing *createControllerFossen();
+    PathFollowing *createControllerRomulo();
+    PathFollowing *createControllerLapierre();
+    PathFollowing *createControllerPramod();
+    PathFollowing *createControllerRavi();
+    PathFollowing *createControllerSamson();
+    PathFollowing *createControllerIlos();
 
     /**
      * @brief Method to delete the current controller being used

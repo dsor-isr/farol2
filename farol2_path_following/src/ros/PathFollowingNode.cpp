@@ -1,5 +1,8 @@
 #include "PathFollowingNode.h"
 
+#include <algorithm>
+#include <cctype>
+
 #include <farol2_utils/angles.hpp> /* Contains auxiliary functions for angle wrap */
 
 PathFollowingNode::PathFollowingNode() : Node("path_following", 
@@ -12,14 +15,17 @@ PathFollowingNode::PathFollowingNode() : Node("path_following",
   this->initialiseServices();
   this->initialiseTimer();
 
-  /* Allocate memory for the default Path Following Algorithm - Breivik */
-  this->pf_algorithm_ = getDefaultControllerBreivik();
+  std::string default_algorithm = "breivik";
+  this->get_parameter("default_algorithm", default_algorithm);
 
-  /* Set PF Debug publisher */
-  pf_algorithm_->setPFollowingDebugPublisher(
-    create_publisher<farol2_interfaces::msg::PFDebug>(
-      TOPIC_PUB_PFOLLOWING_DEBUG, 1)
-  );
+  if (!this->switchController(default_algorithm, true)) {
+    RCLCPP_WARN(this->get_logger(),
+      "Failed to set default_algorithm '%s'. Falling back to 'breivik'.",
+      default_algorithm.c_str());
+    if (!this->switchController("breivik", true)) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to allocate fallback controller 'breivik'.");
+    }
+  }
 }
 
 /**
@@ -27,8 +33,7 @@ PathFollowingNode::PathFollowingNode() : Node("path_following",
  */
 PathFollowingNode::~PathFollowingNode() {
 
-  /* Shutdown all the publishers and deleting the memory allocated for the PF
-   * controller */
+  /* Shutdown all the publishers and deleting the memory allocated for the PF controller */
   this->deleteCurrentController();
   
   /* Stop the timer */
@@ -36,10 +41,9 @@ PathFollowingNode::~PathFollowingNode() {
 }
 
 /**
- * @brief  Alocates memory for the default controller to be used. In this case
- * is Lapierre
+ * @brief  Alocates memory for Lapierre controller
  */
-PathFollowing *PathFollowingNode::getDefaultControllerLapierre() {
+PathFollowing *PathFollowingNode::createControllerLapierre() {
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
                                 TOPIC_PUB_SURGE, 1));
@@ -65,9 +69,9 @@ PathFollowing *PathFollowingNode::getDefaultControllerLapierre() {
 }
 
 /**
- * @brief Alocates memory for a default controller. In this case is Breivik
+ * @brief Alocates memory for Breivik controller
  */
-PathFollowing *PathFollowingNode::getDefaultControllerBreivik() {
+PathFollowing *PathFollowingNode::createControllerBreivik() {
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
                                 TOPIC_PUB_SURGE, 1));
@@ -87,7 +91,7 @@ PathFollowing *PathFollowingNode::getDefaultControllerBreivik() {
   return new Breivik(this->publishers_[0], this->publishers_[1], this->publishers_[2], delta_h);
 }
 
-PathFollowing *PathFollowingNode::getDefaultControllerAguiar() {
+PathFollowing *PathFollowingNode::createControllerAguiar() {
   /* Create the publishers for the node */
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(
                                 TOPIC_PUB_SURGE, 1));
@@ -114,6 +118,166 @@ PathFollowing *PathFollowingNode::getDefaultControllerAguiar() {
   /* Assign the new controller */
   return new Aguiar(delta, kk, kz, k_pos, k_currents, 
                     this->publishers_[0], this->publishers_[1], this->publishers_[2]);
+}
+
+PathFollowing *PathFollowingNode::createControllerRelativeHeading() {
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_SURGE, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_SWAY, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_YAW, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_RABBIT, 1));
+
+  double kx = get_parameter("controller_gains.relative_heading.kx").as_double();
+  double ky = get_parameter("controller_gains.relative_heading.ky").as_double();
+  double kz = get_parameter("controller_gains.relative_heading.kz").as_double();
+  double yaw_offset = get_parameter("controller_gains.relative_heading.yaw_offset").as_double();
+  std::vector<double> p_sat = get_parameter("controller_gains.relative_heading.p_sat").as_double_array();
+
+  return new RelativeHeading(kx, ky, kz, Eigen::Vector2d(p_sat.data()), yaw_offset,
+                             this->publishers_[0], this->publishers_[1], this->publishers_[2], this->publishers_[3]);
+}
+
+PathFollowing *PathFollowingNode::createControllerMarcelo() {
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_SURGE, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_YAW_RATE, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_RABBIT, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_OBSERVER_X, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_OBSERVER_Y, 1));
+
+  double delta = get_parameter("controller_gains.marcelo.delta").as_double();
+  double kk[2];
+  kk[0] = get_parameter("controller_gains.marcelo.kx").as_double();
+  kk[1] = get_parameter("controller_gains.marcelo.ky").as_double();
+  double kz = get_parameter("controller_gains.marcelo.kz").as_double();
+  double k_pos = get_parameter("controller_gains.marcelo.k_pos").as_double();
+  double k_currents = get_parameter("controller_gains.marcelo.k_currents").as_double();
+  std::vector<double> rd = get_parameter("controller_gains.marcelo.rd").as_double_array();
+  std::vector<double> d = get_parameter("controller_gains.marcelo.d").as_double_array();
+
+  return new Marcelo(delta, kk, kz, k_pos, k_currents, rd.data(), d.data(),
+                     this->publishers_[0], this->publishers_[1], this->publishers_[2], this->publishers_[3], this->publishers_[4]);
+}
+
+PathFollowing *PathFollowingNode::createControllerFossen() {
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_SURGE, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_YAW, 1));
+
+  return new Fossen(this->publishers_[0], this->publishers_[1], this->set_path_mode_client_);
+}
+
+PathFollowing *PathFollowingNode::createControllerRomulo() {
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_SURGE, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_SWAY, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_RABBIT, 1));
+
+  std::vector<double> controller_gains = get_parameter("controller_gains.romulo.ke").as_double_array();
+  double kz = get_parameter("controller_gains.romulo.kz").as_double();
+  controller_gains.push_back(kz);
+
+  return new Romulo(controller_gains, this->publishers_[0], this->publishers_[1], this->publishers_[2]);
+}
+
+PathFollowing *PathFollowingNode::createControllerPramod() {
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_SURGE, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_YAW, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_RABBIT, 1));
+
+  double kp = get_parameter("controller_gains.pramod.kp").as_double();
+  double ki = get_parameter("controller_gains.pramod.ki").as_double();
+  std::vector<double> controller_gains{kp, ki};
+
+  return new Pramod(controller_gains, this->publishers_[0], this->publishers_[1], this->publishers_[2], this->set_path_mode_client_);
+}
+
+PathFollowing *PathFollowingNode::createControllerRavi() {
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_SURGE, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_YAW, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_RABBIT, 1));
+
+  double e_turn = get_parameter("controller_gains.ravi.e_turn").as_double();
+  double min_corridor = get_parameter("controller_gains.ravi.min_corridor").as_double();
+  double xi = get_parameter("controller_gains.ravi.xi").as_double();
+  double w0_min = get_parameter("controller_gains.ravi.w0_min").as_double();
+  double epsilon_current = get_parameter("controller_gains.ravi.epsilon_current").as_double();
+  std::vector<double> controller_gains{e_turn, min_corridor, xi, w0_min, epsilon_current};
+
+  return new Ravi(controller_gains, this->publishers_[0], this->publishers_[1], this->publishers_[2], this->set_path_mode_client_);
+}
+
+PathFollowing *PathFollowingNode::createControllerSamson() {
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_SURGE, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_YAW_RATE, 1));
+
+  double k1 = get_parameter("controller_gains.samson.k1").as_double();
+  double k2 = get_parameter("controller_gains.samson.k2").as_double();
+  double k3 = get_parameter("controller_gains.samson.k3").as_double();
+  double theta = get_parameter("controller_gains.samson.theta").as_double();
+  double k_delta = get_parameter("controller_gains.samson.k_delta").as_double();
+
+  return new Samson(k1, k2, k3, theta, k_delta, this->publishers_[0], this->publishers_[1], this->set_path_mode_client_);
+}
+
+PathFollowing *PathFollowingNode::createControllerIlos() {
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_SURGE, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_YAW, 1));
+  this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_RABBIT, 1));
+
+  double delta = get_parameter("controller_gains.ilos.delta").as_double();
+  double ki = get_parameter("controller_gains.ilos.ki").as_double();
+
+  return new ILOS(delta, ki, this->publishers_[0], this->publishers_[1], this->publishers_[2], this->set_path_mode_client_);
+}
+
+bool PathFollowingNode::switchController(const std::string &algorithm_name, bool allow_when_running) {
+  if (!allow_when_running && !this->timer_->is_canceled()) {
+    RCLCPP_INFO(this->get_logger(), "Can't change algorithm when PF is running.");
+    return false;
+  }
+
+  std::string normalized = algorithm_name;
+  std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+  this->deleteCurrentController();
+
+  try {
+    if (normalized == "relative_heading") {
+      this->pf_algorithm_ = this->createControllerRelativeHeading();
+    } else if (normalized == "marcelo") {
+      this->pf_algorithm_ = this->createControllerMarcelo();
+    } else if (normalized == "aguiar") {
+      this->pf_algorithm_ = this->createControllerAguiar();
+    } else if (normalized == "breivik") {
+      this->pf_algorithm_ = this->createControllerBreivik();
+    } else if (normalized == "fossen") {
+      this->pf_algorithm_ = this->createControllerFossen();
+    } else if (normalized == "romulo") {
+      this->pf_algorithm_ = this->createControllerRomulo();
+    } else if (normalized == "lapierre") {
+      this->pf_algorithm_ = this->createControllerLapierre();
+    } else if (normalized == "pramod") {
+      this->pf_algorithm_ = this->createControllerPramod();
+    } else if (normalized == "ravi") {
+      this->pf_algorithm_ = this->createControllerRavi();
+    } else if (normalized == "samson") {
+      this->pf_algorithm_ = this->createControllerSamson();
+    } else if (normalized == "ilos") {
+      this->pf_algorithm_ = this->createControllerIlos();
+    } else {
+      RCLCPP_WARN(this->get_logger(),
+                  "Unknown default_algorithm '%s'. Valid values: relative_heading, marcelo, aguiar, breivik, fossen, romulo, lapierre, pramod, ravi, samson, ilos.",
+                  algorithm_name.c_str());
+      return false;
+    }
+
+    this->pf_algorithm_->setPFollowingDebugPublisher(
+      create_publisher<farol2_interfaces::msg::PFDebug>(TOPIC_PUB_PFOLLOWING_DEBUG, 1));
+    RCLCPP_INFO(this->get_logger(), "PF controller switched to %s", normalized.c_str());
+    return true;
+  } catch (...) {
+    RCLCPP_WARN(this->get_logger(), "Some error occured. Please reset the PF node for safety");
+    this->deleteCurrentController();
+    return false;
+  }
 }
 
 /**

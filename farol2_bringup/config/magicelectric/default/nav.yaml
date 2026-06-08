@@ -10,15 +10,10 @@
       publish_all_steps: true
       
       measurements:
-        gnss: true
-        imu: true
-        utm_ned: false
-        velocity_over_ground: false
-        velocity_through_water: false
-        depth: false
-        altimeter: false
-        rudder_angle: true
-        rpm_command: true
+        - "gnss"
+        - "imu"
+        - "rudder_angle"
+        - "thruster_rpm"
       
       filters: 
         - "asv_dynamics_model"
@@ -35,8 +30,8 @@
           init_cov_current: 1.0
           init_current_x: 0.0
           init_current_y: 0.0
-          rpm_min: -2000.0
-          rpm_max: 2000.0
+          rpm_min: -2200.0
+          rpm_max: 2200.0
           rpm_rate_limit: 200.0
           rho: 1025.0
           prop_pitch: 0.381
@@ -71,8 +66,8 @@
           rudder_arm: 4.0
 
         asv_dynamics_model:
-          rpm_min: -2000.0
-          rpm_max: 2000.0
+          rpm_min: -2200.0
+          rpm_max: 2200.0
           rpm_rate_limit: 200.0
           rho: 1025.0
           prop_pitch: 0.381

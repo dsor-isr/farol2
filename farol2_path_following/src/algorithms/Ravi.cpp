@@ -19,12 +19,13 @@ Ravi::Ravi(std::vector<double> gains,
 bool Ravi::setPFGains(std::vector<double> gains) {
 
   /* Handle the case where the number of gains received is not correct */
-  if(gains.size() != 4) return false;
+  if(gains.size() != 5) return false;
 
   this->e_turn_ = gains[0];
-  this->xi_ = gains[1];
-  this->epsilon_current_ = gains[2];
+  this->min_corridor_ = gains[1];
+  this->xi_ = gains[2];
   this->w0_min_ = gains[3];
+  this->epsilon_current_ = gains[4];
   return true;
 }
 
@@ -60,7 +61,6 @@ void Ravi::callPFController(double dt) {
   double cross_track = pos_error[1];
 
   double w0 = veh_surge/e_turn_;
-  double min_corridor = 4; // minimum corridor for integral action
 
   // compute current velocity orthogonal to the path
   double vc_x_I = vehicle_state_.vc_inertial(0);
@@ -71,7 +71,7 @@ void Ravi::callPFController(double dt) {
   double kp = w0;
   double ki = 0.0;
   // compute integral corridor based on uncertainty of current estimate
-  double integral_corridor = std::max(min_corridor, vc_y_P*epsilon_current_/kp);
+  double integral_corridor = std::max(min_corridor_, vc_y_P*epsilon_current_/kp);
   if (abs(cross_track) < integral_corridor) { 
     w0 = w0_min_;
     kp = 2.0*xi_*w0;
@@ -103,8 +103,6 @@ void Ravi::callPFController(double dt) {
   }
 
   // u = -K1/U*e - K2/U*sigma + current_ff
-  double p_term = -kp / veh_surge * cross_track;
-  double i_term = -ki / veh_surge * sigma_;
   u = -kp / veh_surge * cross_track - ki / veh_surge * sigma_ - vc_y_P/veh_surge;
 
   /* psi_d = path_psi + asin(sat(u)) */

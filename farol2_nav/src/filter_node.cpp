@@ -28,17 +28,7 @@ void FilterNode::load_params()
   node_frequency_ = declare_parameter<double>("node_frequency", 10.0);
   publish_all_steps_ = declare_parameter<bool>("publish_all_steps", true);
   filters_ = declare_parameter<std::vector<std::string>>("filters", std::vector<std::string>{});
-
-  enable_gnss_ = declare_parameter<bool>("measurements.gnss", true);
-  enable_imu_ = declare_parameter<bool>("measurements.imu", true);
-  enable_utm_ned_ = declare_parameter<bool>("measurements.utm_ned", true);
-  enable_velocity_over_ground_ = declare_parameter<bool>("measurements.velocity_over_ground", true);
-  enable_velocity_through_water_ =
-    declare_parameter<bool>("measurements.velocity_through_water", true);
-  enable_depth_ = declare_parameter<bool>("measurements.depth", true);
-  enable_altimeter_ = declare_parameter<bool>("measurements.altimeter", true);
-  enable_rudder_angle_ = declare_parameter<bool>("measurements.rudder_angle", true);
-  enable_rpm_command_ = declare_parameter<bool>("measurements.rpm_command", true);
+  measurements_ = declare_parameter<std::vector<std::string>>("measurements", std::vector<std::string>{"gnss", "imu"});
 }
 
 void FilterNode::initialise_publishers()
@@ -49,7 +39,12 @@ void FilterNode::initialise_publishers()
 
 void FilterNode::initialise_subscribers()
 {
-  if (enable_imu_) {
+  const auto is_active = [this](const std::string & measurement) {
+      return std::find(measurements_.begin(), measurements_.end(), measurement) !=
+        measurements_.end();
+    };
+
+  if (is_active("imu")) {
     imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
       TOPIC_SUB_IMU, rclcpp::QoS(10),
       [this](sensor_msgs::msg::Imu::SharedPtr msg) {
@@ -58,7 +53,7 @@ void FilterNode::initialise_subscribers()
       });
   }
 
-  if (enable_gnss_) {
+  if (is_active("gnss")) {
     gnss_sub_ = create_subscription<sensor_msgs::msg::NavSatFix>(
       TOPIC_SUB_GNSS, rclcpp::QoS(10),
       [this](sensor_msgs::msg::NavSatFix::SharedPtr msg) {
@@ -67,7 +62,7 @@ void FilterNode::initialise_subscribers()
       });
   }
 
-  if (enable_utm_ned_) {
+  if (is_active("utm_ned")) {
     utm_ned_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
       TOPIC_SUB_UTM_NED, rclcpp::QoS(10),
       [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
@@ -76,7 +71,7 @@ void FilterNode::initialise_subscribers()
       });
   }
 
-  if (enable_velocity_over_ground_) {
+  if (is_active("velocity_over_ground")) {
     velocity_over_ground_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
       TOPIC_SUB_VELOCITY_OVER_GROUND, rclcpp::QoS(10),
       [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
@@ -85,7 +80,7 @@ void FilterNode::initialise_subscribers()
       });
   }
 
-  if (enable_velocity_through_water_) {
+  if (is_active("velocity_through_water")) {
     velocity_through_water_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
       TOPIC_SUB_VELOCITY_THROUGH_WATER, rclcpp::QoS(10),
       [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
@@ -94,7 +89,7 @@ void FilterNode::initialise_subscribers()
       });
   }
 
-  if (enable_depth_) {
+  if (is_active("depth")) {
     depth_sub_ = create_subscription<std_msgs::msg::Float32>(
       TOPIC_SUB_DEPTH, rclcpp::QoS(10),
       [this](std_msgs::msg::Float32::SharedPtr msg) {
@@ -103,7 +98,7 @@ void FilterNode::initialise_subscribers()
       });
   }
 
-  if (enable_altimeter_) {
+  if (is_active("altimeter")) {
     altimeter_sub_ = create_subscription<std_msgs::msg::Float32>(
       TOPIC_SUB_ALTIMETER, rclcpp::QoS(10),
       [this](std_msgs::msg::Float32::SharedPtr msg) {
@@ -112,21 +107,21 @@ void FilterNode::initialise_subscribers()
       });
   }
 
-  if (enable_rudder_angle_) {
-    rudder_sub_ = create_subscription<std_msgs::msg::Float32>(
+  if (is_active("rudder_angle")) {
+    rudder_angle_sub_ = create_subscription<std_msgs::msg::Float32>(
       TOPIC_SUB_RUDDER_ANGLE, rclcpp::QoS(10),
       [this](std_msgs::msg::Float32::SharedPtr msg) {
         snapshot_.rudder_angle = std::move(msg);
-        snapshot_.rudder_stamp = now();
+        snapshot_.rudder_angle_stamp = now();
       });
   }
 
-  if (enable_rpm_command_) {
-    rpm_sub_ = create_subscription<farol2_allocation::msg::ThrusterRPM>(
-      TOPIC_SUB_RPM_COMMAND, rclcpp::QoS(10),
+  if (is_active("thruster_rpm")) {
+    thruster_rpm_sub_ = create_subscription<farol2_allocation::msg::ThrusterRPM>(
+      TOPIC_SUB_THRUSTER_RPM, rclcpp::QoS(10),
       [this](farol2_allocation::msg::ThrusterRPM::SharedPtr msg) {
-        snapshot_.rpm_command = std::move(msg);
-        snapshot_.rpm_stamp = now();
+        snapshot_.thruster_rpm = std::move(msg);
+        snapshot_.thruster_rpm_stamp = now();
       });
   }
 }
@@ -188,6 +183,12 @@ void FilterNode::on_timer()
   for (size_t i = 0; i < pipeline_.size(); ++i) {
     auto & filter = pipeline_[i];
     filter->compute(dt_s, snapshot_, state_);
+
+    // sample_and_hold is the first filter and gates startup publication.
+    if (i == 0U && !filter->initialized()) {
+      snapshot_ = farol2_nav::filters::MeasurementSnapshot{};
+      return;
+    }
 
     // Only intermediate stages use stage publishers.
     if (publish_all_steps_ && (i + 1U < pipeline_.size())) {
