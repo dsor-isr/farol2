@@ -1,4 +1,4 @@
-#include "BezierUtils.h"
+#include "algorithms/bezier_utils.hpp"
 
 // Bezier Operations using casadi symbolic expressions
 casadi::SX BezierUtils::bezier_derivative_Casadi(const casadi::SX &P)

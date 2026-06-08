@@ -7,15 +7,14 @@
 #include <Eigen/Dense>
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <numeric>
-#include <ros/ros.h>
 #include <cstdlib>
 #include <ctime> 
-#include "BezierUtils.h"
+#include "algorithms/bezier_utils.hpp"
 #include <stdexcept>
 #include <atomic>
 
 // Define a structure to hold position and angle (current or goal)
-struct vehicle_State
+struct vehicle_state
 {
     double x;
     double y;
@@ -66,13 +65,13 @@ public:
 
 
 // Define the optimization problem class
-class MultipleVehicleMotionPlan
+class MultipleVehiclePlanner
 {
 public:
     // Constructor: Initialize the number of vehicles, Bezier degree, and other parameters
-    MultipleVehicleMotionPlan(int BezierDegree, int NVehicles, const std::vector<int> &nSplit,const std::vector<uint8_t> &constr_flag);
+    MultipleVehiclePlanner(int BezierDegree, int NVehicles, const std::vector<int> &nSplit,const std::vector<uint8_t> &constr_flag);
 
-    ~MultipleVehicleMotionPlan();  // destructor
+    ~MultipleVehiclePlanner();  // destructor
     
     void setBoundsAndGains(double vel_min, double vel_max,
                          double acc_min, double acc_max,
@@ -85,14 +84,14 @@ public:
 
     void computeCostFunction();
 
-    void setOptimizationProblem(const std::vector<vehicle_State>& current_states, const std::vector<vehicle_State>& goal_states,
+    void setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& circ_obs,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& line_obs,
                             const Eigen::Tensor<double, 3>& ContP_guess, double Tf_guess, bool first_iter);
-    void setOptimizationProblem(const std::vector<vehicle_State>& current_states, const std::vector<vehicle_State>& goal_states,
+    void setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& circ_obs,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& line_obs);
-    void setOptimizationProblem(const std::vector<vehicle_State>& current_states, const std::vector<vehicle_State>& goal_states);
+    void setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states);
 
 
     void createConstraintVector();
@@ -116,8 +115,8 @@ public:
 private:
     int BezierDegree_;
     int NVehicles_;
-    std::vector<vehicle_State> current_states_;
-    std::vector<vehicle_State> goal_states_;
+    std::vector<vehicle_state> current_states_;
+    std::vector<vehicle_state> goal_states_;
     Eigen::Matrix<double, 3, Eigen::Dynamic> circ_obs_;
     Eigen::Matrix<double, 3, Eigen::Dynamic> line_obs_;
 
@@ -161,7 +160,7 @@ private:
     double VEL_MIN = 0.001;
     double VEL_MAX = 0.3;
     double ACC_MIN = -0.03;
-    double ACC_MAX = 0.03;//1000000000;
+    double ACC_MAX = 0.03;
     double ANG_VEL_MIN = -0.15;
     double ANG_VEL_MAX = 0.15;
     double ANG_ACC_MIN = -0.005;

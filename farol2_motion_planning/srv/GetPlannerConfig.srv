@@ -16,6 +16,6 @@ float64 gamma
 
 int32 bezier_degree
 int32 guess_degree
-int32[] nSplit
+int64[] n_split
 bool[] constr_flags
-int32 number_sample_Pts
+int32 number_sample_pts

@@ -1,7 +1,7 @@
-#include "MultipleVehicleMotionPlan.h"
+#include "algorithms/multiple_vehicle_planner.hpp"
 
-// Constructor for the MultipleVehicleMotionPlan class
-MultipleVehicleMotionPlan::MultipleVehicleMotionPlan(int BezierDegree, int NVehicles, const std::vector<int> &nSplit, const std::vector<uint8_t> &constr_flag)
+// Constructor for the MultipleVehiclePlanner class
+MultipleVehiclePlanner::MultipleVehiclePlanner(int BezierDegree, int NVehicles, const std::vector<int> &nSplit, const std::vector<uint8_t> &constr_flag)
     : BezierDegree_(BezierDegree), NVehicles_(NVehicles), nSplit_(nSplit), constr_flag_(constr_flag) 
 {
     // Validate input parameters
@@ -19,14 +19,14 @@ MultipleVehicleMotionPlan::MultipleVehicleMotionPlan(int BezierDegree, int NVehi
     }
 }
 
-// In MultipleVehicleMotionPlan.cpp
-MultipleVehicleMotionPlan::~MultipleVehicleMotionPlan()
+// In MultipleVehiclePlanner.cpp
+MultipleVehiclePlanner::~MultipleVehiclePlanner()
 {
     // Destructor implementation (if needed)
 }
 
 
-void MultipleVehicleMotionPlan::setBoundsAndGains(double vel_min, double vel_max,
+void MultipleVehiclePlanner::setBoundsAndGains(double vel_min, double vel_max,
                          double acc_min, double acc_max,
                          double ang_vel_min, double ang_vel_max,
                          double ang_acc_min, double ang_acc_max,
@@ -55,7 +55,7 @@ void MultipleVehicleMotionPlan::setBoundsAndGains(double vel_min, double vel_max
     GAMMA = gamma;
 }
 
-void MultipleVehicleMotionPlan::setupSymbolic()
+void MultipleVehiclePlanner::setupSymbolic()
 {
     using namespace casadi;
 
@@ -90,12 +90,12 @@ void MultipleVehicleMotionPlan::setupSymbolic()
 
         if (constr_flag_[2])
         {
-            ROS_INFO("Setting up acceleration constraints.");
+            std::cout << "Setting up acceleration constraints." << std::endl;
             sym_acc_constr_[i] = BezierUtils::adaptive_dynamic_constraints(sym_P_all_[i], sym_Tf_, nSplit_[0], {false, false, true, false});
         }
         if (constr_flag_[3])
         {
-            ROS_INFO("Setting up angular acceleration constraints.");
+            std::cout << "Setting up angular acceleration constraints." << std::endl;
             sym_ang_acc_constr_[i] = BezierUtils::adaptive_dynamic_constraints(sym_P_all_[i], sym_Tf_, nSplit_[0], {false, false, false, true});
         }
     }
@@ -108,7 +108,7 @@ void MultipleVehicleMotionPlan::setupSymbolic()
     }
 }
 
-void MultipleVehicleMotionPlan::computeCostFunction()
+void MultipleVehiclePlanner::computeCostFunction()
 {
     using namespace casadi;
 
@@ -143,7 +143,7 @@ void MultipleVehicleMotionPlan::computeCostFunction()
     }
 }
 
-void MultipleVehicleMotionPlan::setOptimizationProblem(const std::vector<vehicle_State>& current_states, const std::vector<vehicle_State>& goal_states,
+void MultipleVehiclePlanner::setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& circ_obs,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& line_obs,
                             const Eigen::Tensor<double, 3>& ContP_guess, double Tf_guess, bool first_iter)
@@ -183,7 +183,7 @@ void MultipleVehicleMotionPlan::setOptimizationProblem(const std::vector<vehicle
     }
 }
 
-void MultipleVehicleMotionPlan::setOptimizationProblem(const std::vector<vehicle_State>& current_states, const std::vector<vehicle_State>& goal_states,
+void MultipleVehiclePlanner::setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& circ_obs,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& line_obs)
 {
@@ -207,7 +207,7 @@ void MultipleVehicleMotionPlan::setOptimizationProblem(const std::vector<vehicle
     }
 }
 
-void MultipleVehicleMotionPlan::setOptimizationProblem(const std::vector<vehicle_State>& current_states, const std::vector<vehicle_State>& goal_states)
+void MultipleVehiclePlanner::setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states)
 {
     // Store states
     current_states_ = current_states;
@@ -215,7 +215,7 @@ void MultipleVehicleMotionPlan::setOptimizationProblem(const std::vector<vehicle
     first_iter_  = true;
 }
 
-void MultipleVehicleMotionPlan::createConstraintVector()
+void MultipleVehiclePlanner::createConstraintVector()
 {
     using namespace casadi;
 
@@ -306,10 +306,8 @@ void MultipleVehicleMotionPlan::createConstraintVector()
 
     SX all_obs_constr;
     if(!all_obs_constraints.empty()){
-        
-
         all_obs_constr = SX::vertcat(all_obs_constraints);
-        ROS_INFO("Obstacle_constraint size: lines - %d; columns - %d;", all_obs_constr.size1(), all_obs_constr.size2());
+        std::cout << "Obstacle_constraint size: lines - " << all_obs_constr.size1() << "; columns - " << all_obs_constr.size2() << ";" << std::endl;
     } else {
         all_obs_constr = SX();
     }
@@ -358,7 +356,7 @@ void MultipleVehicleMotionPlan::createConstraintVector()
 
 }
 
-void MultipleVehicleMotionPlan::createDecisionVector()
+void MultipleVehiclePlanner::createDecisionVector()
 {
     using namespace casadi;
     std::vector<SX> vars;
@@ -380,23 +378,12 @@ void MultipleVehicleMotionPlan::createDecisionVector()
             double x_final_val = res[2].scalar();
             double y_final_val = res[3].scalar();
             
-            //std::srand(static_cast<unsigned>(std::time(nullptr)));
-            //auto random_offset = []() {
-            //    return ((std::rand() / static_cast<double>(RAND_MAX)) * 0.2) - 0.1;
-            //};
-
-            //x_init_val  += random_offset();
-            //y_init_val  += random_offset();
-            //x_final_val += random_offset();
-            //y_final_val += random_offset();
-            
             if (BezierDegree_ >= 5)
             {
                 x_init_val = 2*x_init_val-current_states_[k].x;
                 y_init_val = 2*y_init_val-current_states_[k].y;
                 x_final_val = 2*x_final_val-goal_states_[k].x;
                 y_final_val = 2*y_final_val-goal_states_[k].y;
-                //ROS_INFO("Initial guess for vehicle %d: P2=(%.2f, %.2f), PN-2=(%.2f, %.2f)", k, x_init_val, y_init_val, x_final_val, y_final_val);
             } else {
                 x_init_val = x_init_val * (BezierDegree_ - 3) / (BezierDegree_ -2) + x_final_val / (BezierDegree_ -2);
                 y_init_val = y_init_val * (BezierDegree_ - 3) / (BezierDegree_ -2) + y_final_val / (BezierDegree_ -2);
@@ -412,7 +399,6 @@ void MultipleVehicleMotionPlan::createDecisionVector()
                 double val_y = aux * y_final_val + (1 - aux) * y_init_val;
                 guess.push_back(DM(val_x));
                 guess.push_back(DM(val_y));
-                //ROS_INFO("Initial guess for vehicle %d: P%d=(%.2f, %.2f)", k, i, val_x, val_y);
             }
         } else {
             for (int i = 2; i < sym_P_all_[k].size2() - 2; ++i) {
@@ -430,7 +416,7 @@ void MultipleVehicleMotionPlan::createDecisionVector()
     guess.push_back(Tf_guess);
 
    
-    ROS_INFO("Initial guess Tf = %.2f", static_cast<double>(guess.back().scalar()));
+    std::cout << "Initial guess Tf = " << static_cast<double>(guess.back().scalar()) << std::endl;
 
     decision_vec_ = SX::vertcat(vars);
     initial_guess_ = DM::vertcat(guess);
@@ -440,7 +426,7 @@ void MultipleVehicleMotionPlan::createDecisionVector()
 
 }
 
-void MultipleVehicleMotionPlan::createConstraintVector(const std::vector<int>& active_vehicles)
+void MultipleVehiclePlanner::createConstraintVector(const std::vector<int>& active_vehicles)
 {
     using namespace casadi;
 
@@ -544,7 +530,7 @@ void MultipleVehicleMotionPlan::createConstraintVector(const std::vector<int>& a
     SX all_obs_constr;
     if(!all_obs_constraints.empty()){
         all_obs_constr = SX::vertcat(all_obs_constraints);
-        ROS_INFO("Obstacle_constraint size: lines - %d; columns - %d;", all_obs_constr.size1(), all_obs_constr.size2());
+        std::cout << "Obstacle_constraint size: lines - " << all_obs_constr.size1() << "; columns - " << all_obs_constr.size2() << ";" << std::endl;
     } else {
         all_obs_constr = SX();
     }
@@ -593,7 +579,7 @@ void MultipleVehicleMotionPlan::createConstraintVector(const std::vector<int>& a
 
 }
 
-void MultipleVehicleMotionPlan::createDecisionVector(const std::vector<int>& active_vehicles, double Tf_min)
+void MultipleVehiclePlanner::createDecisionVector(const std::vector<int>& active_vehicles, double Tf_min)
 {
     using namespace casadi;
     std::vector<SX> vars;
@@ -620,7 +606,7 @@ void MultipleVehicleMotionPlan::createDecisionVector(const std::vector<int>& act
     vars.push_back(sym_Tf_);
     guess.push_back(DM(Tf_guess_));
 
-    ROS_INFO("Initial guess Tf = %.2f", static_cast<double>(guess.back().scalar()));
+    std::cout << "Initial guess Tf = " << static_cast<double>(guess.back().scalar()) << std::endl;
 
     decision_vec_ = SX::vertcat(vars);
     initial_guess_ = DM::vertcat(guess);
@@ -634,7 +620,7 @@ void MultipleVehicleMotionPlan::createDecisionVector(const std::vector<int>& act
 
 }
 
-void MultipleVehicleMotionPlan::solveOptimizationProblem(std::atomic<bool>* cancel_flag)
+void MultipleVehiclePlanner::solveOptimizationProblem(std::atomic<bool>* cancel_flag)
 {
     using namespace casadi;
 
@@ -721,12 +707,12 @@ void MultipleVehicleMotionPlan::solveOptimizationProblem(std::atomic<bool>* canc
     }
 }
 
-Eigen::Tensor<double, 3> MultipleVehicleMotionPlan::getControlPoints() const
+Eigen::Tensor<double, 3> MultipleVehiclePlanner::getControlPoints() const
 {
     return optimal_ContP_;
 }
 
-Eigen::Tensor<double, 3> MultipleVehicleMotionPlan::getOptimalTrajectories(int numPoints) const
+Eigen::Tensor<double, 3> MultipleVehiclePlanner::getOptimalTrajectories(int numPoints) const
 {
 
     Eigen::Tensor<double, 3> optimal_Trajectories(NVehicles_, 2, numPoints);
@@ -750,12 +736,12 @@ Eigen::Tensor<double, 3> MultipleVehicleMotionPlan::getOptimalTrajectories(int n
     return optimal_Trajectories;
 }
 
-std::string MultipleVehicleMotionPlan::getOptimizationstatus() const
+std::string MultipleVehiclePlanner::getOptimizationstatus() const
 {
     return return_status_;
 }
 
-double MultipleVehicleMotionPlan::getTf() const
+double MultipleVehiclePlanner::getTf() const
 {
     return Tf_opt_;
 }

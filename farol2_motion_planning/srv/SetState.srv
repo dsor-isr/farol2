@@ -1,6 +1,6 @@
 string vehicle_name
-float64 E
-float64 N
+float64 e
+float64 n
 float64 theta
 float64 v
 ---
