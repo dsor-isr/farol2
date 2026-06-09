@@ -25,7 +25,6 @@ add_library(static_thruster_allocator src/static_thruster_allocator.cpp)
 add_library(rudder_allocator src/rudder_allocator.cpp)
 add_library(thruster_rpm_converter src/thruster_rpm_converter.cpp)
 add_executable(allocation_node src/allocation_node.cpp)
-add_executable(wrench_manager src/wrench_manager.cpp)
 
 
 ament_target_dependencies(
@@ -85,26 +84,11 @@ target_compile_features(thruster_rpm_converter PUBLIC c_std_99 cxx_std_17)
 target_link_libraries(allocation_node rudder_allocator static_thruster_allocator thruster_rpm_converter)
 target_compile_features(allocation_node PUBLIC c_std_99 cxx_std_17)
 
-
-ament_target_dependencies(
-  wrench_manager
-  rclcpp
-  std_msgs
-  farol2_interfaces
-)
-
-target_include_directories(wrench_manager PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
-  
-target_compile_features(wrench_manager PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-
 install(TARGETS
   static_thruster_allocator
   rudder_allocator
   thruster_rpm_converter
   allocation_node
-  wrench_manager
   DESTINATION lib/${PROJECT_NAME}
 )
 

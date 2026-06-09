@@ -105,10 +105,53 @@ void AllocationNode::loadParams() {
 }
 
 void AllocationNode::initialiseSubscribers() {
-	body_wrench_request_sub_ = create_subscription<geometry_msgs::msg::WrenchStamped>(
-		TOPIC_SUB_BODY_WRENCH_REQUEST,
+	thrust_x_sub_ = create_subscription<std_msgs::msg::Float32>(
+		TOPIC_SUB_THRUST_X,
 		rclcpp::QoS(1),
-		[this](geometry_msgs::msg::WrenchStamped::SharedPtr msg){bodyWrenchRequestCallback(msg);});
+		[this](std_msgs::msg::Float32::SharedPtr msg) {
+			wrench_input_[0] = msg->data;
+			last_received_[0] = clock_->now();
+		});
+
+	thrust_y_sub_ = create_subscription<std_msgs::msg::Float32>(
+		TOPIC_SUB_THRUST_Y,
+		rclcpp::QoS(1),
+		[this](std_msgs::msg::Float32::SharedPtr msg) {
+			wrench_input_[1] = msg->data;
+			last_received_[1] = clock_->now();
+		});
+
+	thrust_z_sub_ = create_subscription<std_msgs::msg::Float32>(
+		TOPIC_SUB_THRUST_Z,
+		rclcpp::QoS(1),
+		[this](std_msgs::msg::Float32::SharedPtr msg) {
+			wrench_input_[2] = msg->data;
+			last_received_[2] = clock_->now();
+		});
+
+	torque_x_sub_ = create_subscription<std_msgs::msg::Float32>(
+		TOPIC_SUB_TORQUE_X,
+		rclcpp::QoS(1),
+		[this](std_msgs::msg::Float32::SharedPtr msg) {
+			wrench_input_[3] = msg->data;
+			last_received_[3] = clock_->now();
+		});
+
+	torque_y_sub_ = create_subscription<std_msgs::msg::Float32>(
+		TOPIC_SUB_TORQUE_Y,
+		rclcpp::QoS(1),
+		[this](std_msgs::msg::Float32::SharedPtr msg) {
+			wrench_input_[4] = msg->data;
+			last_received_[4] = clock_->now();
+		});
+
+	torque_z_sub_ = create_subscription<std_msgs::msg::Float32>(
+		TOPIC_SUB_TORQUE_Z,
+		rclcpp::QoS(1),
+		[this](std_msgs::msg::Float32::SharedPtr msg) {
+			wrench_input_[5] = msg->data;
+			last_received_[5] = clock_->now();
+		});
 
 	if (allocation_type_ == AllocationType::THRUST_RUDDER) {
 		nav_state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
@@ -139,6 +182,9 @@ void AllocationNode::initialiseTimers() {
 	tf_initialisation_timer_ = create_wall_timer(
 		500ms,
 		[this](){initialiseAllocationFromTF();});
+
+	auto period = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / node_frequency_));
+	allocation_timer_ = create_wall_timer(period, [this]() { allocationTimerCallback(); });
 }
 
 AllocationNode::AllocationType AllocationNode::parseAllocationType(
@@ -171,7 +217,38 @@ void AllocationNode::initialiseAllocationFromTF() {
 	tf_initialisation_timer_->cancel();
 }
 
-void AllocationNode::bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped::SharedPtr msg) {
+void AllocationNode::allocationTimerCallback() {
+	if (!allocation_ready_) {
+		return;
+	}
+
+	const auto now = clock_->now();
+	const double freshness_timeout = 2.0 / static_cast<double>(node_frequency_);
+
+	const bool thrust_x_recent = last_received_[0].has_value() && (now - *last_received_[0]).seconds() < freshness_timeout;
+	const bool thrust_y_recent = last_received_[1].has_value() && (now - *last_received_[1]).seconds() < freshness_timeout;
+	const bool thrust_z_recent = last_received_[2].has_value() && (now - *last_received_[2]).seconds() < freshness_timeout;
+	const bool torque_x_recent = last_received_[3].has_value() && (now - *last_received_[3]).seconds() < freshness_timeout;
+	const bool torque_y_recent = last_received_[4].has_value() && (now - *last_received_[4]).seconds() < freshness_timeout;
+	const bool torque_z_recent = last_received_[5].has_value() && (now - *last_received_[5]).seconds() < freshness_timeout;
+
+	if (!(thrust_x_recent || thrust_y_recent || thrust_z_recent || torque_x_recent || torque_y_recent || torque_z_recent)) {
+		return;
+	}
+
+	geometry_msgs::msg::WrenchStamped body_wrench_request_msg;
+	body_wrench_request_msg.header.stamp = now;
+	body_wrench_request_msg.wrench.force.x = thrust_x_recent ? wrench_input_[0] : 0.0;
+	body_wrench_request_msg.wrench.force.y = thrust_y_recent ? wrench_input_[1] : 0.0;
+	body_wrench_request_msg.wrench.force.z = thrust_z_recent ? wrench_input_[2] : 0.0;
+	body_wrench_request_msg.wrench.torque.x = torque_x_recent ? wrench_input_[3] : 0.0;
+	body_wrench_request_msg.wrench.torque.y = torque_y_recent ? wrench_input_[4] : 0.0;
+	body_wrench_request_msg.wrench.torque.z = torque_z_recent ? wrench_input_[5] : 0.0;
+
+	processBodyWrenchRequest(body_wrench_request_msg);
+}
+
+void AllocationNode::processBodyWrenchRequest(const geometry_msgs::msg::WrenchStamped & msg) {
 	if (!allocation_ready_) {
 		RCLCPP_WARN_THROTTLE(get_logger(), *clock_, 2000, "Ignoring wrench request while waiting for TF allocation.");
 		return;
@@ -181,8 +258,8 @@ void AllocationNode::bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped
 		return;
 	}
 
-	tau_ << msg->wrench.force.x, msg->wrench.force.y, msg->wrench.force.z,
-					msg->wrench.torque.x, msg->wrench.torque.y, msg->wrench.torque.z;
+	tau_ << msg.wrench.force.x, msg.wrench.force.y, msg.wrench.force.z,
+					msg.wrench.torque.x, msg.wrench.torque.y, msg.wrench.torque.z;
 
 	if (allocation_type_ == AllocationType::THRUST_RUDDER) {
 		const auto rudder_result = rudder_allocator_->compute(nav_state_, tau_[5]);
@@ -193,7 +270,7 @@ void AllocationNode::bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped
 		forces_ = static_thruster_allocator_->allocate(tau_common_mode_);
 
 		if (!open_loop_) {
-			const auto stamp = clock_->now();
+			const auto stamp = msg.header.stamp;
 			std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
 
 			rpm_converter_->setSurge(nav_state_.velocity_through_water_body.x);
@@ -206,7 +283,7 @@ void AllocationNode::bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped
 	}
 
 	forces_ = static_thruster_allocator_->allocate(tau_);
-	const auto stamp = clock_->now();
+	const auto stamp = msg.header.stamp;
 	std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
 
 	rpm_converter_->setSurge(nav_state_.velocity_through_water_body.x);

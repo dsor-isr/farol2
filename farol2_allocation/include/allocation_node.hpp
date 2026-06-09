@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <array>
+#include <optional>
 
 #include <Eigen/Dense>
 
@@ -19,7 +21,12 @@
 #include <static_thruster_allocator.hpp>
 #include <thruster_rpm_converter.hpp>
 
-static constexpr char TOPIC_SUB_BODY_WRENCH_REQUEST[] = "body_wrench_request";
+static constexpr char TOPIC_SUB_THRUST_X[] = "thrust_x";
+static constexpr char TOPIC_SUB_THRUST_Y[] = "thrust_y";
+static constexpr char TOPIC_SUB_THRUST_Z[] = "thrust_z";
+static constexpr char TOPIC_SUB_TORQUE_X[] = "torque_x";
+static constexpr char TOPIC_SUB_TORQUE_Y[] = "torque_y";
+static constexpr char TOPIC_SUB_TORQUE_Z[] = "torque_z";
 static constexpr char TOPIC_SUB_NAV_STATE[] = "nav_state";
 static constexpr char TOPIC_SUB_MISSION_STATUS[] = "mission_status";
 static constexpr char TOPIC_PUB_RUDDER_COMMAND[] = "rudder_command";
@@ -40,17 +47,24 @@ class AllocationNode : public rclcpp::Node {
     void initialisePublishers();
     void initialiseTimers();
     void initialiseAllocationFromTF();
+    void allocationTimerCallback();
     AllocationType parseAllocationType(const std::string & allocation_type) const;
-    void bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped::SharedPtr msg);
+    void processBodyWrenchRequest(const geometry_msgs::msg::WrenchStamped & msg);
 
     rclcpp::Clock::SharedPtr clock_;
     rclcpp::TimerBase::SharedPtr tf_initialisation_timer_;
+    rclcpp::TimerBase::SharedPtr allocation_timer_;
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
     rclcpp::Publisher<farol2_interfaces::msg::ThrusterRPM>::SharedPtr rpm_command_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_command_pub_;
-    rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr body_wrench_request_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr thrust_x_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr thrust_y_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr thrust_z_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr torque_x_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr torque_y_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr torque_z_sub_;
     rclcpp::Subscription<farol2_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
     rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr mission_status_sub_;
 
@@ -73,6 +87,8 @@ class AllocationNode : public rclcpp::Node {
     Eigen::Vector<double, 6> tau_;
     Eigen::Vector<double, 6> tau_common_mode_;
     Eigen::Vector<double, Eigen::Dynamic> forces_;
+    std::array<double, 6> wrench_input_{0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    std::array<std::optional<rclcpp::Time>, 6> last_received_;
 
     double node_frequency_{10.0};
     double rudder_angle_{0.0};
