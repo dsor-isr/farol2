@@ -9,14 +9,13 @@
 #include "geometry_msgs/msg/wrench_stamped.hpp"
 
 // Topic names (short form, remapped in launch file)
-#define TOPIC_SUB_THRUST_X "thrust_x"
-#define TOPIC_SUB_THRUST_Y "thrust_y"
-#define TOPIC_SUB_THRUST_Z "thrust_z"
-#define TOPIC_SUB_TORQUE_X "torque_x"
-#define TOPIC_SUB_TORQUE_Y "torque_y"
-#define TOPIC_SUB_TORQUE_Z "torque_z"
-#define TOPIC_PUB_BODY_WRENCH_REQUEST "body_wrench_request"
-
+static constexpr char TOPIC_SUB_THRUST_X[] = "thrust_x";
+static constexpr char TOPIC_SUB_THRUST_Y[] = "thrust_y";
+static constexpr char TOPIC_SUB_THRUST_Z[] = "thrust_z";
+static constexpr char TOPIC_SUB_TORQUE_X[] = "torque_x";
+static constexpr char TOPIC_SUB_TORQUE_Y[] = "torque_y";
+static constexpr char TOPIC_SUB_TORQUE_Z[] = "torque_z";
+static constexpr char TOPIC_PUB_BODY_WRENCH_REQUEST[] = "body_wrench_request";
 /**
  * @brief   Wrench manager (groups forces and torques into a single topic)
  * @author  Ravi Regalo

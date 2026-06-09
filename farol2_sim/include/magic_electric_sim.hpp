@@ -25,24 +25,23 @@
 
 
 // Topic names (short form, remapped in launch file)
-#define TOPIC_SUB_RPM_COMMAND "rpm_command"
-#define TOPIC_SUB_RUDDER_CMD "rudder_cmd"
-#define TOPIC_SUB_RUDDER_REF "rudder_ref"
-#define TOPIC_PUB_POSITION "position"
-#define TOPIC_PUB_BODY_VELOCITY "body_velocity"
-#define TOPIC_PUB_ORIENTATION "orientation"
-#define TOPIC_PUB_ORIENTATION_RATE "orientation_rate"
-#define TOPIC_PUB_BODY_ACCELERATION "body_acceleration"
-#define TOPIC_PUB_ANGULAR_ACCELERATION "angular_acceleration"
-#define TOPIC_PUB_RUDDER_ANGLE "rudder_angle"
-#define TOPIC_PUB_JOINT_STATES "joint_states"
-#define TOPIC_PUB_IMU "imu"
-#define TOPIC_PUB_GNSS "gnss"
-#define TOPIC_PUB_UTM_NED "ned_utm"
-#define TOPIC_PUB_VELOCITY_OVER_GROUND "velocity_over_ground"
-#define TOPIC_PUB_VELOCITY_THROUGH_WATER "velocity_through_water"
-#define TOPIC_PUB_DEPTH "depth"
-
+static constexpr char TOPIC_SUB_RPM_COMMAND[] = "rpm_command";
+static constexpr char TOPIC_SUB_RUDDER_CMD[] = "rudder_cmd";
+static constexpr char TOPIC_SUB_RUDDER_REF[] = "rudder_ref";
+static constexpr char TOPIC_PUB_POSITION[] = "position";
+static constexpr char TOPIC_PUB_BODY_VELOCITY[] = "body_velocity";
+static constexpr char TOPIC_PUB_ORIENTATION[] = "orientation";
+static constexpr char TOPIC_PUB_ORIENTATION_RATE[] = "orientation_rate";
+static constexpr char TOPIC_PUB_BODY_ACCELERATION[] = "body_acceleration";
+static constexpr char TOPIC_PUB_ANGULAR_ACCELERATION[] = "angular_acceleration";
+static constexpr char TOPIC_PUB_RUDDER_ANGLE[] = "rudder_angle";
+static constexpr char TOPIC_PUB_JOINT_STATES[] = "joint_states";
+static constexpr char TOPIC_PUB_IMU[] = "imu";
+static constexpr char TOPIC_PUB_GNSS[] = "gnss";
+static constexpr char TOPIC_PUB_UTM_NED[] = "ned_utm";
+static constexpr char TOPIC_PUB_VELOCITY_OVER_GROUND[] = "velocity_over_ground";
+static constexpr char TOPIC_PUB_VELOCITY_THROUGH_WATER[] = "velocity_through_water";
+static constexpr char TOPIC_PUB_DEPTH[] = "depth";
 /**
  * @brief   Magic Electric Simulation
  * @author  André Carvalho

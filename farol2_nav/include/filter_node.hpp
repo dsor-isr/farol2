@@ -18,19 +18,18 @@
 
 // Topic names (short form, remapped in launch file)
 // Subscribers
-#define TOPIC_SUB_IMU "imu"
-#define TOPIC_SUB_GNSS "gnss"
-#define TOPIC_SUB_UTM_NED "ned_utm"
-#define TOPIC_SUB_VELOCITY_OVER_GROUND "velocity_over_ground"
-#define TOPIC_SUB_VELOCITY_THROUGH_WATER "velocity_through_water"
-#define TOPIC_SUB_CURRENT_NED "current_velocity"
-#define TOPIC_SUB_DEPTH "depth"
-#define TOPIC_SUB_ALTIMETER "altimeter"
-#define TOPIC_SUB_RUDDER_ANGLE "rudder_angle"
-#define TOPIC_SUB_THRUSTER_RPM "thruster_rpm"
+static constexpr char TOPIC_SUB_IMU[] = "imu";
+static constexpr char TOPIC_SUB_GNSS[] = "gnss";
+static constexpr char TOPIC_SUB_UTM_NED[] = "ned_utm";
+static constexpr char TOPIC_SUB_VELOCITY_OVER_GROUND[] = "velocity_over_ground";
+static constexpr char TOPIC_SUB_VELOCITY_THROUGH_WATER[] = "velocity_through_water";
+static constexpr char TOPIC_SUB_CURRENT_NED[] = "current_velocity";
+static constexpr char TOPIC_SUB_DEPTH[] = "depth";
+static constexpr char TOPIC_SUB_ALTIMETER[] = "altimeter";
+static constexpr char TOPIC_SUB_RUDDER_ANGLE[] = "rudder_angle";
+static constexpr char TOPIC_SUB_THRUSTER_RPM[] = "thruster_rpm";
 // Publishers
-#define TOPIC_PUB_STATE "state"
-
+static constexpr char TOPIC_PUB_STATE[] = "state";
 class FilterNode : public rclcpp::Node
 {
 public:

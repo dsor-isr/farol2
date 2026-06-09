@@ -20,13 +20,11 @@
 #include "tf2_ros/transform_listener.h"
 
 #include <farol2_utils/angles.hpp>
-
-#define TOPIC_SUB_BODY_WRENCH_REQUEST "body_wrench_request"
-#define TOPIC_SUB_NAV_STATE "nav_state"
-#define TOPIC_SUB_MISSION_STATUS "mission_status"
-#define TOPIC_PUB_THRUSTER_FORCE "thruster_force"
-#define TOPIC_PUB_RUDDER_COMMAND "rudder_command"
-
+static constexpr char TOPIC_SUB_BODY_WRENCH_REQUEST[] = "body_wrench_request";
+static constexpr char TOPIC_SUB_NAV_STATE[] = "nav_state";
+static constexpr char TOPIC_SUB_MISSION_STATUS[] = "mission_status";
+static constexpr char TOPIC_PUB_THRUSTER_FORCE[] = "thruster_force";
+static constexpr char TOPIC_PUB_RUDDER_COMMAND[] = "rudder_command";
 class ThrusterAllocation : public rclcpp::Node {
   public:
     ThrusterAllocation();

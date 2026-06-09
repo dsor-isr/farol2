@@ -12,10 +12,9 @@
 #include "farol2_interfaces/msg/navigation_state.hpp"
 
 // Topic names (short form, remapped in launch file)
-#define TOPIC_SUB_THRUSTER_FORCE "thruster_force"
-#define TOPIC_SUB_NAV_STATE "nav_state"
-#define TOPIC_PUB_RPM_COMMAND "rpm_command"
-
+static constexpr char TOPIC_SUB_THRUSTER_FORCE[] = "thruster_force";
+static constexpr char TOPIC_SUB_NAV_STATE[] = "nav_state";
+static constexpr char TOPIC_PUB_RPM_COMMAND[] = "rpm_command";
 /**
  * @brief   RPM Conversion
  * @author  Eduardo Cunha
