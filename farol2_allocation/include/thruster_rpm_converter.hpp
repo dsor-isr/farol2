@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
-#include "farol2_allocation/msg/thruster_force.hpp"
 #include "farol2_interfaces/msg/thruster_rpm.hpp"
 
 class ThrusterRpmConverter {
@@ -32,7 +31,7 @@ class ThrusterRpmConverter {
 
     void setSurge(double surge);
     farol2_interfaces::msg::ThrusterRPM convert(
-      const farol2_allocation::msg::ThrusterForce & force_msg,
+      const std::vector<double> & forces,
       const rclcpp::Time & stamp) const;
 
   private:

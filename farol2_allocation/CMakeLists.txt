@@ -13,7 +13,6 @@ find_package(farol2_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
 find_package(farol2_utils REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -21,20 +20,6 @@ find_package(tf2_ros REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
-
-# Collect all .msg and .srv files
-file(GLOB MSG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
-file(GLOB SRV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "srv/*.srv")
-
-# Generate messages and services
-rosidl_generate_interfaces(${PROJECT_NAME}
-  ${MSG_FILES}
-  ${SRV_FILES}
-  DEPENDENCIES std_msgs geometry_msgs
-)
-
-ament_export_dependencies(rosidl_default_runtime)
-
 
 add_library(static_thruster_allocator src/static_thruster_allocator.cpp)
 add_library(rudder_allocator src/rudder_allocator.cpp)
@@ -107,14 +92,6 @@ ament_target_dependencies(
   std_msgs
   farol2_interfaces
 )
-
-# Link generated service types
-rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
-target_link_libraries(static_thruster_allocator "${cpp_typesupport_target}")
-target_link_libraries(rudder_allocator "${cpp_typesupport_target}")
-target_link_libraries(thruster_rpm_converter "${cpp_typesupport_target}")
-target_link_libraries(allocation_node "${cpp_typesupport_target}")
-
 
 target_include_directories(wrench_manager PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

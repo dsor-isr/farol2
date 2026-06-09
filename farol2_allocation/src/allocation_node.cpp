@@ -124,10 +124,6 @@ void AllocationNode::initialiseSubscribers() {
 }
 
 void AllocationNode::initialisePublishers() {
-	thruster_force_pub_ = create_publisher<farol2_allocation::msg::ThrusterForce>(
-		TOPIC_PUB_THRUSTER_FORCE,
-		rclcpp::QoS(1));
-
 	rpm_command_pub_ = create_publisher<farol2_interfaces::msg::ThrusterRPM>(
 		"rpm_command",
 		rclcpp::QoS(1));
@@ -197,13 +193,11 @@ void AllocationNode::bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped
 		forces_ = static_thruster_allocator_->allocate(tau_common_mode_);
 
 		if (!open_loop_) {
-			thruster_force_msg_.header.stamp = clock_->now();
+			const auto stamp = clock_->now();
 			std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
-			thruster_force_msg_.force = forces_vec;
-			thruster_force_pub_->publish(thruster_force_msg_);
 
 			rpm_converter_->setSurge(nav_state_.velocity_through_water_body.x);
-			rpm_command_pub_->publish(rpm_converter_->convert(thruster_force_msg_, clock_->now()));
+			rpm_command_pub_->publish(rpm_converter_->convert(forces_vec, stamp));
 		}
 
 		rudder_command_msg_.data = farol2_utils::rad2deg(rudder_angle_);
@@ -212,13 +206,11 @@ void AllocationNode::bodyWrenchRequestCallback(geometry_msgs::msg::WrenchStamped
 	}
 
 	forces_ = static_thruster_allocator_->allocate(tau_);
-	thruster_force_msg_.header.stamp = clock_->now();
+	const auto stamp = clock_->now();
 	std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
-	thruster_force_msg_.force = forces_vec;
-	thruster_force_pub_->publish(thruster_force_msg_);
 
 	rpm_converter_->setSurge(nav_state_.velocity_through_water_body.x);
-	rpm_command_pub_->publish(rpm_converter_->convert(thruster_force_msg_, clock_->now()));
+	rpm_command_pub_->publish(rpm_converter_->convert(forces_vec, stamp));
 }
 
 int main(int argc, char ** argv) {

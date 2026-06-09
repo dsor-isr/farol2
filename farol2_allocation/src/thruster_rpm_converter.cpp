@@ -49,14 +49,14 @@ void ThrusterRpmConverter::setSurge(double surge)
 }
 
 farol2_interfaces::msg::ThrusterRPM ThrusterRpmConverter::convert(
-  const farol2_allocation::msg::ThrusterForce & force_msg,
+  const std::vector<double> & forces,
   const rclcpp::Time & stamp) const
 {
   farol2_interfaces::msg::ThrusterRPM rpm_msg;
   rpm_msg.header.stamp = stamp;
-  rpm_msg.rpm.reserve(force_msg.force.size());
+  rpm_msg.rpm.reserve(forces.size());
 
-  for (const double force : force_msg.force) {
+  for (const double force : forces) {
     if (mode_ == Mode::STATIC_CURVE) {
       rpm_msg.rpm.push_back(forceToRpmStatic(force));
     } else {

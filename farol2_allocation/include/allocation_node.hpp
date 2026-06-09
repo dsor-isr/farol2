@@ -11,7 +11,6 @@
 #include "std_msgs/msg/int8.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
-#include "farol2_allocation/msg/thruster_force.hpp"
 #include "farol2_interfaces/msg/navigation_state.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
@@ -23,7 +22,6 @@
 static constexpr char TOPIC_SUB_BODY_WRENCH_REQUEST[] = "body_wrench_request";
 static constexpr char TOPIC_SUB_NAV_STATE[] = "nav_state";
 static constexpr char TOPIC_SUB_MISSION_STATUS[] = "mission_status";
-static constexpr char TOPIC_PUB_THRUSTER_FORCE[] = "thruster_force";
 static constexpr char TOPIC_PUB_RUDDER_COMMAND[] = "rudder_command";
 
 class AllocationNode : public rclcpp::Node {
@@ -50,7 +48,6 @@ class AllocationNode : public rclcpp::Node {
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
-    rclcpp::Publisher<farol2_allocation::msg::ThrusterForce>::SharedPtr thruster_force_pub_;
     rclcpp::Publisher<farol2_interfaces::msg::ThrusterRPM>::SharedPtr rpm_command_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_command_pub_;
     rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr body_wrench_request_sub_;
@@ -61,7 +58,6 @@ class AllocationNode : public rclcpp::Node {
     std::unique_ptr<RudderAllocator> rudder_allocator_;
     std::unique_ptr<ThrusterRpmConverter> rpm_converter_;
 
-    farol2_allocation::msg::ThrusterForce thruster_force_msg_;
     std_msgs::msg::Float32 rudder_command_msg_;
     farol2_interfaces::msg::NavigationState nav_state_;
 
