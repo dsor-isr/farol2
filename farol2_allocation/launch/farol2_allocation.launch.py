@@ -4,9 +4,6 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch.conditions import IfCondition
-
-
 def generate_launch_description():
   
   ####################
@@ -74,7 +71,7 @@ def generate_launch_description():
   thruster_allocation_node = Node(
     package='farol2_allocation',
     namespace=PathJoinSubstitution([vehicle_ns, 'allocation']),
-    executable='thruster_allocation',
+    executable='allocation_node',
     name='thruster_allocation',
     output='screen',
     parameters=params,
@@ -88,22 +85,7 @@ def generate_launch_description():
       # Publishers
       ('thruster_force', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thruster_force')]),
       ('rudder_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rudder_command')]),
-    ]
-  )
-
-  rpm_conversion_node = Node(
-    package='farol2_allocation',
-    namespace=PathJoinSubstitution([vehicle_ns, 'allocation']),
-    executable='rpm_conversion',
-    name='rpm_conversion',
-    output='screen',
-    parameters=params,
-    remappings=[
-      # Subscribers
-      ('thruster_force', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thruster_force')]),
-      ('nav_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
-      # Publishers
-      ('rpm_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rpm_command_')]),
+      ('rpm_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rpm_command')]),
     ]
   )
 
@@ -138,6 +120,5 @@ def generate_launch_description():
     config_to_use_arg,
     # nodes
     thruster_allocation_node,
-    rpm_conversion_node,
     wrench_manager_node,
   ])
