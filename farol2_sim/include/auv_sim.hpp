@@ -8,7 +8,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/parameter.hpp"
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
-#include "farol2_allocation/msg/thruster_rpm.hpp"
+#include "farol2_interfaces/msg/thruster_rpm.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "geometry_msgs/msg/vector3_stamped.hpp"
 #include "sim_utilis/AUV.hpp"
@@ -86,13 +86,13 @@ class AuvSim : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_through_water_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr depth_pub_;
 
-    rclcpp::Subscription<farol2_allocation::msg::ThrusterRPM>::SharedPtr rpm_sub_;
+    rclcpp::Subscription<farol2_interfaces::msg::ThrusterRPM>::SharedPtr rpm_sub_;
     
     rclcpp::TimerBase::SharedPtr timer_;   
   
 
     /* Callbacks */
-    void rpmCallback(const farol2_allocation::msg::ThrusterRPM::SharedPtr msg);
+    void rpmCallback(const farol2_interfaces::msg::ThrusterRPM::SharedPtr msg);
 
     std::unique_ptr<AUV> auv_;
 

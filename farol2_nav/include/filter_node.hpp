@@ -4,7 +4,7 @@
 #include <farol2_nav/measurement_snapshot.hpp>
 #include <farol2_nav/state.hpp>
 
-#include <farol2_allocation/msg/thruster_rpm.hpp>
+#include <farol2_interfaces/msg/thruster_rpm.hpp>
 #include <farol2_interfaces/msg/navigation_state.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -57,7 +57,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr depth_sub_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr altimeter_sub_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rudder_angle_sub_;
-  rclcpp::Subscription<farol2_allocation::msg::ThrusterRPM>::SharedPtr thruster_rpm_sub_;
+  rclcpp::Subscription<farol2_interfaces::msg::ThrusterRPM>::SharedPtr thruster_rpm_sub_;
 
   rclcpp::Publisher<farol2_interfaces::msg::NavigationState>::SharedPtr final_state_pub_;
   std::vector<rclcpp::Publisher<farol2_interfaces::msg::NavigationState>::SharedPtr> stage_pubs_{};

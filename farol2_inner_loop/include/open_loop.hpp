@@ -8,7 +8,7 @@
 #include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/int8.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
-#include "farol2_allocation/msg/thruster_rpm.hpp"
+#include "farol2_interfaces/msg/thruster_rpm.hpp"
 
 // Topic/service names (short form, remapped in launch file)
 static constexpr char TOPIC_SUB_SURGE_REF[] = "surge_ref";
@@ -40,7 +40,7 @@ class OpenLoop : public rclcpp::Node {
     void initialiseServices();
     
     /* Declare publishers, subscribers, services, etc. */
-    rclcpp::Publisher<farol2_allocation::msg::ThrusterRPM>::SharedPtr rpm_command_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::ThrusterRPM>::SharedPtr rpm_command_pub_;
 
     
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr surge_ref_sub_;
@@ -57,7 +57,7 @@ class OpenLoop : public rclcpp::Node {
     void surgeRefCallback(std_msgs::msg::Float32::SharedPtr msg);
 
     /* Other variables */
-    farol2_allocation::msg::ThrusterRPM rpm_command_msg_;
+    farol2_interfaces::msg::ThrusterRPM rpm_command_msg_;
     rclcpp::Clock clock_;
     bool surge_enabled_;
     double surge_gain_;

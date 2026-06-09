@@ -16,7 +16,7 @@
 /* Messages used to receive data from the vehicle and from the path */
 #include "farol2_interfaces/msg/navigation_state.hpp"
 #include "farol2_planning/msg/path_data.hpp"
-#include "farol2_interfaces/msg/pf_debug.hpp"
+#include "farol2_path_following/msg/pf_debug.hpp"
 
 /* Include the Control libraries */
 #include "RelativeHeading.h"
@@ -57,39 +57,38 @@
 #define FLAG_PF 6
 
 // Topic/service names (short form, remapped in launch file)
-#define TOPIC_SUB_STATE "state"
-#define TOPIC_SUB_PATH_DATA "path_data"
-#define TOPIC_SUB_VC "vc"
-#define TOPIC_SUB_MISSION_STATUS "mission_status"
-#define TOPIC_PUB_MISSION_STATUS "mission_status"
-#define TOPIC_PUB_PFOLLOWING_DEBUG "pfollowing_debug"
-#define TOPIC_PUB_SURGE "surge"
-#define TOPIC_PUB_SWAY "sway"
-#define TOPIC_PUB_YAW "yaw"
-#define TOPIC_PUB_YAW_RATE "yaw_rate"
-#define TOPIC_PUB_RABBIT "rabbit"
-#define TOPIC_PUB_OBSERVER_X "observer_x"
-#define TOPIC_PUB_OBSERVER_Y "observer_y"
-#define SERVICE_START_PF "start_pf"
-#define SERVICE_STOP_PF "stop_pf"
-#define SERVICE_UPDATE_GAINS_PF "update_gains_pf"
-#define SERVICE_MARCELO_PF "marcelo_pf"
-#define SERVICE_AGUIAR_PF "aguiar_pf"
-#define SERVICE_BREIVIK_PF "breivik_pf"
-#define SERVICE_FOSSEN_PF "fossen_pf"
-#define SERVICE_ROMULO_PF "romulo_pf"
-#define SERVICE_LAPIERRE_PF "lapierre_pf"
-#define SERVICE_PRAMOD_PF "pramod_pf"
-#define SERVICE_RAVI_PF "ravi_pf"
-#define SERVICE_SAMSON_PF "samson_pf"
-#define SERVICE_RELATIVE_HEADING_PF "relative_heading_pf"
-#define SERVICE_ILOS_PF "ilos_pf"
-#define SERVICE_RESET_VT_PF "reset_vt_pf"
-#define SERVICE_WP_STANDARD "wp_standard"
-#define SERVICE_RESET_DR "reset_dr"
-#define SERVICE_RESET_PATH "reset_path"
-#define SERVICE_SET_PATH_MODE "set_path_mode"
-
+static constexpr char TOPIC_SUB_STATE[] = "state";
+static constexpr char TOPIC_SUB_PATH_DATA[] = "path_data";
+static constexpr char TOPIC_SUB_VC[] = "vc";
+static constexpr char TOPIC_SUB_MISSION_STATUS[] = "mission_status";
+static constexpr char TOPIC_PUB_MISSION_STATUS[] = "mission_status";
+static constexpr char TOPIC_PUB_PFOLLOWING_DEBUG[] = "pfollowing_debug";
+static constexpr char TOPIC_PUB_SURGE[] = "surge";
+static constexpr char TOPIC_PUB_SWAY[] = "sway";
+static constexpr char TOPIC_PUB_YAW[] = "yaw";
+static constexpr char TOPIC_PUB_YAW_RATE[] = "yaw_rate";
+static constexpr char TOPIC_PUB_RABBIT[] = "rabbit";
+static constexpr char TOPIC_PUB_OBSERVER_X[] = "observer_x";
+static constexpr char TOPIC_PUB_OBSERVER_Y[] = "observer_y";
+static constexpr char SERVICE_START_PF[] = "start_pf";
+static constexpr char SERVICE_STOP_PF[] = "stop_pf";
+static constexpr char SERVICE_UPDATE_GAINS_PF[] = "update_gains_pf";
+static constexpr char SERVICE_MARCELO_PF[] = "marcelo_pf";
+static constexpr char SERVICE_AGUIAR_PF[] = "aguiar_pf";
+static constexpr char SERVICE_BREIVIK_PF[] = "breivik_pf";
+static constexpr char SERVICE_FOSSEN_PF[] = "fossen_pf";
+static constexpr char SERVICE_ROMULO_PF[] = "romulo_pf";
+static constexpr char SERVICE_LAPIERRE_PF[] = "lapierre_pf";
+static constexpr char SERVICE_PRAMOD_PF[] = "pramod_pf";
+static constexpr char SERVICE_RAVI_PF[] = "ravi_pf";
+static constexpr char SERVICE_SAMSON_PF[] = "samson_pf";
+static constexpr char SERVICE_RELATIVE_HEADING_PF[] = "relative_heading_pf";
+static constexpr char SERVICE_ILOS_PF[] = "ilos_pf";
+static constexpr char SERVICE_RESET_VT_PF[] = "reset_vt_pf";
+static constexpr char SERVICE_WP_STANDARD[] = "wp_standard";
+static constexpr char SERVICE_RESET_DR[] = "reset_dr";
+static constexpr char SERVICE_RESET_PATH[] = "reset_path";
+static constexpr char SERVICE_SET_PATH_MODE[] = "set_path_mode";
 /**
  * @brief     Path Following Node, where the magic happens 
  * @author    Marcelo Jacinto

@@ -11,8 +11,8 @@ float32 depth
 float32 altimeter 
 
 # Altitude
-float32 altitude_ellipsoidal # ellipsoidal altitude WGS84
-LocalDatum local_datum # local datum altitude
+float32 altitude_wgs84 # ellipsoidal altitude WGS84
+LocalDatum altitude_local_datum # local datum altitude
 
 # Velocity over ground
 geometry_msgs/Vector3 velocity_over_ground_body # velocity relative to static frame (NED), expressed in the body (m/s)
