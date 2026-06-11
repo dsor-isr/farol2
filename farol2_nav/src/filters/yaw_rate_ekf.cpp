@@ -300,7 +300,7 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
   // Expose yaw-rate (deg/s) and yaw estimate (deg) to downstream state consumers.
   s.angular_velocity(2) = farol2_utils::rad2deg(x_(0));
   // s.attitude(2) = farol2_utils::rad2deg(z_yaw);
-  // s.attitude(2) = farol2_utils::rad2deg(x_(3));
+  s.attitude(2) = farol2_utils::rad2deg(x_(3));
   torque_bias_msg_.data = static_cast<float>(x_(1));
   torque_bias_pub_->publish(torque_bias_msg_);
   torque_gain_msg_.data = static_cast<float>(x_(2));

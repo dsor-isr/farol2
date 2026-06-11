@@ -84,9 +84,9 @@ def generate_launch_description():
       ('u_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/surge')]),
       ('v_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/sway')]),
       # Services
-      ('wp_standard', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/waypoint/send_wp_standard')]),
-      ('wp_loose', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/waypoint/send_wp_loose')]),
-      ('wp_heading', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/waypoint/send_wp_heading')]),
+      ('wp_standard', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/waypoint/send_wp_standard')]),
+      ('wp_loose', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/waypoint/send_wp_loose')]),
+      ('wp_heading', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/waypoint/send_wp_heading')]),
     ]
   )
 
