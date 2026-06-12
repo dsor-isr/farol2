@@ -5,35 +5,13 @@ simulation tasks.
 
 ## Usage
 
-Source the loader from a Bash shell:
+Add the loader to your `~/.bashrc`:
 
 ```bash
-source src/farol2/farol2_scripts/source_all.sh
-```
-
-After that, the helper functions from all scripts in this folder are available
-in the current terminal session.
-
-For daily use, add the loader to `~/.bashrc` with the absolute path to this
-workspace:
-
-```bash
-source /home/andre/dsor/colcon_ws_sim/src/farol2/farol2_scripts/source_all.sh
-```
-
-Most build and cleanup helpers expect `COLCON_ROOT` to point at the colcon
-workspace root:
-
-```bash
-export COLCON_ROOT=/home/andre/dsor/colcon_ws_sim
+echo 'source ${COLCON_ROOT}/src/farol2/farol2_scripts/source_all.sh' >> ~/.bashrc
 ```
 
 ## Scripts
-
-### `source_all.sh`
-
-Sources every other `.sh` file in this directory. Use this instead of sourcing
-each helper script manually.
 
 ### `display_git_branch_in_prompt.sh`
 

@@ -44,19 +44,18 @@
 
 
 // Topic/service names (short form, remapped in launch file)
-#define TOPIC_SUB_GAMMA "gamma"
-#define TOPIC_SUB_VEHICLE_STATE "vehicle_state"
-#define TOPIC_PUB_PATH_DATA "path_data"
-#define TOPIC_PUB_VIRTUAL_TARGET_STATE "virtual_target_state"
-#define SERVICE_RESET_PATH "reset_path"
-#define SERVICE_SET_MODE "set_mode"
-#define SERVICE_ARC2D_PATH "arc2d_path"
-#define SERVICE_BERNOULLI_PATH "bernoulli_path"
-#define SERVICE_CIRCLE2D_PATH "circle2d_path"
-#define SERVICE_LINE_PATH "line_path"
-#define SERVICE_CONST_RABBIT_SPEED "speed_const_rabbit_speed"
-#define SERVICE_CONST_VEHICLE_SPEED "speed_const_vehicle_speed"
-
+static constexpr char TOPIC_SUB_GAMMA[] = "gamma";
+static constexpr char TOPIC_SUB_VEHICLE_STATE[] = "vehicle_state";
+static constexpr char TOPIC_PUB_PATH_DATA[] = "path_data";
+static constexpr char TOPIC_PUB_VIRTUAL_TARGET_STATE[] = "virtual_target_state";
+static constexpr char SERVICE_RESET_PATH[] = "reset_path";
+static constexpr char SERVICE_SET_MODE[] = "set_mode";
+static constexpr char SERVICE_ARC2D_PATH[] = "arc2d_path";
+static constexpr char SERVICE_BERNOULLI_PATH[] = "bernoulli_path";
+static constexpr char SERVICE_CIRCLE2D_PATH[] = "circle2d_path";
+static constexpr char SERVICE_LINE_PATH[] = "line_path";
+static constexpr char SERVICE_CONST_RABBIT_SPEED[] = "speed_const_rabbit_speed";
+static constexpr char SERVICE_CONST_VEHICLE_SPEED[] = "speed_const_vehicle_speed";
 /** 
  *  @brief     Implementation of the PathNode. Creates a Path, adds elements 
  *             to the path and publishes the path data when listening to the 

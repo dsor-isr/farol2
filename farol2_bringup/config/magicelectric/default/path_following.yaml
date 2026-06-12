@@ -13,7 +13,7 @@
       controller_gains:
         ravi:
           e_turn: 45.0            # meters at which to start turning, equivalent to lookahead distance
-          min_corridor: 45.0      # minimum hlaf-width of inner corridor where integral action is applied
+          min_corridor: 5.0      # minimum hlaf-width of inner corridor where integral action is applied
           xi: 1.0                 # ξ of the final system with integral
           w0_min: 0.08            # ω0 of the final system with integral
           epsilon_current: 0.2    # confidence on current estimate 

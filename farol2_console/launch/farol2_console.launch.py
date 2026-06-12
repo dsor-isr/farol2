@@ -92,8 +92,8 @@ def generate_launch_description():
       ('arc2d_path', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SpawnArc2DPath')]),
       ('line_path', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SpawnLinePath')]),
       ('set_speed', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SetConstVdVehicle')]),
-      ('pf_start', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/path_following/Start')]),
-      ('pf_stop', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/path_following/Stop')]),
+      ('pf_start', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/path_following/Start')]),
+      ('pf_stop', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/path_following/Stop')]),
     ]
   )
 
@@ -109,7 +109,7 @@ def generate_launch_description():
     parameters=params,
     remappings=[
       # Services
-      ('wp_standard', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/waypoint/send_wp_standard')]),
+      ('wp_standard', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/waypoint/send_wp_standard')]),
     ],
   )
 

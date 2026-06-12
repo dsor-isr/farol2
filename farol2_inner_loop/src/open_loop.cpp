@@ -47,7 +47,7 @@ void OpenLoop::initialiseSubscribers() {
  * @brief Initialise Publishers
  */
 void OpenLoop::initialisePublishers() {
-  rpm_command_pub_ = create_publisher<farol2_allocation::msg::ThrusterRPM>(
+  rpm_command_pub_ = create_publisher<farol2_interfaces::msg::ThrusterRPM>(
   TOPIC_PUB_RPM_COMMAND,
   rclcpp::QoS(1));
 }

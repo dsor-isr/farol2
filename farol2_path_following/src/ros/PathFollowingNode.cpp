@@ -270,7 +270,7 @@ bool PathFollowingNode::switchController(const std::string &algorithm_name, bool
     }
 
     this->pf_algorithm_->setPFollowingDebugPublisher(
-      create_publisher<farol2_interfaces::msg::PFDebug>(TOPIC_PUB_PFOLLOWING_DEBUG, 1));
+      create_publisher<farol2_path_following::msg::PFDebug>(TOPIC_PUB_PFOLLOWING_DEBUG, 1));
     RCLCPP_INFO(this->get_logger(), "PF controller switched to %s", normalized.c_str());
     return true;
   } catch (...) {

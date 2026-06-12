@@ -46,6 +46,14 @@ farol_clean() {
                 echo "Removing: $dir"
                 rm -rf -- "$dir"
             done
+
+            # reset ROS env in this terminal
+            unset AMENT_PREFIX_PATH
+            unset CMAKE_PREFIX_PATH
+            unset COLCON_PREFIX_PATH
+
+            source /opt/ros/jazzy/setup.bash
+
             echo "Done."
             ;;
         *)

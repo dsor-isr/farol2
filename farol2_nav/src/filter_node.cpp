@@ -117,9 +117,9 @@ void FilterNode::initialise_subscribers()
   }
 
   if (is_active("thruster_rpm")) {
-    thruster_rpm_sub_ = create_subscription<farol2_allocation::msg::ThrusterRPM>(
+    thruster_rpm_sub_ = create_subscription<farol2_interfaces::msg::ThrusterRPM>(
       TOPIC_SUB_THRUSTER_RPM, rclcpp::QoS(10),
-      [this](farol2_allocation::msg::ThrusterRPM::SharedPtr msg) {
+      [this](farol2_interfaces::msg::ThrusterRPM::SharedPtr msg) {
         snapshot_.thruster_rpm = std::move(msg);
         snapshot_.thruster_rpm_stamp = now();
       });
@@ -223,8 +223,8 @@ void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
 
   msg_.depth = state_.depth;
   msg_.altimeter = state_.altimeter;
-  msg_.altitude_ellipsoidal = state_.altitude_ellipsoidal;
-  msg_.local_datum.altitude = state_.local_datum_altitude;
+  msg_.altitude_wgs84 = state_.altitude_wgs84;
+  msg_.altitude_local_datum.altitude = state_.altitude_local_datum_altitude;
 
   msg_.velocity_over_ground_body.x = state_.velocity_over_ground_body(0);
   msg_.velocity_over_ground_body.y = state_.velocity_over_ground_body(1);
@@ -242,6 +242,8 @@ void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
   msg_.current_velocity_ned.x = state_.current_velocity_ned(0);
   msg_.current_velocity_ned.y = state_.current_velocity_ned(1);
   msg_.current_velocity_ned.z = state_.current_velocity_ned(2);
+  msg_.current_speed = state_.current_velocity_ned.head<2>().norm();
+  msg_.current_direction = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(std::atan2(state_.current_velocity_ned(1), state_.current_velocity_ned(0))));
 
   msg_.attitude.roll = state_.attitude(0);
   msg_.attitude.pitch = state_.attitude(1);

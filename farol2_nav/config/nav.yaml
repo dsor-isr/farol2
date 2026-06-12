@@ -1,6 +1,8 @@
 ################################
-#  Parameters
+#  Example configuration file  #
 ################################
+
+# "/**" is needed for nodes to find their params despite the "/vehicle0/<meta_package>/"<node_name>. the /**/ essentially leaves only the "node_name" as a key.
 /**:
   filter_node:
     ros__parameters:
@@ -10,8 +12,14 @@
       measurements:
         - "gnss"
         - "imu"
-        - "rudder_angle"
+        - "depth"
+        - "velocity_over_ground"
+        - "velocity_through_water"
+        - "utm_ned"
+        - "altimeter"
         - "thruster_rpm"
+        - "rudder_angle"
+      
       
       filters: 
         - "asv_dynamics_model"
@@ -44,12 +52,11 @@
           process_noise_bias: 0.01
           process_noise_gain: 0.01
           process_noise_yaw: 0.001
+          # measurement_noise_yaw_rate: 0.1
           measurement_noise_yaw_rate: 0.1
-          measurement_noise_yaw: 10.0
-
+          measurement_noise_yaw: 0.1
           measurement_window_samples: 40
           yaw_measurement_window_samples: 40
-
           init_cov_yaw_rate: 1.0
           init_cov_bias: 1.0
           init_cov_gain: 1.0

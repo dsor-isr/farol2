@@ -8,7 +8,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/parameter.hpp"
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
-#include "farol2_allocation/msg/thruster_rpm.hpp"
+#include "farol2_interfaces/msg/thruster_rpm.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "geometry_msgs/msg/vector3_stamped.hpp"
 #include "sim_utilis/AUV.hpp"
@@ -23,21 +23,20 @@
 #include <GeographicLib/UTMUPS.hpp>
 
 // Topic names (short form, remapped in launch file)
-#define TOPIC_SUB_RPM_COMMAND "rpm_command"
-#define TOPIC_PUB_UTM "utm"
-#define TOPIC_PUB_POSITION "position"
-#define TOPIC_PUB_BODY_VELOCITY "body_velocity"
-#define TOPIC_PUB_ORIENTATION "orientation"
-#define TOPIC_PUB_ORIENTATION_RATE "orientation_rate"
-#define TOPIC_PUB_BODY_ACCELERATION "body_acceleration"
-#define TOPIC_PUB_ANGULAR_ACCELERATION "angular_acceleration"
-#define TOPIC_PUB_IMU "imu"
-#define TOPIC_PUB_GNSS "gnss"
-#define TOPIC_PUB_UTM_NED "ned_utm"
-#define TOPIC_PUB_VELOCITY_OVER_GROUND "velocity_over_ground"
-#define TOPIC_PUB_VELOCITY_THROUGH_WATER "velocity_through_water"
-#define TOPIC_PUB_DEPTH "depth"
-
+static constexpr char TOPIC_SUB_RPM_COMMAND[] = "rpm_command";
+static constexpr char TOPIC_PUB_UTM[] = "utm";
+static constexpr char TOPIC_PUB_POSITION[] = "position";
+static constexpr char TOPIC_PUB_BODY_VELOCITY[] = "body_velocity";
+static constexpr char TOPIC_PUB_ORIENTATION[] = "orientation";
+static constexpr char TOPIC_PUB_ORIENTATION_RATE[] = "orientation_rate";
+static constexpr char TOPIC_PUB_BODY_ACCELERATION[] = "body_acceleration";
+static constexpr char TOPIC_PUB_ANGULAR_ACCELERATION[] = "angular_acceleration";
+static constexpr char TOPIC_PUB_IMU[] = "imu";
+static constexpr char TOPIC_PUB_GNSS[] = "gnss";
+static constexpr char TOPIC_PUB_UTM_NED[] = "ned_utm";
+static constexpr char TOPIC_PUB_VELOCITY_OVER_GROUND[] = "velocity_over_ground";
+static constexpr char TOPIC_PUB_VELOCITY_THROUGH_WATER[] = "velocity_through_water";
+static constexpr char TOPIC_PUB_DEPTH[] = "depth";
 /**
  * @brief   Sim
  * @author  Eduardo Cunha
@@ -87,13 +86,13 @@ class AuvSim : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_through_water_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr depth_pub_;
 
-    rclcpp::Subscription<farol2_allocation::msg::ThrusterRPM>::SharedPtr rpm_sub_;
+    rclcpp::Subscription<farol2_interfaces::msg::ThrusterRPM>::SharedPtr rpm_sub_;
     
     rclcpp::TimerBase::SharedPtr timer_;   
   
 
     /* Callbacks */
-    void rpmCallback(const farol2_allocation::msg::ThrusterRPM::SharedPtr msg);
+    void rpmCallback(const farol2_interfaces::msg::ThrusterRPM::SharedPtr msg);
 
     std::unique_ptr<AUV> auv_;
 
