@@ -1,6 +1,7 @@
 #pragma once
 
 #include <farol2_nav/filters/base_filter.hpp>
+#include <farol2_nav/msg/yaw_rate_ekf_debug.hpp>
 #include <farol2_nav/srv/tune_yaw_rate_ekf.hpp>
 
 #include <farol2_utils/filters/moving_average_filter.hpp>
@@ -8,8 +9,6 @@
 #include <Eigen/Dense>
 
 #include <deque>
-
-#include <std_msgs/msg/float32.hpp>
 
 namespace farol2_nav
 {
@@ -81,19 +80,7 @@ private:
 
   std::deque<HistoryEntry, Eigen::aligned_allocator<HistoryEntry>> history_{};
   rclcpp::Service<farol2_nav::srv::TuneYawRateEkf>::SharedPtr tune_ekf_srv_{};
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_bias_pub_{};
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr yaw_rate_filtered_pub_{};
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr current_yaw_rate_pub_{};
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr innovation_pub_{};
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr delayed_yaw_rate_pub_{};
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr tau_r_pub_{};
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_gain_pub_{};
-  std_msgs::msg::Float32 torque_bias_msg_{};
-  std_msgs::msg::Float32 torque_gain_msg_{};
-  std_msgs::msg::Float32 yaw_rate_filtered_msg_{};
-  std_msgs::msg::Float32 current_yaw_rate_msg_{};
-  std_msgs::msg::Float32 delayed_yaw_rate_msg_{};
-  std_msgs::msg::Float32 tau_r_msg_{};
+  rclcpp::Publisher<farol2_nav::msg::YawRateEkfDebug>::SharedPtr debug_pub_{};
 };
 
 }  // namespace filters

@@ -242,6 +242,8 @@ void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
   msg_.current_velocity_ned.x = state_.current_velocity_ned(0);
   msg_.current_velocity_ned.y = state_.current_velocity_ned(1);
   msg_.current_velocity_ned.z = state_.current_velocity_ned(2);
+  msg_.current_speed = state_.current_velocity_ned.head<2>().norm();
+  msg_.current_direction = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(std::atan2(state_.current_velocity_ned(1), state_.current_velocity_ned(0))));
 
   msg_.attitude.roll = state_.attitude(0);
   msg_.attitude.pitch = state_.attitude(1);

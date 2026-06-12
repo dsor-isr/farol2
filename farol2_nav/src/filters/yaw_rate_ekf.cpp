@@ -23,14 +23,8 @@ namespace filters
 
 void YawRateEkfFilter::configure(rclcpp::Node & node)
 {
-  // Configure torque bias publisher for external monitoring.
-  torque_bias_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/torque_bias", rclcpp::QoS(10));
-  yaw_rate_filtered_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/yaw_rate_filtered", rclcpp::QoS(10));
-  current_yaw_rate_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/current_yaw_rate", rclcpp::QoS(10));
-  innovation_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/innovation", rclcpp::QoS(10));
-  delayed_yaw_rate_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/delayed_yaw_rate", rclcpp::QoS(10));
-  tau_r_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/tau_r", rclcpp::QoS(10));
-  torque_gain_pub_ = node.create_publisher<std_msgs::msg::Float32>("yaw_rate_ekf/torque_gain", rclcpp::QoS(10));
+  debug_pub_ = node.create_publisher<farol2_nav::msg::YawRateEkfDebug>(
+    "yaw_rate_ekf/debug", rclcpp::QoS(10));
   tune_ekf_srv_ = node.create_service<farol2_nav::srv::TuneYawRateEkf>(
     "yaw_rate_ekf/tune",
     [this](
@@ -205,9 +199,6 @@ void YawRateEkfFilter::update(Eigen::Vector4d & x, Eigen::Matrix4d & P, const Ei
 
   Eigen::Vector2d y = z - H * x;
   y(1) = farol2_utils::wrapToPi(y(1));
-  std_msgs::msg::Float32 innovation_msg;
-  innovation_msg.data = static_cast<float>(y(0));
-  innovation_pub_->publish(innovation_msg);
 
   Eigen::Matrix2d R = Eigen::Matrix2d::Zero();
   R(0, 0) = std::max(1e-12, r_yaw_rate_);
@@ -241,9 +232,6 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
     const double yaw_meas = yaw_from_quaternion(m.imu->orientation);
     yaw_maf_.step(yaw_meas);
     z_yaw = farol2_utils::wrapToPi(yaw_maf_.y());
-
-    yaw_rate_filtered_msg_.data = static_cast<float>(z_r);
-    yaw_rate_filtered_pub_->publish(yaw_rate_filtered_msg_);
   }
 
   // Input torque from rudder command + fluid velocity estimate.
@@ -252,8 +240,6 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
     rudder_angle = farol2_utils::deg2rad(m.rudder_angle->data);
   }
   const double tau_r = get_torque(rudder_angle, s.velocity_through_water_body, x_(0));
-  tau_r_msg_.data = static_cast<float>(tau_r);
-  tau_r_pub_->publish(tau_r_msg_);
 
   if (!initialized_) {
     x_.setZero();
@@ -273,10 +259,6 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
   while (history_.size() > history_max_samples_) {
     history_.pop_front();
   }
-  delayed_yaw_rate_msg_.data = static_cast<float>(history_.front().x_post(0));
-  delayed_yaw_rate_pub_->publish(delayed_yaw_rate_msg_);
-  current_yaw_rate_msg_.data = static_cast<float>(history_.back().x_post(0));
-  current_yaw_rate_pub_->publish(current_yaw_rate_msg_);
 
   // 2) Apply correction at the oldest buffered state and re-roll forward.
   // With history size tied to delay+1, the oldest entry is the delayed state.
@@ -300,11 +282,17 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
   // Expose yaw-rate (deg/s) and yaw estimate (deg) to downstream state consumers.
   s.angular_velocity(2) = farol2_utils::rad2deg(x_(0));
   // s.attitude(2) = farol2_utils::rad2deg(z_yaw);
-  s.attitude(2) = farol2_utils::rad2deg(x_(3));
-  torque_bias_msg_.data = static_cast<float>(x_(1));
-  torque_bias_pub_->publish(torque_bias_msg_);
-  torque_gain_msg_.data = static_cast<float>(x_(2));
-  torque_gain_pub_->publish(torque_gain_msg_);
+  // s.attitude(2) = farol2_utils::rad2deg(x_(3));
+
+  farol2_nav::msg::YawRateEkfDebug debug_msg;
+  debug_msg.yaw_rate_est = farol2_utils::rad2deg(x_(0));
+  debug_msg.torque_bias_est = x_(1);
+  debug_msg.torque_gain_est = x_(2);
+  debug_msg.yaw_est = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(x_(3)));
+  debug_msg.yaw_rate_meas = farol2_utils::rad2deg(z_r);
+  debug_msg.yaw_meas = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(z_yaw));
+  debug_msg.torque_used = tau_r;
+  debug_pub_->publish(debug_msg);
 }
 
 }  // namespace filters

@@ -40,7 +40,7 @@
         debug: true
         enabled: true
         delta_implementation: false
-        use_ref_lpf: true
+        use_ref_lpf: false
         use_rate_limiter: true
         rate_limit: 4.0 # deg/s
         kp: 31.6800

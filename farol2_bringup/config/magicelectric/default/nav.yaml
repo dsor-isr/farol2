@@ -44,11 +44,12 @@
           process_noise_bias: 0.01
           process_noise_gain: 0.01
           process_noise_yaw: 0.001
-          # measurement_noise_yaw_rate: 0.1
           measurement_noise_yaw_rate: 0.1
-          measurement_noise_yaw: 0.1
+          measurement_noise_yaw: 10.0
+
           measurement_window_samples: 40
           yaw_measurement_window_samples: 40
+
           init_cov_yaw_rate: 1.0
           init_cov_bias: 1.0
           init_cov_gain: 1.0

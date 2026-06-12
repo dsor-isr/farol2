@@ -27,8 +27,8 @@ find_library(GEOGRAPHIC_LIB GeographicLib)
 # --------------------
 # Interfaces (msg/srv)
 # --------------------
-file(GLOB MSG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
-file(GLOB SRV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "srv/*.srv")
+file(GLOB MSG_FILES CONFIGURE_DEPENDS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
+file(GLOB SRV_FILES CONFIGURE_DEPENDS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "srv/*.srv")
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${MSG_FILES}
@@ -66,6 +66,7 @@ ament_target_dependencies(filter_node
 # Include dirs
 target_include_directories(filter_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
 )
 
