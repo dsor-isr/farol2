@@ -11,6 +11,26 @@ Add the loader to your `~/.bashrc`:
 echo 'source ${COLCON_ROOT}/src/farol2/farol2_scripts/source_all.sh' >> ~/.bashrc
 ```
 
+## Migrating to `farol2_cli`
+
+The ROS 2 `ament_python` package at `farol2_cli/` provides a modern command
+interface while these scripts remain available for backwards compatibility:
+
+```bash
+colcon build --symlink-install --packages-select farol2_cli
+source install/setup.bash
+
+farol2 cd
+farol2 cd drivers
+farol2 ws build
+farol2 ws clean
+farol2 bag crop my_bag 10 20 -a
+farol2 serial bridge /dev/ttyACM0
+farol2 kill ros
+```
+
+See `farol2_cli/README.md` for the complete command mapping and usage.
+
 ## Scripts
 
 ### `display_git_branch_in_prompt.sh`

@@ -17,6 +17,13 @@ for _farol2_script in "$_farol2_scripts_dir"/*.sh; do
     source "$_farol2_script"
 done
 
+_farol2_cli_shell="$_farol2_scripts_dir/../farol2_cli/shell/farol2.bash"
+if [[ -f "$_farol2_cli_shell" ]]; then
+    # shellcheck source=/dev/null
+    source "$_farol2_cli_shell"
+fi
+
+unset _farol2_cli_shell
 unset _farol2_script
 unset _farol2_scripts_dir
 unset _farol2_scripts_loader

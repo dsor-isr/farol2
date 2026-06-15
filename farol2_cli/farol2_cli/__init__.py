@@ -1,0 +1,1 @@
+"""FAROL command-line helpers."""

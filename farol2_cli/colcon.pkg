@@ -1,0 +1,2 @@
+hooks:
+  - share/farol2_cli/shell/farol2.bash
