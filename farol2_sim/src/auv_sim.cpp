@@ -22,6 +22,7 @@ void AuvSim::loadParams() {
 
   freq_ = declare_parameter<int>("node_frequency");
   node_period_ = 1.0/freq_;
+  frame_prefix_ = declare_parameter<std::string>("frame_prefix", "");
 
   fluid_density = declare_parameter<double>("environment.fluid_density");
 
@@ -186,6 +187,7 @@ void AuvSim::initialisePublishers() {
       TOPIC_PUB_VELOCITY_THROUGH_WATER, 1);
   depth_pub_ = create_publisher<std_msgs::msg::Float32>(
       TOPIC_PUB_DEPTH, 1);
+  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
   return;
 }
@@ -229,6 +231,7 @@ void AuvSim::rpmCallback(const farol2_allocation::msg::ThrusterRPM::SharedPtr ms
 
 void AuvSim::timerCallback() {
   RCLCPP_DEBUG(get_logger(), "Timer callback triggered");
+  const auto stamp = get_clock()->now();
   auv_->update(node_period_, rpm_);
 
   geometry_msgs::msg::Vector3 pos_msg, body_vel_msg, ori_msg, ori_rate_msg, body_acc_msg, ang_acc_msg;
@@ -263,6 +266,7 @@ void AuvSim::timerCallback() {
   ang_acc_msg.z = auv_->getYawRateDot();
   angular_acceleration_pub_->publish(ang_acc_msg);
 
+  publishWorldTransform(stamp);
   publishMeasurements();
 
   return;
@@ -346,6 +350,24 @@ void AuvSim::publishMeasurements()
     imu_msg.linear_acceleration.z = auv_->getHeaveDot();
     imu_pub_->publish(imu_msg);
   }
+}
+
+void AuvSim::publishWorldTransform(const rclcpp::Time & stamp)
+{
+  geometry_msgs::msg::TransformStamped transform;
+  transform.header.stamp = stamp;
+  transform.header.frame_id = "world";
+  transform.child_frame_id = frame_prefix_ + "base_link";
+  transform.transform.translation.x = auv_->getX();
+  transform.transform.translation.y = auv_->getY();
+  transform.transform.translation.z = auv_->getZ();
+
+  tf2::Quaternion q;
+  q.setRPY(auv_->getRoll(), auv_->getPitch(), auv_->getYaw());
+  q.normalize();
+  transform.transform.rotation = tf2::toMsg(q);
+
+  tf_broadcaster_->sendTransform(transform);
 }
 
 double AuvSim::randn(double mu, double sigma)

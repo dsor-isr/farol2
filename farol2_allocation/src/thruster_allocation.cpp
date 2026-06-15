@@ -22,11 +22,15 @@ ThrusterAllocation::~ThrusterAllocation() = default;
 
 void ThrusterAllocation::loadParams() {
   node_frequency_ = declare_parameter<double>("node_frequency");
+  frame_prefix_ = declare_parameter<std::string>("frame_prefix", "");
 
   const auto allocation_type = declare_parameter<std::string>("allocation.type");
   allocation_type_ = parseAllocationType(allocation_type);
 
   base_frame_ = declare_parameter<std::string>("allocation.thrusters.base_frame");
+  if (!frame_prefix_.empty() && base_frame_.rfind(frame_prefix_, 0) != 0) {
+    base_frame_ = frame_prefix_ + base_frame_;
+  }
   if (base_frame_.empty()) {
     throw std::runtime_error("allocation.thrusters.base_frame cannot be empty");
   }
@@ -45,9 +49,12 @@ void ThrusterAllocation::loadParams() {
   if (thruster_frames_.empty()) {
     throw std::runtime_error("allocation.thrusters.frames must contain at least one TF frame");
   }
-  for (const auto & frame : thruster_frames_) {
+  for (auto & frame : thruster_frames_) {
     if (frame.empty()) {
       throw std::runtime_error("allocation.thrusters.frames cannot contain empty frame names");
+    }
+    if (!frame_prefix_.empty() && frame.rfind(frame_prefix_, 0) != 0) {
+      frame = frame_prefix_ + frame;
     }
   }
 

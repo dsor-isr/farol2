@@ -15,6 +15,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(farol2_allocation REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 find_package(PkgConfig REQUIRED)
@@ -41,6 +42,7 @@ ament_target_dependencies(
   farol2_allocation
   tf2
   tf2_geometry_msgs
+  tf2_ros
 )
 
 ament_target_dependencies(
@@ -53,6 +55,7 @@ ament_target_dependencies(
   farol2_allocation
   tf2
   tf2_geometry_msgs
+  tf2_ros
 )
 
 target_include_directories(auv_sim PUBLIC

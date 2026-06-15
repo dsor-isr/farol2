@@ -46,6 +46,7 @@ def generate_launch_description():
             # vehicle namespace
             {'vehicle_name': LaunchConfiguration('vehicle_name')},
             {'vehicle_id': LaunchConfiguration('vehicle_id')},
+            {'frame_prefix': [vehicle_ns, TextSubstitution(text='/')]},
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
 
             # load default allocation configs
@@ -83,8 +84,6 @@ def generate_launch_description():
     parameters=params,
     remappings=[
       # Subscribers
-      ('/tf', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/tf')]),
-      ('/tf_static', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/tf_static')]),
       ('body_wrench_request', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/body_wrench_request')]),
       ('nav_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
       ('mission_status', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/mission_status')]),

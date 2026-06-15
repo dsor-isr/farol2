@@ -20,6 +20,7 @@
 #include "std_msgs/msg/float32.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_ros/transform_broadcaster.h>
 #include <GeographicLib/UTMUPS.hpp>
 
 // Topic names (short form, remapped in launch file)
@@ -86,6 +87,7 @@ class AuvSim : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_over_ground_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_through_water_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr depth_pub_;
+    std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
     rclcpp::Subscription<farol2_allocation::msg::ThrusterRPM>::SharedPtr rpm_sub_;
     
@@ -134,6 +136,7 @@ class AuvSim : public rclcpp::Node {
 
     // Sensor / measurement publishing
     void publishMeasurements();
+    void publishWorldTransform(const rclcpp::Time & stamp);
     double randn(double mu, double sigma);
 
     bool gnss_activate_;
@@ -144,6 +147,7 @@ class AuvSim : public rclcpp::Node {
     int    utm_zone_;
     bool   northp_;
     double northing_, easting_;
+    std::string frame_prefix_;
 
     std::array<double,3> pos_bias{};
     std::array<double,3> pos_variance{};
