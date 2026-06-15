@@ -151,7 +151,7 @@ void AuvSim::loadParams() {
 void AuvSim::initialiseSubscribers() {
 
 
-  rpm_sub_  = create_subscription<farol2_allocation::msg::ThrusterRPM>(
+  rpm_sub_  = create_subscription<farol2_interfaces::msg::ThrusterRPM>(
                           TOPIC_SUB_RPM_COMMAND, 
                           1, std::bind(&AuvSim::rpmCallback, this, std::placeholders::_1));
   return;
@@ -222,7 +222,7 @@ void AuvSim::initialiseTimers() {
  *        Where the algorithms will constantly run.
  */
 
-void AuvSim::rpmCallback(const farol2_allocation::msg::ThrusterRPM::SharedPtr msg){
+void AuvSim::rpmCallback(const farol2_interfaces::msg::ThrusterRPM::SharedPtr msg){
 
   for(int i=0; i < rpm_.size(); i++) {
     rpm_[i] = msg->rpm[i];

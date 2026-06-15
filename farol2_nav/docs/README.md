@@ -62,7 +62,7 @@ Unknown keys are skipped with a warning.
 - `depth`
 - `altimeter`
 - `rudder_angle`
-- `rpm_command`
+- `thruster_rpm`
 
 ### Published
 

@@ -6,51 +6,31 @@
     ros__parameters:
       node_frequency: 10.0
       course_instead_of_yaw: false   # set to true to control course angle instead of yaw
-      use_heading_rate_as_yaw_rate: true # set to true to use the heading rate from the nav filter as the yaw rate for feedforward and control, instead of the yaw rate from the IMU (which is typically much noisier)
-      lpf_order: 2
+      lpf_order: 3
       lpf_method: "tustin"
       lpf_design: "bessel"
       
-      # Controllers gains and parameters
-      surge:
-        enabled: false
-        kp: 10.0
-        ki: 1.0
-        lpf_wc: 31.4 # rad/s
-        tau_min: -30.0 # N
-        tau_max: 30.0 # N
-      altitude:
-        debug: false
-        enabled: false
-        delta_implementation: false
-        use_ref_lpf: false
-        use_rate_limiter: false
-        rate_limit: 0.5 # m/s
-        kp: 22.0
-        ki: 0.0
-        kd: 0.0
-        lpf_wc: 6.28 # rad/s
-        tau_min: -6.0 # N
-        tau_max: 6.0 # N
-      
+###########
+#   YAW   #
+###########
       ## Delta pid implementation
       # yaw:
       #   debug: true
       #   enabled: true
       #   delta_implementation: true
       #   use_ref_lpf: true
-      #   use_rate_limiter: false
-      #   rate_limit: 6.0 # deg/s
+      #   use_rate_limiter: true
+      #   rate_limit: 4.0 # deg/s
       #   kp: 21.0
       #   ki: 2.0
       #   kd: 110.0
-      #   # kffv_lin: 14.334052 # linear drag term (N.s/m) SHOULD BE POSITIVE
-      #   # kffv_sq: 260.675031 # quadratic drag term (N.s^2/m^2) SHOULD BE POSITIVE
+      #   kffv_lin: 14.334052 # linear drag term (N.s/m) SHOULD BE POSITIVE
+      #   kffv_sq: 260.675031 # quadratic drag term (N.s^2/m^2) SHOULD BE POSITIVE
       #   # kffa: 88.478840   # hydrodynamic compensated mass (Kg) SHOULD BE POSITIVE
-      #   kffv_lin: 0.0
-      #   kffv_sq: 0.0
+      #   # kffv_lin: 0.0
+      #   # kffv_sq: 0.0
       #   kffa: 0.0
-      #   lpf_wc: 6.28 # rad/s (2hz about the maximum possible given that sampling is 10hz)
+      #   lpf_wc: 1.0 # 6.28 # rad/s (2hz about the maximum possible given that sampling is 10hz)
       #   # lpf_wc: 12.5664 # rad/s (2hz about the maximum possible given that sampling is 10hz)
       #   tau_min: -6.0  # N.m (actual in simulation is 5.93)
       #   tau_max: 6.0 # N.m
@@ -61,11 +41,11 @@
         enabled: true
         delta_implementation: false
         use_ref_lpf: false
-        use_rate_limiter: false
-        rate_limit: 6.0 # deg/s
-        kp: 22.0
-        ki: 0.0
-        kd: 0.0 #47.6
+        use_rate_limiter: true
+        rate_limit: 4.0 # deg/s
+        kp: 31.6800
+        ki: 1.0
+        kd: 59.9200
         kffv_lin: 0.0
         kffv_sq: 0.0
         kffa: 0.0
@@ -74,6 +54,21 @@
         tau_min: -6.0  # N.m (actual in simulation is 5.93)
         tau_max: 6.0 # N.m
 
+
+#############
+#   SURGE   #
+#############
+      surge:
+        enabled: false
+        kp: 10.0
+        ki: 1.0
+        lpf_wc: 31.4 # rad/s
+        tau_min: -30.0 # N
+        tau_max: 30.0 # N
+
+################
+#   YAW RATE   #
+################
       yaw_rate:
         enabled: false
         kp: 1.0
@@ -86,4 +81,4 @@
     ros__parameters:
       surge:
         enabled: true
-        gain: 2000.0 # surge m/s to rpms
+        gain: 2200.0 # surge m/s to rpms (basically max_rpms)

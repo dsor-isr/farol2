@@ -18,7 +18,7 @@ public:
   void compute(double dt_s, const MeasurementSnapshot & measurements, State & state) override;
 
 private:
-  double rpm_to_body_speed_mps(const MeasurementSnapshot & m, double dt_s);
+  Eigen::Vector2d rpm_to_body_velocity_mps(const MeasurementSnapshot & m, const State & s, double dt_s);
   void on_tune_ekf(
     const std::shared_ptr<farol2_nav::srv::TunePositionEkf::Request> req,
     std::shared_ptr<farol2_nav::srv::TunePositionEkf::Response> res);
@@ -36,6 +36,8 @@ private:
   double r_pos_{1.0};
   double p0_pos_{25.0};
   double p0_current_{1.0};
+  double init_current_x_{0.0};
+  double init_current_y_{0.0};
   bool override_position_state_{true};
 
   // Surge dynamics model parameters.
@@ -47,19 +49,18 @@ private:
   double prop_diameter_{0.4318};
   double k_t_bp_{0.061461915};
   double m_u_{3100.0};
+  double m_uv_{-2.967651};
+  double m_v_{3102.967651};
   double x_u_{0.0};
   double x_uu_{-96.2270};
-
-  // Optional surge override parameters.
-  double override_velocity_{0.0};
-  double override_rpms_{600.0};
-  double override_timeout_s_{5.0};
+  double Y_v_{-500.0};
+  double Y_vv_{-1500.0};
 
   // Runtime model state.
   bool rpm_model_initialized_{false};
   double rpm_model_state_{0.0};
   double u_estimated_{0.0};
-  double time_in_override_zone_s_{0.0};
+  double v_estimated_{0.0};
 
   rclcpp::Service<farol2_nav::srv::TunePositionEkf>::SharedPtr tune_ekf_srv_{};
 };

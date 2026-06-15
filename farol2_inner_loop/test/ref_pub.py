@@ -20,20 +20,20 @@ class YawRefPublisher(Node):
 
         # Main ref
         self.pub_ref = self.create_publisher(
-            Float32, '/magicelectric0/control/ref/yaw', 1
+            Float32, '/magicelectric0/inner_loop/ref/yaw', 1
         )
 
         # Debug: (yaw, yaw_dot, yaw_ddot)
         self.pub_dbg = self.create_publisher(
-            Vector3, '/magicelectric0/control/ref/yaw_dbg', 1
+            Vector3, '/magicelectric0/inner_loop/ref/yaw_dbg', 1
         )
 
         # Parameters
         self.declare_parameter('mode', 'sine')        # 'sine' or 'ramp'
-        self.declare_parameter('amplitude', 0.25) # rad (sine only)
-        self.declare_parameter('frequency', 0.03)     # Hz
-        self.declare_parameter('offset', 1.0)         # rad
-        self.declare_parameter('rate', 20.0)          # Hz
+        self.declare_parameter('amplitude', 0.087222222) # rad (sine only)
+        self.declare_parameter('frequency', 0.033333)     # Hz
+        self.declare_parameter('offset', 1.39)         # rad
+        self.declare_parameter('rate', 10.0)          # Hz
 
         self.mode = str(self.get_parameter('mode').value).lower()
         self.A = float(self.get_parameter('amplitude').value)
@@ -84,7 +84,7 @@ class YawRefPublisher(Node):
         """
         if self.mode == 'sine':
             # yaw = offset + A sin(2π f t)
-            w = 0.3 #2.0 * math.pi * self.f
+            w = self.f*2*3.1416 #2.0 * math.pi * self.f
             s = math.sin(w * t)
             c = math.cos(w * t)
 

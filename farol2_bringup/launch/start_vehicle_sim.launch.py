@@ -56,12 +56,14 @@ def _launch(context, *args, **kwargs):
       'vehicle_name': vehicle_name,
       'vehicle_id': vehicle_id,
       'config_to_use': config_to_use,
-      'use_sim_time': 'true',
+      'use_sim_time': 'false',
     }.items()
   )
 
   # Keep vehicle_id in context so ros2 launch tooling can report it.
-  return [SetLaunchConfiguration('vehicle_id', vehicle_id), clock, simulation, farol_stack]
+  return [SetLaunchConfiguration('vehicle_id', vehicle_id),
+          # clock, simulation,
+          farol_stack]
 
 
 def generate_launch_description():

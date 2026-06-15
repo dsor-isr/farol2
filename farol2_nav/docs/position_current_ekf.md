@@ -28,8 +28,20 @@ $$
 
 where $(v_{x,model}, v_{y,model})$ is obtained from:
 
-1. an RPM-to-surge model,
+1. an RPM-to-body-velocity model that estimates both surge and sway,
 2. projection to NED using current yaw.
+
+The body-frame velocity model is:
+
+$$
+\dot{u} = \frac{1}{m_u}(\tau_u + X_u u + X_{uu}|u|u)
+$$
+
+$$
+\dot{v} = \frac{1}{m_v}(-m_u u r + Y_v v + Y_{vv}|v|v)
+$$
+
+with $r$ taken from the current yaw-rate estimate.
 
 Discrete covariance propagation uses Jacobian $F$ and process noise $Q_d = Q \cdot dt$.
 
@@ -47,13 +59,14 @@ $$
 
 - Position measurements from shared state (`northing`, `easting`) populated by `sample_and_hold`.
 - Yaw from shared attitude state.
-- RPM command (`rpm_command`) for surge model.
+- Yaw rate from shared angular-velocity state.
+- Thruster RPM (`thruster_rpm`) for surge model.
 
 ## Outputs written to shared state
 
 - `current_velocity_ned.{x,y}` from EKF current estimate.
 - `velocity_through_water_ned.{x,y}` from model projection.
-- `velocity_through_water_body.x` from modeled surge.
+- `velocity_through_water_body.{x,y}` from modeled surge and sway.
 - Optional overwrite of position:
   - `northing`, `easting` if `override_position_state=true`.
 
@@ -63,8 +76,7 @@ $$
 - If no position measurement is available in a tick, prediction still runs (open-loop update).
 - RPM model includes:
   - command clamp,
-  - rate limiting,
-  - optional fixed-speed override after staying near a target RPM for a configured time.
+  - rate limiting.
 
 ## Parameters
 
@@ -77,19 +89,17 @@ Noise and covariance:
 - `measurement_noise_pos`
 - `init_cov_pos`
 - `init_cov_current`
+- `init_current_x`
+- `init_current_y`
 - `override_position_state`
 
 Surge model and propulsion constants:
 
 - `rpm_min`, `rpm_max`, `rpm_rate_limit`
 - `rho`, `prop_pitch`, `prop_diameter`, `k_t_bp`
-- `m_u`, `x_u`, `x_uu`
-
-Override behavior:
-
-- `override_velocity`
-- `override_rpms`
-- `override_timeout_s`
+- `m_u`, `m_uv`, `m_v`
+- `x_u`, `x_uu`
+- `Y_v`, `Y_vv`
 
 ## Runtime tuning service
 
@@ -105,6 +115,5 @@ All values must be positive.
 
 ## Assumptions and limitations
 
-- Model currently estimates only surge in body frame (no sway model).
 - Current is modeled in horizontal plane only.
 - Performance depends strongly on propulsion model calibration.

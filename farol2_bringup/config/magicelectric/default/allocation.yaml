@@ -19,8 +19,8 @@
           K_D1: 0.0   # 0.0 -> drag induced by rudder is not accounted for
         rudder:
           limits:
-            max: 36.0 # [deg]
-            min: -36.0 # [deg]
+            max: 30.0 # [deg]
+            min: -30.0 # [deg]
           cm_distance: 4.0 # [m]
         thrusters:
           open_loop: true
@@ -41,6 +41,6 @@
       # Forces (N) = ct[0]*RPM^2 + c[1]*RPM + c[2]
       coef_fwd: [0.00000177778, 0.0, 0.0]     # parameters for farol seabotix, eqn -> Thrust = f(rpm)
       coef_bwd: [-0.00000177778, 0.0, 0.0]    # parameters for farol seabotix, eqn -> Thrust = f(rpm)
-      max_rpm: 2000.0
-      min_rpm: -2000.0
+      max_rpm: 2200.0
+      min_rpm: -2200.0
 

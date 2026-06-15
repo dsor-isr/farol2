@@ -1,77 +1,104 @@
-#!/usr/bin/env bash
-set -euo pipefail
+nuke_ros2() {
+    local patterns=(
+        "ros2"
+        "ros2 launch"
+        "launch_ros"
+        "rviz2"
+        "rqt"
+        "component_container"
+        "robot_state_publisher"
+        "joint_state_publisher"
+        "/opt/ros/.*/lib/"
+        "/install/.*/lib/"
+    )
 
-# Kills ROS 2-related processes:
-# 1. SIGINT  = like Ctrl-C
-# 2. SIGTERM = polite terminate
-# 3. SIGKILL = forced kill
+    # Anything matching these will be protected.
+    local exclude_patterns=(
+        "plotjuggler"
+        "PlotJuggler"
+        "rqt"
+        "foxglove_bridge"
+        "foxglove[-_ ]bridge"
+        "bag_record"
+    )
 
-PATTERNS=(
-  "ros2"
-  "ros2 launch"
-  "launch_ros"
-  "rviz2"
-  "rqt"
-  "component_container"
-  "robot_state_publisher"
-  "joint_state_publisher"
-  "/opt/ros/.*/lib/"
-  "/install/.*/lib/"
-)
+    local self_pid="$$"
+    local pids=""
 
-SELF_PID=$$
-PIDS=""
+    is_excluded_pid() {
+        local pid="$1"
+        local cmdline
 
-for pattern in "${PATTERNS[@]}"; do
-  while read -r pid; do
-    [[ -z "$pid" ]] && continue
-    [[ "$pid" == "$SELF_PID" ]] && continue
-    PIDS="$PIDS $pid"
-  done < <(pgrep -f "$pattern" || true)
-done
+        cmdline="$(ps -p "$pid" -o args= 2>/dev/null || true)"
 
-# Remove duplicates
-PIDS=$(echo "$PIDS" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+        for exclude in "${exclude_patterns[@]}"; do
+            if [[ "$cmdline" =~ $exclude ]]; then
+                return 0
+            fi
+        done
 
-if [[ -z "${PIDS// }" ]]; then
-  echo "No ROS 2 processes found."
-  exit 0
-fi
+        return 1
+    }
 
-echo "Found ROS 2-related processes:"
-ps -fp $PIDS || true
+    for pattern in "${patterns[@]}"; do
+        while read -r pid; do
+            [[ -z "$pid" ]] && continue
+            [[ "$pid" == "$self_pid" ]] && continue
 
-echo
-echo "Sending SIGINT..."
-kill -INT $PIDS 2>/dev/null || true
-sleep 2
+            if is_excluded_pid "$pid"; then
+                continue
+            fi
 
-REMAINING=""
-for pid in $PIDS; do
-  if kill -0 "$pid" 2>/dev/null; then
-    REMAINING="$REMAINING $pid"
-  fi
-done
+            pids="$pids $pid"
+        done < <(pgrep -f "$pattern" || true)
+    done
 
-if [[ -n "${REMAINING// }" ]]; then
-  echo "Sending SIGTERM..."
-  kill -TERM $REMAINING 2>/dev/null || true
-  sleep 2
-fi
+    pids=$(echo "$pids" | tr ' ' '\n' | sort -u | tr '\n' ' ')
 
-REMAINING2=""
-for pid in $PIDS; do
-  if kill -0 "$pid" 2>/dev/null; then
-    REMAINING2="$REMAINING2 $pid"
-  fi
-done
+    if [[ -z "${pids// }" ]]; then
+        echo "No ROS 2 processes found."
+        return 0
+    fi
 
-if [[ -n "${REMAINING2// }" ]]; then
-  echo "Sending SIGKILL..."
-  kill -KILL $REMAINING2 2>/dev/null || true
-fi
+    echo "Found ROS 2-related processes to kill:"
+    ps -fp $pids || true
 
-echo "Stopping ROS 2 daemon..."
-ros2 daemon stop 2>/dev/null || true
+    echo
+    echo "Protected processes matching:"
+    printf '  - %s\n' "${exclude_patterns[@]}"
 
-echo "Done."
+    echo
+    echo "Sending SIGINT..."
+    kill -INT $pids 2>/dev/null || true
+    sleep 2
+
+    local remaining=""
+    for pid in $pids; do
+        if kill -0 "$pid" 2>/dev/null; then
+            remaining="$remaining $pid"
+        fi
+    done
+
+    if [[ -n "${remaining// }" ]]; then
+        echo "Sending SIGTERM..."
+        kill -TERM $remaining 2>/dev/null || true
+        sleep 2
+    fi
+
+    local remaining2=""
+    for pid in $pids; do
+        if kill -0 "$pid" 2>/dev/null; then
+            remaining2="$remaining2 $pid"
+        fi
+    done
+
+    if [[ -n "${remaining2// }" ]]; then
+        echo "Sending SIGKILL..."
+        kill -KILL $remaining2 2>/dev/null || true
+    fi
+
+    echo "Stopping ROS 2 daemon..."
+    ros2 daemon stop 2>/dev/null || true
+
+    echo "Done."
+}

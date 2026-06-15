@@ -91,7 +91,7 @@ def generate_launch_description():
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'config_to_use': LaunchConfiguration('config_to_use'),
             'pid': 'true',
-            'open_loop': 'false',
+            'open_loop': 'true',
         }.items()
     )
 
