@@ -11,3 +11,5 @@ float64 d_vd
 float64 vehicle_speed
 float64 gamma_min      # The minimum and maximum value that gamma can achieve for the current path
 float64 gamma_max
+float64 tf             # Additional parameter to pass bezier maneuver time
+int32 type             # Only used in the bezier implementation for waypoint alternative

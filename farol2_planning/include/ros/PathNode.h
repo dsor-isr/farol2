@@ -26,10 +26,13 @@
 #include "PathSection.h"
 #include "Arc2D.h"
 #include "Bernoulli.h"
+#include "Bezier.h"
 #include "Circle2D.h"
 #include "Line.h"
 #include "ConstRabbitSpeed.h"
 #include "ConstVehicleSpeed.h"
+#include "BezierRabbitSpeed.h"
+#include "BezierVehicleSpeed.h"
 
 /* Include the generated services for the farol2_planning */
 #include "farol2_planning/srv/reset_path.hpp"
@@ -38,10 +41,11 @@
 #include "farol2_planning/srv/spawn_bernoulli.hpp"
 #include "farol2_planning/srv/spawn_circle2_d.hpp"
 #include "farol2_planning/srv/spawn_line.hpp"
+#include "farol2_planning/srv/spawn_bezier.hpp"
 
 /* Services for setting the speed profile of the vehicle*/
 #include "farol2_planning/srv/set_const_speed.hpp"
-
+#include "farol2_planning/srv/set_bezier_speed.hpp"
 
 // Topic/service names (short form, remapped in launch file)
 static constexpr char TOPIC_SUB_GAMMA[] = "gamma";
@@ -56,6 +60,9 @@ static constexpr char SERVICE_CIRCLE2D_PATH[] = "circle2d_path";
 static constexpr char SERVICE_LINE_PATH[] = "line_path";
 static constexpr char SERVICE_CONST_RABBIT_SPEED[] = "speed_const_rabbit_speed";
 static constexpr char SERVICE_CONST_VEHICLE_SPEED[] = "speed_const_vehicle_speed";
+static constexpr char SERVICE_BEZIER_RABBIT_SPEED[] = "speed_bezier_rabbit_speed";
+static constexpr char SERVICE_BEZIER_VEHICLE_SPEED[] = "speed_bezier_vehicle_speed";
+static constexpr char SERVICE_BEZIER_PATH[] = "bezier_path";
 /** 
  *  @brief     Implementation of the PathNode. Creates a Path, adds elements 
  *             to the path and publishes the path data when listening to the 
@@ -89,6 +96,8 @@ class PathNode : public rclcpp::Node {
     std::optional<double> gamma_; // The current gamma being published
     Path * path_{NULL}; // A pointer to the path object
 
+    double Tf_val_{0.0}; // Additional variable needed for Bezier Implementation
+
     /**
      * @brief Frame_id for messages 
      */
@@ -121,10 +130,13 @@ class PathNode : public rclcpp::Node {
     rclcpp::Service<farol2_planning::srv::SetMode>::SharedPtr set_mode_srv_;
     rclcpp::Service<farol2_planning::srv::SpawnArc2D>::SharedPtr arc2d_srv_;
     rclcpp::Service<farol2_planning::srv::SpawnBernoulli>::SharedPtr bernoulli_srv_;
+    rclcpp::Service<farol2_planning::srv::SpawnBezier>::SharedPtr bezier_srv_;
     rclcpp::Service<farol2_planning::srv::SpawnCircle2D>::SharedPtr circle2D_srv_;
     rclcpp::Service<farol2_planning::srv::SpawnLine>::SharedPtr line_srv_;
     rclcpp::Service<farol2_planning::srv::SetConstSpeed>::SharedPtr vehicle_const_speed_srv_;
     rclcpp::Service<farol2_planning::srv::SetConstSpeed>::SharedPtr rabbit_const_speed_srv_;
+    rclcpp::Service<farol2_planning::srv::SetBezierSpeed>::SharedPtr rabbit_bezier_speed_srv_;
+    rclcpp::Service<farol2_planning::srv::SetBezierSpeed>::SharedPtr vehicle_bezier_speed_srv_;
 
     /**
      * @brief ROS Timer
@@ -161,6 +173,9 @@ class PathNode : public rclcpp::Node {
     bool LineService(const std::shared_ptr<farol2_planning::srv::SpawnLine::Request> req, std::shared_ptr<farol2_planning::srv::SpawnLine::Response> res);
     bool RabbitConstSpeedService(const std::shared_ptr<farol2_planning::srv::SetConstSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetConstSpeed::Response> res);
     bool VehicleConstSpeedService(const std::shared_ptr<farol2_planning::srv::SetConstSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetConstSpeed::Response> res);
+    bool RabbitBezierSpeedService(const std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Response> res);
+    bool VehicleBezierSpeedService(const std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Response> res); 
+    bool BezierService(const std::shared_ptr<farol2_planning::srv::SpawnBezier::Request> req, std::shared_ptr<farol2_planning::srv::SpawnBezier::Response> res);
 
     /** 
      * @brief Auxiliar method to be called inside the callbacks

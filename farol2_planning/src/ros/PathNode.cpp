@@ -82,6 +82,7 @@ void PathNode::timerCallback() {
   std::optional<double> vd = 0;
   std::optional<double> d_vd = 0;
   double vehicle_speed = 0;
+  double Tf_value = 0;
   std::pair<double, double> min_max_gamma_path;
 
   /* If the mode is to use the closest point to the vehicle, than get the gamma of that point */
@@ -107,7 +108,7 @@ void PathNode::timerCallback() {
     derivative_norm = this->path_->derivative_norm(this->gamma_.value());
     vd = this->path_->eq_vd(this->gamma_.value());
     d_vd = this->path_->eq_d_vd(this->gamma_.value());
-    
+    Tf_value = this->Tf_val_;
     /* Compute the vehicle speed */
     vehicle_speed = vd.value_or(0.0) * derivative_norm.value_or(0.0);
   
@@ -138,6 +139,7 @@ void PathNode::timerCallback() {
       msg.vd = vd.value();
       msg.d_vd = d_vd.value();
       msg.vehicle_speed = vehicle_speed;
+      msg.tf = Tf_value;
 
       msg.gamma_min = min_max_gamma_path.first;
       msg.gamma_max = min_max_gamma_path.second;

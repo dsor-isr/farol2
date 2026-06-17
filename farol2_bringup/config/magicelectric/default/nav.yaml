@@ -10,8 +10,8 @@
       measurements:
         - "gnss"
         - "imu"
-        - "rudder_angle"
-        - "thruster_rpm"
+        # - "rudder_angle"
+        # - "thruster_rpm"
       
       filters: 
         - "asv_dynamics_model"

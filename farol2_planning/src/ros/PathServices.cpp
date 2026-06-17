@@ -52,6 +52,24 @@ void PathNode::initializeServices() {
       [this](const std::shared_ptr<farol2_planning::srv::SetConstSpeed::Request> request,
         std::shared_ptr<farol2_planning::srv::SetConstSpeed::Response> response){
         VehicleConstSpeedService(request, response);});
+
+  this->bezier_srv_ = create_service<farol2_planning::srv::SpawnBezier>(
+      SERVICE_BEZIER_PATH,
+      [this](const std::shared_ptr<farol2_planning::srv::SpawnBezier::Request> request,
+        std::shared_ptr<farol2_planning::srv::SpawnBezier::Response> response){
+        BezierService(request, response);});
+
+  this->rabbit_bezier_speed_srv_ = create_service<farol2_planning::srv::SetBezierSpeed>(
+      SERVICE_BEZIER_RABBIT_SPEED,
+      [this](const std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> request,
+        std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Response> response){
+        RabbitBezierSpeedService(request, response);});
+  
+  this->vehicle_bezier_speed_srv_ = create_service<farol2_planning::srv::SetBezierSpeed>(
+      SERVICE_BEZIER_VEHICLE_SPEED,
+      [this](const std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> request,
+        std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Response> response){
+        VehicleBezierSpeedService(request, response);}); 
 }
 
 /**
@@ -313,4 +331,91 @@ bool PathNode::VehicleConstSpeedService(const std::shared_ptr<farol2_planning::s
   return true;
 }
 
+bool PathNode::BezierService(const std::shared_ptr<farol2_planning::srv::SpawnBezier::Request> req, std::shared_ptr<farol2_planning::srv::SpawnBezier::Response> res){
 
+  // Validate the Bezier section
+  if (req->px.size() != req->py.size())
+  {
+    RCLCPP_INFO(get_logger(), "Px and Py arrays have different sizes!");
+    // Print the sizes of both arrays
+    RCLCPP_INFO(get_logger(), "Px size: %ld, Py size: %ld", req->px.size(), req->py.size());
+    
+    // Print the contents of Px and Py
+    RCLCPP_INFO(get_logger(), "Px values: ");
+    for (size_t i = 0; i < req->px.size(); ++i)
+    {
+        RCLCPP_INFO(get_logger(), "%f", req->px[i]);
+    }
+
+    RCLCPP_INFO(get_logger(), "Py values: ");
+    for (size_t i = 0; i < req->py.size(); ++i)
+    {
+        RCLCPP_INFO(get_logger(), "%f", req->py[i]);
+    }
+
+    res->success = false;
+    return true;
+  }
+
+  Eigen::Matrix2Xd control_P(2,req->px.size());
+
+  // Fill the Eigen matrix with Px and Py values
+  for (size_t i = 0; i < req->px.size(); ++i)
+  {
+    control_P(0, i) = req->px[i]; // Set x coordinates
+    control_P(1, i) = req->py[i]; // Set y coordinates
+  }
+
+  bool success = false;
+  double Tf = req->tf;
+  /* Allocate memory for a new Bezier Object */
+  Bezier *section = new Bezier(Eigen::VectorXd::Map(req->px.data(), req->px.size()),
+                             Eigen::VectorXd::Map(req->py.data(), req->py.size()), 
+                             0.0, Tf);
+
+  /* Try to add the bezier to the path */
+  success = this->loadSectionIntoPath(section);
+
+  /* Send the update if the path section was added successfully or not */
+  res->success = success;
+  RCLCPP_INFO(get_logger(), "Adding Bezier to the path");
+  return true;
+} 
+
+bool PathNode::RabbitBezierSpeedService(const std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Response> res) {
+  
+  /* Get the data from the message */
+  double Tf_val = req->tf;
+  bool success = false;
+
+  /* Create a new Rabbit Speed object */
+  BezierRabbitSpeed * speed = new BezierRabbitSpeed(Eigen::VectorXd::Map(req->px.data(), req->px.size()), Eigen::VectorXd::Map(req->py.data(), req->py.size()), Tf_val);
+
+  /* Try to add the speed object to the path */
+  success = this->loadSpeedIntoPath(speed);
+
+  /* Construct the response back */
+  res->success = success;
+  if(success == true) RCLCPP_INFO(get_logger(), "Load rabbit BEZIER speed section");
+
+  return true;
+}
+
+bool PathNode::VehicleBezierSpeedService(const std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Response> res) {
+  
+  /* Get the data from the message */
+  Tf_val_ = req->tf;
+  bool success = false;
+
+  /* Create a new Rabbit Speed object */
+  BezierVehicleSpeed * speed = new BezierVehicleSpeed(Eigen::VectorXd::Map(req->px.data(), req->px.size()), Eigen::VectorXd::Map(req->py.data(), req->py.size()), Tf_val_);
+
+  /* Try to add the speed object to the path */
+  success = this->loadSpeedIntoPath(speed);
+
+  /* Construct the response back */
+  res->success = success;
+  if(success == true) RCLCPP_INFO(get_logger(), "Load vehicle BEZIER speed section");
+
+  return true;
+}

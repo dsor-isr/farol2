@@ -62,7 +62,7 @@ def _launch(context, *args, **kwargs):
 
   # Keep vehicle_id in context so ros2 launch tooling can report it.
   return [SetLaunchConfiguration('vehicle_id', vehicle_id),
-          # clock, simulation,
+          clock, simulation,
           farol_stack]
 
 

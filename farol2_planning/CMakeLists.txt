@@ -40,11 +40,14 @@ add_executable(path_node
   src/algorithms/speed_profiles/Speed.cpp
   src/algorithms/speed_profiles/ConstRabbitSpeed.cpp
   src/algorithms/speed_profiles/ConstVehicleSpeed.cpp
-   
+  src/algorithms/speed_profiles/BezierRabbitSpeed.cpp
+  src/algorithms/speed_profiles/BezierVehicleSpeed.cpp
+
   # Path Library files
   src/algorithms/path_sections/Arc2D.cpp
   src/algorithms/path_sections/Circle2D.cpp
   src/algorithms/path_sections/Bernoulli.cpp
+  src/algorithms/path_sections/Bezier.cpp
   src/algorithms/path_sections/Line.cpp
   src/algorithms/path_sections/PathSection.cpp
   src/algorithms/path_sections/Polynomial5.cpp
