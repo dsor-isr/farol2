@@ -1,57 +1,24 @@
 ################################
 #  Parameters
 ################################
-# "/**" is needed for nodes to find their params despite the "/vehicle0/<meta_package>/"<node_name>. the /**/ essentially leaves only the "node_name" as a key.
 /**:
   filter_node:
     ros__parameters:
       node_frequency: 10.0
       publish_all_steps: true
-      # sample_and_hold is always applied first implicitly.
+
       filters: 
-        - "" ## this is needed because ROS2 is stupid and doesnt understand this an empty array of strings... might be fixed in the future 
-        # - "position_current_ekf"
-        # - "yaw_rate_ekf"
+        - ""
+      
       measurements:
-        gnss: true
-        imu: true
-        utm_ned: true
-        velocity_over_ground: true
-        velocity_through_water: true
-        depth: true
-        altimeter: true
-        rudder_angle: false
-        rpm_command: true
+        - "gnss"
+        - "imu"
+        - "utm_ned"
+        - "velocity_over_ground"
+        - "velocity_through_water"
+        - "depth"
+        - "altimeter"
+        - "thruster_rpm"
+      
       # plugins:
-        # position_current_ekf:
-        #   override_position_state: true
-        #   process_noise_pos: 0.1
-        #   process_noise_current: 0.01
-        #   measurement_noise_pos: 10000.0
-        #   init_cov_pos: 25.0
-        #   init_cov_current: 1.0
-        #   rpm_min: -2000.0
-        #   rpm_max: 2000.0
-        #   rpm_rate_limit: 200.0
-        #   rho: 1025.0
-        #   prop_pitch: 0.381
-        #   prop_diameter: 0.4318
-        #   k_t_bp: 0.061461915
-        #   m_u: 3100.0
-        #   x_u: 0.0
-        #   x_uu: -96.2270
-        #   override_velocity: 1.618
-        #   override_rpms: 600.0
-        #   override_timeout_s: 15.0
-        # yaw_rate_ekf:
-        #   process_noise_yaw_rate: 0.02
-        #   process_noise_bias: 0.01
-        #   measurement_noise_yaw_rate: 0.1
-        #   measurement_window_samples: 60 
-        #   init_cov_yaw_rate: 1.0
-        #   init_cov_bias: 1.0
-        #   inertia: 88.478840
-        #   damping: 14.334052
-        #   damping_quadratic: 260.675031
-        #   torque_gain: 1.0
-        #   rudder_arm: 4.0
+       

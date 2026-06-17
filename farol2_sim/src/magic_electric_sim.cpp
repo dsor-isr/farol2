@@ -152,7 +152,7 @@ void MagicElectricSim::loadParams()
 void MagicElectricSim::initialiseSubscribers()
 {
 
-  rpm_sub_ = create_subscription<farol2_allocation::msg::ThrusterRPM>(
+  rpm_sub_ = create_subscription<farol2_interfaces::msg::ThrusterRPM>(
       TOPIC_SUB_RPM_COMMAND,
       1, std::bind(&MagicElectricSim::rpmCallback, this, std::placeholders::_1));
 
@@ -257,7 +257,7 @@ void MagicElectricSim::rudderAngleCallback(const std_msgs::msg::Float32::SharedP
   rudder_command_ = std::clamp(static_cast<double>(msg->data), -1.0, 1.0);
 }
 
-void MagicElectricSim::rpmCallback(const farol2_allocation::msg::ThrusterRPM::SharedPtr msg)
+void MagicElectricSim::rpmCallback(const farol2_interfaces::msg::ThrusterRPM::SharedPtr msg)
 {
 
   rpm_[0] = msg->rpm[0];

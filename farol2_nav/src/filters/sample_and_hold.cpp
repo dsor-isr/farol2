@@ -12,13 +12,40 @@ namespace farol2_nav
 namespace filters
 {
 
-void SampleAndHoldFilter::configure(rclcpp::Node &)
+void SampleAndHoldFilter::configure(rclcpp::Node & node)
 {
+  node.get_parameter("measurements", required_measurements_);
+  received_measurements_.clear();
+  initialized_ = required_measurements_.empty();
+}
+
+bool SampleAndHoldFilter::has_measurement(const std::string & name) const
+{
+  return std::find(required_measurements_.begin(), required_measurements_.end(), name) !=
+    required_measurements_.end();
+}
+
+void SampleAndHoldFilter::mark_received(const std::string & name)
+{
+  if (!has_measurement(name)) {
+    return;
+  }
+
+  const auto it = std::find(received_measurements_.begin(), received_measurements_.end(), name);
+  if (it == received_measurements_.end()) {
+    received_measurements_.push_back(name);
+  }
+}
+
+bool SampleAndHoldFilter::all_required_measurements_received() const
+{
+  return received_measurements_.size() >= required_measurements_.size();
 }
 
 void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State & s)
 {
   if (m.imu != nullptr) {
+    mark_received("imu");
     tf2::Quaternion q_tf;
     tf2::fromMsg(m.imu->orientation, q_tf);
 
@@ -42,6 +69,7 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
   }
 
   if (m.gnss != nullptr) {
+    mark_received("gnss");
     s_.latitude = m.gnss->latitude;
     s_.longitude = m.gnss->longitude;
 
@@ -61,12 +89,14 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
   }
 
   if (m.utm_ned != nullptr) {
+    mark_received("utm_ned");
     s_.northing = m.utm_ned->vector.x;
     s_.easting = m.utm_ned->vector.y;
     s_.utm_zone = static_cast<int32_t>(m.utm_ned->vector.z);
   }
 
   if (m.velocity_over_ground != nullptr) {
+    mark_received("velocity_over_ground");
     s_.velocity_over_ground_ned <<
       m.velocity_over_ground->vector.x,
       m.velocity_over_ground->vector.y,
@@ -75,6 +105,7 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
   }
 
   if (m.velocity_through_water != nullptr) {
+    mark_received("velocity_through_water");
     s_.velocity_through_water_ned <<
       m.velocity_through_water->vector.x,
       m.velocity_through_water->vector.y,
@@ -83,14 +114,30 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
   }
 
   if (m.depth != nullptr) {
+    mark_received("depth");
     s_.depth = m.depth->data;
   }
 
   if (m.altimeter != nullptr) {
+    mark_received("altimeter");
     s_.altimeter = m.altimeter->data;
   }
 
-  s = s_;
+  if (m.rudder_angle != nullptr) {
+    mark_received("rudder_angle");
+  }
+
+  if (m.thruster_rpm != nullptr) {
+    mark_received("thruster_rpm");
+  }
+
+  if (!initialized_ && all_required_measurements_received()) {
+    initialized_ = true;
+  }
+
+  if (initialized_) {
+    s = s_;
+  }
 }
 
 }  // namespace filters

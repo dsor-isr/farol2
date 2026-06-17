@@ -89,7 +89,7 @@ def generate_launch_description():
       ('altimeter', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/altimeter')]),
       ('altitude', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/altitude')]),
       ('rudder_angle', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/rudder_angle')]),
-      ('rpm_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/rpm')]),
+      ('thruster_rpm', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/thruster_rpm')]),
       # Publishers
       ('state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
       ##############################################################################################################################

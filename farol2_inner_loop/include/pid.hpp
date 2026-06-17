@@ -29,38 +29,37 @@
 #include "farol2_inner_loop/reference_generator.hpp"
 
 // Topic/service names (short form, remapped in launch file)
-#define TOPIC_SUB_NAV_STATE "nav_state"
-#define TOPIC_SUB_SURGE_REF "surge_ref"
-#define TOPIC_SUB_SWAY_REF "sway_ref"
-#define TOPIC_SUB_HEAVE_REF "heave_ref"
-#define TOPIC_SUB_DEPTH_REF "depth_ref"
-#define TOPIC_SUB_ALTITUDE_REF "altitude_ref"
-#define TOPIC_SUB_YAW_REF "yaw_ref"
-#define TOPIC_SUB_PITCH_REF "pitch_ref"
-#define TOPIC_SUB_ROLL_REF "roll_ref"
-#define TOPIC_SUB_YAW_RATE_REF "yaw_rate_ref"
-#define TOPIC_SUB_PITCH_RATE_REF "pitch_rate_ref"
-#define TOPIC_SUB_ROLL_RATE_REF "roll_rate_ref"
-#define TOPIC_PUB_THRUST_X "thrust_x"
-#define TOPIC_PUB_THRUST_Y "thrust_y"
-#define TOPIC_PUB_THRUST_Z "thrust_z"
-#define TOPIC_PUB_TORQUE_X "torque_x"
-#define TOPIC_PUB_TORQUE_Y "torque_y"
-#define TOPIC_PUB_TORQUE_Z "torque_z"
-#define TOPIC_PUB_DEBUG_SURGE "debug_surge"
-#define TOPIC_PUB_DEBUG_SWAY "debug_sway"
-#define TOPIC_PUB_DEBUG_HEAVE "debug_heave"
-#define TOPIC_PUB_DEBUG_DEPTH "debug_depth"
-#define TOPIC_PUB_DEBUG_ALTITUDE "debug_altitude"
-#define TOPIC_PUB_DEBUG_YAW "debug_yaw"
-#define TOPIC_PUB_DEBUG_PITCH "debug_pitch"
-#define TOPIC_PUB_DEBUG_ROLL "debug_roll"
-#define TOPIC_PUB_DEBUG_YAW_RATE "debug_yaw_rate"
-#define TOPIC_PUB_DEBUG_PITCH_RATE "debug_pitch_rate"
-#define TOPIC_PUB_DEBUG_ROLL_RATE "debug_roll_rate"
-#define SERVICE_CHANGE_PARAMS "change_params"
-#define SERVICE_COURSE_CONTROL "course_instead_of_yaw"
-
+static constexpr char TOPIC_SUB_NAV_STATE[] = "nav_state";
+static constexpr char TOPIC_SUB_SURGE_REF[] = "surge_ref";
+static constexpr char TOPIC_SUB_SWAY_REF[] = "sway_ref";
+static constexpr char TOPIC_SUB_HEAVE_REF[] = "heave_ref";
+static constexpr char TOPIC_SUB_DEPTH_REF[] = "depth_ref";
+static constexpr char TOPIC_SUB_ALTITUDE_REF[] = "altitude_ref";
+static constexpr char TOPIC_SUB_YAW_REF[] = "yaw_ref";
+static constexpr char TOPIC_SUB_PITCH_REF[] = "pitch_ref";
+static constexpr char TOPIC_SUB_ROLL_REF[] = "roll_ref";
+static constexpr char TOPIC_SUB_YAW_RATE_REF[] = "yaw_rate_ref";
+static constexpr char TOPIC_SUB_PITCH_RATE_REF[] = "pitch_rate_ref";
+static constexpr char TOPIC_SUB_ROLL_RATE_REF[] = "roll_rate_ref";
+static constexpr char TOPIC_PUB_THRUST_X[] = "thrust_x";
+static constexpr char TOPIC_PUB_THRUST_Y[] = "thrust_y";
+static constexpr char TOPIC_PUB_THRUST_Z[] = "thrust_z";
+static constexpr char TOPIC_PUB_TORQUE_X[] = "torque_x";
+static constexpr char TOPIC_PUB_TORQUE_Y[] = "torque_y";
+static constexpr char TOPIC_PUB_TORQUE_Z[] = "torque_z";
+static constexpr char TOPIC_PUB_DEBUG_SURGE[] = "debug_surge";
+static constexpr char TOPIC_PUB_DEBUG_SWAY[] = "debug_sway";
+static constexpr char TOPIC_PUB_DEBUG_HEAVE[] = "debug_heave";
+static constexpr char TOPIC_PUB_DEBUG_DEPTH[] = "debug_depth";
+static constexpr char TOPIC_PUB_DEBUG_ALTITUDE[] = "debug_altitude";
+static constexpr char TOPIC_PUB_DEBUG_YAW[] = "debug_yaw";
+static constexpr char TOPIC_PUB_DEBUG_PITCH[] = "debug_pitch";
+static constexpr char TOPIC_PUB_DEBUG_ROLL[] = "debug_roll";
+static constexpr char TOPIC_PUB_DEBUG_YAW_RATE[] = "debug_yaw_rate";
+static constexpr char TOPIC_PUB_DEBUG_PITCH_RATE[] = "debug_pitch_rate";
+static constexpr char TOPIC_PUB_DEBUG_ROLL_RATE[] = "debug_roll_rate";
+static constexpr char SERVICE_CHANGE_PARAMS[] = "change_params";
+static constexpr char SERVICE_COURSE_CONTROL[] = "course_instead_of_yaw";
 enum ControllerType {
   SURGE = 0,
   SWAY = 1,

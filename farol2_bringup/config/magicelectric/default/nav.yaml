@@ -1,8 +1,6 @@
 ################################
 #  Parameters
 ################################
-
-# "/**" is needed for nodes to find their params despite the "/vehicle0/<meta_package>/"<node_name>. the /**/ essentially leaves only the "node_name" as a key.
 /**:
   filter_node:
     ros__parameters:
@@ -10,15 +8,10 @@
       publish_all_steps: true
       
       measurements:
-        gnss: true
-        imu: true
-        utm_ned: false
-        velocity_over_ground: false
-        velocity_through_water: false
-        depth: false
-        altimeter: false
-        rudder_angle: true
-        rpm_command: true
+        - "gnss"
+        - "imu"
+        - "rudder_angle"
+        - "thruster_rpm"
       
       filters: 
         - "asv_dynamics_model"
@@ -35,8 +28,8 @@
           init_cov_current: 1.0
           init_current_x: 0.0
           init_current_y: 0.0
-          rpm_min: -2000.0
-          rpm_max: 2000.0
+          rpm_min: -2200.0
+          rpm_max: 2200.0
           rpm_rate_limit: 200.0
           rho: 1025.0
           prop_pitch: 0.381
@@ -49,13 +42,18 @@
         yaw_rate_ekf:
           process_noise_yaw_rate: 0.02
           process_noise_bias: 0.01
-          process_noise_gain: 0.1
-          # measurement_noise_yaw_rate: 0.1
+          process_noise_gain: 0.01
+          process_noise_yaw: 0.001
           measurement_noise_yaw_rate: 0.1
-          measurement_window_samples: 30 
+          measurement_noise_yaw: 10.0
+
+          measurement_window_samples: 40
+          yaw_measurement_window_samples: 40
+
           init_cov_yaw_rate: 1.0
           init_cov_bias: 1.0
           init_cov_gain: 1.0
+          init_cov_yaw: 1.0
           inertia: 88.478840
           damping: 14.334052
           # damping: 28.0
@@ -67,8 +65,8 @@
           rudder_arm: 4.0
 
         asv_dynamics_model:
-          rpm_min: -2000.0
-          rpm_max: 2000.0
+          rpm_min: -2200.0
+          rpm_max: 2200.0
           rpm_rate_limit: 200.0
           rho: 1025.0
           prop_pitch: 0.381

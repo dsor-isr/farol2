@@ -24,8 +24,8 @@ struct State
   // Vertical information
   double depth{0.0};
   double altimeter{0.0};
-  double altitude_ellipsoidal{0.0};
-  double local_datum_altitude{0.0};
+  double altitude_wgs84{0.0};
+  double altitude_local_datum_altitude{0.0};
 
   // Velocities
   Eigen::Vector3d velocity_over_ground_body{Eigen::Vector3d::Zero()};
