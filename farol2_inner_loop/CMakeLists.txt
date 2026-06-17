@@ -52,7 +52,7 @@ target_include_directories(${PROJECT_NAME}_controllers PUBLIC
 target_compile_features(${PROJECT_NAME}_controllers PUBLIC cxx_std_17)
 
 # Node executable
-add_executable(pid_control src/pid.cpp)
+add_executable(inner_loop_node src/inner_loop_node.cpp)
 
 # Open Loop node executable
 add_executable(open_loop src/open_loop.cpp)
@@ -75,7 +75,7 @@ target_include_directories(open_loop PUBLIC
 target_compile_features(open_loop PUBLIC c_std_99 cxx_std_17)
 
 ament_target_dependencies(
-  pid_control
+  inner_loop_node
   rclcpp
   std_msgs
   std_srvs
@@ -85,21 +85,21 @@ ament_target_dependencies(
 )
 
 # Link controller library to the executable
-target_link_libraries(pid_control
+target_link_libraries(inner_loop_node
   ${PROJECT_NAME}_controllers
   farol2_utils::farol2_utils
 )
 
 # Link generated service types
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
-target_link_libraries(pid_control "${cpp_typesupport_target}")
+target_link_libraries(inner_loop_node "${cpp_typesupport_target}")
 
-target_include_directories(pid_control PUBLIC
+target_include_directories(inner_loop_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp>
   $<INSTALL_INTERFACE:include>)
   
-target_compile_features(pid_control PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(inner_loop_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 # Install headers
 install(DIRECTORY include/
@@ -117,7 +117,7 @@ install(TARGETS
 
 # Install executable
 install(TARGETS
-  pid_control
+  inner_loop_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
