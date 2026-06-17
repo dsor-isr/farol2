@@ -40,7 +40,6 @@ add_executable(path_node
   src/algorithms/speed_profiles/Speed.cpp
   src/algorithms/speed_profiles/ConstRabbitSpeed.cpp
   src/algorithms/speed_profiles/ConstVehicleSpeed.cpp
-  src/algorithms/speed_profiles/BezierRabbitSpeed.cpp
   src/algorithms/speed_profiles/BezierVehicleSpeed.cpp
 
   # Path Library files

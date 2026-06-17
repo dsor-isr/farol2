@@ -81,8 +81,14 @@ void ConsoleParser::initializeServices() {
   spawn_line_client_ = create_client<farol2_planning::srv::SpawnLine>(
                         SERVICE_LINE_PATH);
 
+  spawn_bezier_client_ = create_client<farol2_planning::srv::SpawnBezier>(
+                        SERVICE_SPAWN_BEZIER);
+
   set_path_speed_client_ = create_client<farol2_planning::srv::SetConstSpeed>(
                             SERVICE_SET_SPEED);
+
+  set_path_bezier_speed_client_ = create_client<farol2_planning::srv::SetBezierSpeed>(
+                            SERVICE_SET_BEZIER_SPEED);
 
   start_pf_client_ = create_client<farol2_path_following::srv::StartPF>(
                       SERVICE_PF_START);
@@ -248,6 +254,28 @@ void ConsoleParser::requestPath() {
         /* Increment the number of valid sent sections */
         run++;
       }
+    } else if(it->type == 5) {
+
+      /* TODO: Make sure the Bezier received is valid */
+
+      /* Call the service to spawn Bezier */
+      std::shared_ptr<farol2_planning::srv::SpawnBezier::Request> req = std::make_shared<farol2_planning::srv::SpawnBezier::Request>();
+
+      req->px = it->px;
+      req->py = it->py;
+      req->tf = it->tf;
+
+      spawn_bezier_client_->async_send_request(req);
+
+      /* Call the service to specify the section desired speed for this section */
+      std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> bezier_speed_req = std::make_shared<farol2_planning::srv::SetBezierSpeed::Request>();
+      bezier_speed_req->px = it->px;//it->velocity;
+      bezier_speed_req->py = it->py;//->velocity;
+      bezier_speed_req->tf = it->tf;//it->velocity;
+      set_path_bezier_speed_client_->async_send_request(bezier_speed_req);
+
+      /* Increment the number of valid sent sections */
+      run++;
     }
   }
 
@@ -450,6 +478,39 @@ void ConsoleParser::parseMission(std::istream &is) {
       } else {
         continue;
       }
+    } 
+    // +.+ Bezier
+    else if (line.compare(0, 6, "BEZIER") == 0) {
+      std::vector<std::string> bezier_str;
+      boost::split(bezier_str,line, boost::is_any_of("\t "));
+
+      if (bezier_str.size() < 2)
+      {
+        RCLCPP_ERROR(get_logger(), "Invalid BEZIER command: [%s]", line.c_str());
+        return;
+      }
+      newSection.type = 5;
+      newSection.gamma_s = 0;
+      newSection.gamma_e = 1;
+      
+      int num_points = std::stoi(bezier_str[1]);  
+      if (bezier_str.size() != static_cast<size_t>(3 + 2 * num_points)) {
+        RCLCPP_ERROR(get_logger(), "BEZIER command does not match expected number of points");
+        return;
+      }
+      
+      newSection.px.clear();
+      newSection.py.clear();
+
+      for (int i = 0; i < num_points; i++)
+      {
+        double xPoints = std::stod(bezier_str[2+i]);
+        double yPoints = std::stod(bezier_str[2+num_points + i]);
+
+        newSection.px.push_back(xPoints+xrefpoint);
+        newSection.py.push_back(yPoints+yrefpoint);
+      }
+      newSection.tf = std::stoi(bezier_str[2+2*num_points]);
     } 
     // +.+ Depth
     else if (line.compare(0, 5, "DEPTH") == 0) {

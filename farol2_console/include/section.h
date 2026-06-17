@@ -23,6 +23,11 @@ class Section {
     double gamma_s;    ///< Starting gamma (not normalized)
     double gamma_e;    ///< Ending gamma (not normalized) 
     float depth;       ///< Depth of the section
+
+    std::vector<double> px;  ///< Dynamic vector for x coordinates of the Bezier control points
+    std::vector<double> py;  ///< Dynamic vector for y coordinates of the Bezier control points
+    double tf;         ///< Final time of arrival for Bezier Curve
+
     Section() {
       type = 0;
       xi = 0;
@@ -40,5 +45,8 @@ class Section {
       gamma_s = 0;
       gamma_e = 0; 
       depth = 0.0;
+      px.clear();
+      py.clear();
+      tf = 0;
     }
 };

@@ -28,6 +28,8 @@
 #include "farol2_planning/srv/spawn_arc2_d.hpp"
 #include "farol2_planning/srv/spawn_line.hpp"
 #include "farol2_planning/srv/set_const_speed.hpp"
+#include "farol2_planning/srv/spawn_bezier.hpp"
+#include "farol2_planning/srv/set_bezier_speed.hpp"
 
 #include "farol2_path_following/srv/start_pf.hpp"
 #include "farol2_path_following/srv/stop_pf.hpp"
@@ -63,6 +65,8 @@ static constexpr char SERVICE_RESET_PATH[] = "reset_path";
 static constexpr char SERVICE_ARC2D_PATH[] = "arc2d_path";
 static constexpr char SERVICE_LINE_PATH[] = "line_path";
 static constexpr char SERVICE_SET_SPEED[] = "set_speed";
+static constexpr char SERVICE_SET_BEZIER_SPEED[] = "set_bezier_speed";
+static constexpr char SERVICE_SPAWN_BEZIER[] = "spawn_bezier";
 static constexpr char SERVICE_PF_START[] = "pf_start";
 static constexpr char SERVICE_PF_STOP[] = "pf_stop";
 /**
@@ -148,6 +152,8 @@ class ConsoleParser : public rclcpp::Node {
     rclcpp::Client<farol2_planning::srv::SpawnArc2D>::SharedPtr spawn_arc_client_;
     rclcpp::Client<farol2_planning::srv::SpawnLine>::SharedPtr spawn_line_client_;
     rclcpp::Client<farol2_planning::srv::SetConstSpeed>::SharedPtr set_path_speed_client_;
+    rclcpp::Client<farol2_planning::srv::SpawnBezier>::SharedPtr spawn_bezier_client_;
+    rclcpp::Client<farol2_planning::srv::SetBezierSpeed>::SharedPtr set_path_bezier_speed_client_;
 
     /* Path Following clients - to start and stop the path following algorithm */
     rclcpp::Client<farol2_path_following::srv::StartPF>::SharedPtr start_pf_client_;
