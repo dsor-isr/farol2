@@ -31,7 +31,6 @@
 #include "Line.h"
 #include "ConstRabbitSpeed.h"
 #include "ConstVehicleSpeed.h"
-#include "BezierRabbitSpeed.h"
 #include "BezierVehicleSpeed.h"
 
 /* Include the generated services for the farol2_planning */
@@ -60,7 +59,6 @@ static constexpr char SERVICE_CIRCLE2D_PATH[] = "circle2d_path";
 static constexpr char SERVICE_LINE_PATH[] = "line_path";
 static constexpr char SERVICE_CONST_RABBIT_SPEED[] = "speed_const_rabbit_speed";
 static constexpr char SERVICE_CONST_VEHICLE_SPEED[] = "speed_const_vehicle_speed";
-static constexpr char SERVICE_BEZIER_RABBIT_SPEED[] = "speed_bezier_rabbit_speed";
 static constexpr char SERVICE_BEZIER_VEHICLE_SPEED[] = "speed_bezier_vehicle_speed";
 static constexpr char SERVICE_BEZIER_PATH[] = "bezier_path";
 /** 
@@ -135,7 +133,6 @@ class PathNode : public rclcpp::Node {
     rclcpp::Service<farol2_planning::srv::SpawnLine>::SharedPtr line_srv_;
     rclcpp::Service<farol2_planning::srv::SetConstSpeed>::SharedPtr vehicle_const_speed_srv_;
     rclcpp::Service<farol2_planning::srv::SetConstSpeed>::SharedPtr rabbit_const_speed_srv_;
-    rclcpp::Service<farol2_planning::srv::SetBezierSpeed>::SharedPtr rabbit_bezier_speed_srv_;
     rclcpp::Service<farol2_planning::srv::SetBezierSpeed>::SharedPtr vehicle_bezier_speed_srv_;
 
     /**
@@ -173,7 +170,6 @@ class PathNode : public rclcpp::Node {
     bool LineService(const std::shared_ptr<farol2_planning::srv::SpawnLine::Request> req, std::shared_ptr<farol2_planning::srv::SpawnLine::Response> res);
     bool RabbitConstSpeedService(const std::shared_ptr<farol2_planning::srv::SetConstSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetConstSpeed::Response> res);
     bool VehicleConstSpeedService(const std::shared_ptr<farol2_planning::srv::SetConstSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetConstSpeed::Response> res);
-    bool RabbitBezierSpeedService(const std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Response> res);
     bool VehicleBezierSpeedService(const std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Response> res); 
     bool BezierService(const std::shared_ptr<farol2_planning::srv::SpawnBezier::Request> req, std::shared_ptr<farol2_planning::srv::SpawnBezier::Response> res);
 

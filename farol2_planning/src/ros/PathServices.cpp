@@ -58,12 +58,6 @@ void PathNode::initializeServices() {
       [this](const std::shared_ptr<farol2_planning::srv::SpawnBezier::Request> request,
         std::shared_ptr<farol2_planning::srv::SpawnBezier::Response> response){
         BezierService(request, response);});
-
-  this->rabbit_bezier_speed_srv_ = create_service<farol2_planning::srv::SetBezierSpeed>(
-      SERVICE_BEZIER_RABBIT_SPEED,
-      [this](const std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> request,
-        std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Response> response){
-        RabbitBezierSpeedService(request, response);});
   
   this->vehicle_bezier_speed_srv_ = create_service<farol2_planning::srv::SetBezierSpeed>(
       SERVICE_BEZIER_VEHICLE_SPEED,
@@ -382,32 +376,13 @@ bool PathNode::BezierService(const std::shared_ptr<farol2_planning::srv::SpawnBe
   return true;
 } 
 
-bool PathNode::RabbitBezierSpeedService(const std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Response> res) {
-  
-  /* Get the data from the message */
-  double Tf_val = req->tf;
-  bool success = false;
-
-  /* Create a new Rabbit Speed object */
-  BezierRabbitSpeed * speed = new BezierRabbitSpeed(Eigen::VectorXd::Map(req->px.data(), req->px.size()), Eigen::VectorXd::Map(req->py.data(), req->py.size()), Tf_val);
-
-  /* Try to add the speed object to the path */
-  success = this->loadSpeedIntoPath(speed);
-
-  /* Construct the response back */
-  res->success = success;
-  if(success == true) RCLCPP_INFO(get_logger(), "Load rabbit BEZIER speed section");
-
-  return true;
-}
-
 bool PathNode::VehicleBezierSpeedService(const std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> req, std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Response> res) {
   
   /* Get the data from the message */
   Tf_val_ = req->tf;
   bool success = false;
 
-  /* Create a new Rabbit Speed object */
+  /* Create a new Vehicle Speed object */
   BezierVehicleSpeed * speed = new BezierVehicleSpeed(Eigen::VectorXd::Map(req->px.data(), req->px.size()), Eigen::VectorXd::Map(req->py.data(), req->py.size()), Tf_val_);
 
   /* Try to add the speed object to the path */
