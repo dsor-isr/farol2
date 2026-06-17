@@ -37,10 +37,10 @@ def generate_launch_description():
 
   vehicle_ns = PythonExpression(["'", LaunchConfiguration('vehicle_name'), "' + '", LaunchConfiguration('vehicle_id'), "'"])
 
-  launch_pid_arg = DeclareLaunchArgument(
-    'pid',
+  launch_inner_loop_arg = DeclareLaunchArgument(
+    'inner_loop',
     default_value='true',
-    description='Boolean to determine if "pid" node is launched.'
+    description='Boolean to determine if "inner_loop" node is launched.'
   )
 
   launch_openloop_arg = DeclareLaunchArgument(
@@ -81,13 +81,13 @@ def generate_launch_description():
   # Nodes to launch #
   ###################
   
-  pid_node = Node(
+  inner_loop_node = Node(
     package='farol2_inner_loop',
     namespace=PathJoinSubstitution([vehicle_ns, 'inner_loop']),
-    executable='pid_control',
-    name='pid',
+    executable='inner_loop_node',
+    name='inner_loop',
     output='screen',
-    condition=IfCondition(LaunchConfiguration('pid')),
+    condition=IfCondition(LaunchConfiguration('inner_loop')),
     parameters=params,
     remappings=[
       # Subscribers
@@ -153,9 +153,9 @@ def generate_launch_description():
     vehicle_name_arg,
     use_sim_time_arg,
     config_to_use,
-    launch_pid_arg,
+    launch_inner_loop_arg,
     launch_openloop_arg,
     # nodes
-    pid_node,
+    inner_loop_node,
     open_loop_node
   ])
