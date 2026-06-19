@@ -92,6 +92,7 @@ def generate_launch_description():
     remappings=[
       # Subscribers
       ('nav_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
+      ('body_velocity', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/body_velocity')]),
       ('surge_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/surge')]),
       ('sway_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/sway')]),
       ('heave_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/ref/heave')]),

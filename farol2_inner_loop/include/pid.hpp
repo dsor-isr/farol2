@@ -30,6 +30,7 @@
 
 // Topic/service names (short form, remapped in launch file)
 static constexpr char TOPIC_SUB_NAV_STATE[] = "nav_state";
+static constexpr char TOPIC_SUB_SIM_STATE[] = "body_velocity";
 static constexpr char TOPIC_SUB_SURGE_REF[] = "surge_ref";
 static constexpr char TOPIC_SUB_SWAY_REF[] = "sway_ref";
 static constexpr char TOPIC_SUB_HEAVE_REF[] = "heave_ref";
@@ -172,13 +173,17 @@ class PID : public rclcpp::Node {
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr torque_z_pub_;
 
     rclcpp::Subscription<farol2_interfaces::msg::NavigationState>::SharedPtr nav_state_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sim_state_sub_;
     std::map<std::string, rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr> reference_subscribers_;
 
     rclcpp::Service<farol2_inner_loop::srv::ChangeParams>::SharedPtr change_params_srv_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr course_instead_of_yaw_srv_;
 
+    std::map<std::string, ControllerPID*> controller_ptrs_;
+
     /** @brief Store latest navigation state sample. */
     void navStateCallback(const farol2_interfaces::msg::NavigationState &msg);
+    void simStateCallback(const geometry_msgs::msg::Vector3 &msg);
 
     /**
      * @brief Update reference value for one controller and timestamp it.
@@ -241,6 +246,9 @@ class PID : public rclcpp::Node {
         /** Most recent navigation estimate. */
     farol2_interfaces::msg::NavigationState nav_state_;
 
+        /** Most recent simulation state estimate. */
+    geometry_msgs::msg::Vector3 body_velocity_;
+
         /** Enabled controller names after parsing/filtering configuration. */
     std::set<std::string> controller_names_;
 
@@ -276,6 +284,7 @@ class PID : public rclcpp::Node {
 
         /** Selects yaw state source: heading (`false`) or course angle (`true`). */
     bool course_instead_of_yaw_{false}; // flag to switch between heading or course control
+    bool body_vel_instead_of_nav_{false}; // flag to switch between body velocity or navigation state velocity
     bool use_heading_rate_as_yaw_rate_{false};
 
         /** Low-pass filter configuration passed to PID controllers. */

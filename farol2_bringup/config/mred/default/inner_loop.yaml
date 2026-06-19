@@ -6,6 +6,7 @@
     ros__parameters:
       node_frequency: 10.0
       course_instead_of_yaw: false   # set to true to control course angle instead of yaw
+      body_vel_instead_of_nav: true   # set to true to use body velocity from simulation instead of velocity from the navigation filter (which is typically much noisier, especially in surge)
       use_heading_rate_as_yaw_rate: true # set to true to use the heading rate from the nav filter as the yaw rate for feedforward and control, instead of the yaw rate from the IMU (which is typically much noisier)
       lpf_order: 2
       lpf_method: "tustin"
@@ -13,7 +14,9 @@
       
       # Controllers gains and parameters
       surge:
+        debug: true
         enabled: true
+        delta_implementation: false
         kp: 20.0
         ki: 2.0
         lpf_wc: 31.4 # rad/s
@@ -63,8 +66,8 @@
         use_ref_lpf: false
         use_rate_limiter: false
         rate_limit: 6.0 # deg/s
-        kp: 22.0
-        ki: 0.0
+        kp: 2.0
+        ki: 1.0
         kd: 0.0 #47.6
         kffv_lin: 0.0
         kffv_sq: 0.0

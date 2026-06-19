@@ -227,6 +227,8 @@ void PID::loadParams() {
     RCLCPP_WARN(get_logger(), "No enabled controllers found. Node will run without applying control effort.");
   }
 
+  body_vel_instead_of_nav_ = this->get_parameter("body_vel_instead_of_nav").as_bool();
+
   course_instead_of_yaw_ = this->get_parameter("course_instead_of_yaw").as_bool();
   lpf_order_ = this->get_parameter("lpf_order").as_int();
   lpf_method_ = this->get_parameter("lpf_method").as_string();
@@ -240,6 +242,10 @@ void PID::initialiseSubscribers() {
   nav_state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
                     TOPIC_SUB_NAV_STATE,
                     1, std::bind(&PID::navStateCallback, this, std::placeholders::_1));
+  
+  sim_state_sub_ = create_subscription<geometry_msgs::msg::Vector3>(
+                    TOPIC_SUB_SIM_STATE,
+                    1, std::bind(&PID::simStateCallback, this, std::placeholders::_1));
 
   for (const auto &name : controller_names_) {
     if (controller_map_.count(name) == 0) {
@@ -336,6 +342,11 @@ void PID::initialiseTimers() {
 void PID::navStateCallback(const farol2_interfaces::msg::NavigationState &msg) {
   nav_state_ = msg;
   has_nav_state_ = true;
+
+}
+
+void PID::simStateCallback(const geometry_msgs::msg::Vector3 &msg) {
+  body_velocity_ = msg;
 }
 
 void PID::referenceCallback(const std::string &controller_name, double raw_value) {
@@ -460,6 +471,19 @@ void PID::createControllers() {
                get_controller_param(spec.name, "kffa", 0.0),
                spec.wrap_to_pi);
   }
+
+  // After all controllers are instantiated:
+  controller_ptrs_["surge"] = controller_surge_.get();
+  controller_ptrs_["sway"] = controller_sway_.get();
+  controller_ptrs_["heave"] = controller_heave_.get();
+  controller_ptrs_["depth"] = controller_depth_.get();
+  controller_ptrs_["altitude"] = controller_altitude_.get();
+  controller_ptrs_["yaw"] = controller_yaw_.get();
+  controller_ptrs_["pitch"] = controller_pitch_.get();
+  controller_ptrs_["roll"] = controller_roll_.get();
+  controller_ptrs_["yaw_rate"] = controller_yaw_rate_.get();
+  controller_ptrs_["pitch_rate"] = controller_pitch_rate_.get();
+  controller_ptrs_["roll_rate"] = controller_roll_rate_.get();
 }
 
 void PID::initializeControllerConfigs() {
@@ -496,7 +520,13 @@ void PID::initializeControllerConfigs() {
         controller_configs_[name] = make_pid_no_rate_config(
           name,
           SURGE,
-          [this]() { return nav_state_.velocity_through_water_body.x; },
+          [this]() { 
+            if (body_vel_instead_of_nav_) {
+              return body_velocity_.x;
+            } else {
+              return nav_state_.velocity_through_water_body.x;
+            }
+          },
           [this]() { return surge_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.x += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
@@ -518,6 +548,7 @@ void PID::initializeControllerConfigs() {
             debug_msg.dref_filt = ref.dref;
             debug_msg.ddref_filt = ref.ddref;
           });
+          RCLCPP_INFO(get_logger(), "Created SURGE controller.");
         break;
 
       case SWAY:
@@ -898,60 +929,42 @@ void PID::timerCallback() {
   return;
 }
 
-/**
- * @brief Change controllers' parameters callback.
- */
 void PID::changeParamsCallback(const std::shared_ptr<farol2_inner_loop::srv::ChangeParams::Request> request,
                                std::shared_ptr<farol2_inner_loop::srv::ChangeParams::Response> response) {
-  if (!controller_yaw_) {
+  
+  auto it = controller_ptrs_.find(request->controller);
+  if (it == controller_ptrs_.end()) {
     response->success = false;
-    response->message = "Yaw controller is not enabled.";
+    response->message = "Controller '" + request->controller + "' not found or not enabled.";
     return;
-  }
-
-
-  /* If required controller does not exist */
-  if (controller_names_.find(request->controller) == controller_names_.end()) {
-    response->success = false;
-    response->message = "Controller " + request->controller + " does not exist - it's not (correctly?) configured in inner_loop.yaml.";
-    return;
-  }
-  // /* If any parameter is invalid */
-  // if (request->kp <= 0 || request->ki <= 0 || request->kd <= 0 || request->lpf_wc <= 0 ||
-  //     request->tau_min <= 0 || request->tau_max <= 0 || request->tau_min >= request->tau_max) {
-  //   response->success = false;
-  //   response->message = "Parameter(s) invalid (negative gains/pole/tau, tau_min > tau_max).";
-  // }
-  if(request->w0 > 0 && request->xi > 0 && request->mr > 0){
-    controller_yaw_->kp_ = request->mr*(request->w0*request->w0 + 20*request->xi*request->xi*request->w0*request->w0);
-    controller_yaw_->ki_ = request->mr*(10*request->xi*request->w0*request->w0*request->w0);
-    controller_yaw_->kd_ = request->mr*(12*request->xi*request->w0);
-    response->success = true;
-    response->message = "Changed " + request->controller + " controller's params based on w0 and xi. New gains are: kp: " + std::to_string(controller_yaw_->kp_) + " ki: " + std::to_string(controller_yaw_->ki_) + " kd: " + std::to_string(controller_yaw_->kd_);
-    tau_ = 0.0;
-  }
-  else{
-    controller_yaw_->kp_ = request->kp;
-    controller_yaw_->ki_ = request->ki;
-    controller_yaw_->kd_ = request->kd;
-    response->success = true;
-    response->message = "Changed " + request->controller + " controller's params to specified (kp, ki, kd). New gains are: kp=" + std::to_string(controller_yaw_->kp_) + ", ki=" + std::to_string(controller_yaw_->ki_) + ", kd=" + std::to_string(controller_yaw_->kd_);
-    tau_ = 0.0;
   }
   
-  /* Set additional parameters if provided */
-  if (request->lpf_wc > 0) {
-    response->message += "; lpf_wc ignored (ref generator owns LPF now)";
+  ControllerPID* controller = it->second;
+  
+  if (request->w0 > 0 && request->xi > 0 && request->mr > 0) {
+    // Using w0/xi/mr formula
+    controller->kp_ = request->mr * (request->w0 * request->w0 + 20 * request->xi * request->xi * request->w0 * request->w0);
+    controller->ki_ = request->mr * (10 * request->xi * request->w0 * request->w0 * request->w0);
+    controller->kd_ = request->mr * (12 * request->xi * request->w0);
+    
+    response->success = true;
+    response->message = "Changed " + request->controller + " controller params (w0/xi formula). kp=" + 
+                        std::to_string(controller->kp_) + ", ki=" + std::to_string(controller->ki_) + 
+                        ", kd=" + std::to_string(controller->kd_);
   }
-  if (request->tau_min > 0) {
-    controller_yaw_->tau_min_ = request->tau_min;
-    response->message += "; tau_min=" + std::to_string(request->tau_min);
+  else {
+    // Using direct kp/ki/kd
+    controller->kp_ = request->kp;
+    controller->ki_ = request->ki;
+    controller->kd_ = request->kd;
+    
+    response->success = true;  // ← THIS WAS MISSING!
+    response->message = "Changed " + request->controller + " controller params (direct). kp=" + 
+                        std::to_string(controller->kp_) + ", ki=" + std::to_string(controller->ki_) + 
+                        ", kd=" + std::to_string(controller->kd_);
   }
-  if (request->tau_max > 0) {
-    controller_yaw_->tau_max_ = request->tau_max;
-    response->message += "; tau_max=" + std::to_string(request->tau_max);
-  }
-  return;
+  
+  tau_ = 0.0;
 }
 
 void PID::courseControlCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
