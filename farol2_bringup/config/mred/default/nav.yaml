@@ -13,10 +13,10 @@
       measurements:
         - "gnss"
         - "imu"
-        - "utm_ned"
-        - "depth"
-        - "altimeter"
-        - "thruster_rpm"
+        # - "utm_ned"
+        # - "depth"
+        # - "altimeter"
+        # - "thruster_rpm"
       
       #plugins:
         

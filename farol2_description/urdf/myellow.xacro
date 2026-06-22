@@ -12,7 +12,7 @@
   <joint name="base_to_thruster_portside_horizontal_back" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_portside_horizontal_back_link"/>
-    <origin xyz="-0.306 0.062 0.0" rpy="0 0 ${0.25*M_PI}"/>
+    <origin xyz="-0.306 -0.062 0.0" rpy="0 0 ${0.25*M_PI}"/>
   </joint>
 
   <!-- Starboard horizontal back thruster -->
@@ -20,7 +20,7 @@
   <joint name="base_to_thruster_starboard_horizontal_back" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_starboard_horizontal_back_link"/>
-    <origin xyz="-0.306 -0.062 0.0" rpy="0 0 -${0.25*M_PI}"/>
+    <origin xyz="-0.306 0.062 0.0" rpy="0 0 -${0.25*M_PI}"/>
   </joint>
 
   <!-- Portside vertical thruster -->
@@ -28,7 +28,7 @@
   <joint name="base_to_thruster_portside_vertical" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_starboard_vertical_link"/>
-    <origin xyz="0.087 -0.120 -0.12" rpy="0 -${0.5*M_PI} 0"/>
+    <origin xyz="0.087 0.120 -0.12" rpy="0 -${0.5*M_PI} 0"/>
   </joint>
 
   <!-- Starboard vertical thruster -->
@@ -36,7 +36,7 @@
   <joint name="base_to_thruster_starboard_vertical" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_portside_vertical_link"/>
-    <origin xyz="0.087 0.120 -0.12" rpy="0 -${0.5*M_PI} 0"/>
+    <origin xyz="0.087 -0.120 -0.12" rpy="0 -${0.5*M_PI} 0"/>
   </joint>
 
   <!-- Portside horizontal front thruster -->
@@ -44,7 +44,7 @@
   <joint name="base_to_thruster_portside_horizontal_front" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_portside_horizontal_front_link"/>
-    <origin xyz="0.300 0.197 0.0" rpy="0 0 -${0.25*M_PI}"/>
+    <origin xyz="0.300 -0.197 0.0" rpy="0 0 -${0.25*M_PI}"/>
   </joint>
 
   <!-- Starboard horizontal front thruster -->
@@ -52,7 +52,7 @@
   <joint name="base_to_thruster_starboard_horizontal_front" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_starboard_horizontal_front_link"/>
-    <origin xyz="0.300 -0.197 0.0" rpy="0 0 ${0.25*M_PI}"/>
+    <origin xyz="0.300 0.197 0.0" rpy="0 0 ${0.25*M_PI}"/>
   </joint>
 
 </robot>

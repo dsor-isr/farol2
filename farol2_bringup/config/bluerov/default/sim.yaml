@@ -2,7 +2,7 @@
   sim_clock:
     ros__parameters:
       node_frequency: 100
-      speedup: 20.0
+      speedup: 1.0
 
   auv_sim:
     ros__parameters:
@@ -44,8 +44,6 @@
           lump_param_positive: [0.00000177778, 0.0, 0.0]  # (a*|x|^{2} + b*|x| + c)
           lump_param_negative: [-0.00000177778, 0.0, 0.0] # (a*|x|^{2} + b*|x| + c)
 
-          max_input: 5000.0 # Maximum RPM input value
-          min_input: 430.0 # Minimum RPM input value (for values < |min_input|) the motors "won't" spin <-> dead-zone
           min_max_thruster_input: [430.0, 5000.0] # Minimum and maximum RPM values for thrusters
 
           # Model of each thruster is the same as for a regular DC motor (pole+delay)
