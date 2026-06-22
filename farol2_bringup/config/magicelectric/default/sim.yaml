@@ -46,8 +46,8 @@
           #False means that it is subscribed to a topic, true means that it is fixed to the value defined in rpm
             fixed_rpm: true 
             fixed_rpm_value: 660.0 #660
-            max_rpm: 2000.0
-            min_rpm: -2000.0
+            max_rpm: 2200.0
+            min_rpm: -2200.0
             K_T_BP: 0.061461915
             prop_pitch: 0.381
             D: 0.4318
