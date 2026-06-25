@@ -148,6 +148,8 @@ void InteractivePlannerNode::processState(const vehicle_state  msg, const std::s
 
         // Also create mission publisher
         std::string mission_topic = "/" + vehicle_name + "/planning_console/Mission_String";
+        mission_pubs_[vehicle_name] = this->create_publisher<std_msgs::msg::String>(
+            mission_topic, rclcpp::QoS(1).transient_local());   
         // Note: Publishers map not used in ROS2 version, but keeping for compatibility
 
         // Control points topic
@@ -826,7 +828,9 @@ void InteractivePlannerNode::publishMissions()
         auto msg = std::make_shared<std_msgs::msg::String>();
         msg->data = formatMissionString(last_control_points_, i, last_Tf_);
         // Note: Publishing via control_points_pubs_ would be better
-        // For now, missions are available through the control points
+        if (mission_pubs_.find(name) != mission_pubs_.end()) {
+            mission_pubs_[name]->publish(*msg);
+        }
         RCLCPP_INFO_STREAM(this->get_logger(), "Mission prepared for " << name);
         i++;
     }

@@ -37,7 +37,7 @@ def _launch(context, *args, **kwargs):
       'can_instrumentation': 'false',
       'airmar200wx': 'false',
       'airmardx900': 'false',
-      'ashtech': 'true',
+      'ashtech': 'false',
     }.items()
   )
 
@@ -58,7 +58,7 @@ def _launch(context, *args, **kwargs):
 
   # Keep vehicle_id in context so ros2 launch tooling can report it.
   return [SetLaunchConfiguration('vehicle_id', vehicle_id), 
-          # drivers, 
+          drivers, 
           farol_stack]
 
 
@@ -69,7 +69,7 @@ def generate_launch_description():
   ####################
   vehicle_name_arg = DeclareLaunchArgument(
     'vehicle_name',
-    default_value='magicelectric',
+    default_value='myellow',
     description='Name of the vehicle to be launched.'
   )
 

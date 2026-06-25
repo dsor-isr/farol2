@@ -254,10 +254,10 @@ void ConsoleParser::requestPath() {
         /* Increment the number of valid sent sections */
         run++;
       }
-    } else if(it->type == 5) {
+    } else if(it->type == 6) {
 
       /* TODO: Make sure the Bezier received is valid */
-
+      RCLCPP_INFO(get_logger(), "Received Bezier section, sending to service");
       /* Call the service to spawn Bezier */
       std::shared_ptr<farol2_planning::srv::SpawnBezier::Request> req = std::make_shared<farol2_planning::srv::SpawnBezier::Request>();
 
@@ -269,11 +269,13 @@ void ConsoleParser::requestPath() {
 
       /* Call the service to specify the section desired speed for this section */
       std::shared_ptr<farol2_planning::srv::SetBezierSpeed::Request> bezier_speed_req = std::make_shared<farol2_planning::srv::SetBezierSpeed::Request>();
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
       bezier_speed_req->px = it->px;//it->velocity;
       bezier_speed_req->py = it->py;//->velocity;
       bezier_speed_req->tf = it->tf;//it->velocity;
       set_path_bezier_speed_client_->async_send_request(bezier_speed_req);
-
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
       /* Increment the number of valid sent sections */
       run++;
     }
@@ -482,36 +484,71 @@ void ConsoleParser::parseMission(std::istream &is) {
     // +.+ Bezier
     else if (line.compare(0, 6, "BEZIER") == 0) {
       std::vector<std::string> bezier_str;
-      boost::split(bezier_str,line, boost::is_any_of("\t "));
-
-      if (bezier_str.size() < 2)
-      {
-        RCLCPP_ERROR(get_logger(), "Invalid BEZIER command: [%s]", line.c_str());
-        return;
-      }
-      newSection.type = 5;
-      newSection.gamma_s = 0;
-      newSection.gamma_e = 1;
+      boost::split(bezier_str, line, boost::is_any_of("\t "));
       
-      int num_points = std::stoi(bezier_str[1]);  
-      if (bezier_str.size() != static_cast<size_t>(3 + 2 * num_points)) {
-        RCLCPP_ERROR(get_logger(), "BEZIER command does not match expected number of points");
-        return;
+      // Validate minimum structure: "BEZIER num_points [x1 y1 ... xN yN] tf"
+      if (bezier_str.size() < 4) {
+        RCLCPP_ERROR(get_logger(), "BEZIER: Invalid command format [%s]", line.c_str());
+        continue;
       }
       
-      newSection.px.clear();
-      newSection.py.clear();
-
-      for (int i = 0; i < num_points; i++)
-      {
-        double xPoints = std::stod(bezier_str[2+i]);
-        double yPoints = std::stod(bezier_str[2+num_points + i]);
-
-        newSection.px.push_back(xPoints+xrefpoint);
-        newSection.py.push_back(yPoints+yrefpoint);
+      newSection.type = 6;
+      
+      try {
+        int num_points = std::stoi(bezier_str[1]);
+        
+        // Expected size: "BEZIER" + "num_points" + 2*num_points (x,y coords) + "tf"
+        int expected_size = 3 + 2 * num_points;
+        if (bezier_str.size() != static_cast<size_t>(expected_size)) {
+          RCLCPP_ERROR(get_logger(), 
+            "BEZIER: Expected %d points, got %lu tokens. Format: BEZIER <num_points> <x1> <y1> ... <xN> <yN> <tf>",
+            num_points, bezier_str.size());
+          continue;
+        }
+        
+        newSection.px.clear();
+        newSection.py.clear();
+        
+        // Parse control points
+        for (int i = 0; i < num_points; i++) {
+          try {
+            double xPoints = std::stod(bezier_str[2 + i]);
+            double yPoints = std::stod(bezier_str[2 + num_points + i]);
+            newSection.px.push_back(xPoints + xrefpoint);
+            newSection.py.push_back(yPoints + yrefpoint);
+            
+            RCLCPP_INFO(get_logger(), 
+              "BEZIER point %d: x=%.3f, y=%.3f (after offset x=%.3f, y=%.3f)", 
+              i, xPoints, yPoints, 
+              newSection.px.back(), newSection.py.back());
+              
+          } catch (const std::invalid_argument& e) {
+            RCLCPP_ERROR(get_logger(), 
+              "BEZIER: Invalid coordinate at point %d: %s", i, e.what());
+            continue;
+          }
+        }
+        
+        // Parse time factor
+        try {
+          newSection.tf = std::stoi(bezier_str[2 + 2 * num_points]);
+        } catch (const std::invalid_argument& e) {
+          RCLCPP_ERROR(get_logger(), "BEZIER: Invalid time factor: %s", e.what());
+          continue;
+        }
+        
+        // Set trajectory parameters
+        newSection.gamma_s = 0;
+        newSection.gamma_e = 1;
+        
+        RCLCPP_INFO(get_logger(), "BEZIER: Parsed %d control points with tf=%f", 
+          num_points, newSection.tf);
+        
+      } catch (const std::invalid_argument& e) {
+        RCLCPP_ERROR(get_logger(), "BEZIER: Failed to parse num_points: %s", e.what());
+        continue;
       }
-      newSection.tf = std::stoi(bezier_str[2+2*num_points]);
-    } 
+    }
     // +.+ Depth
     else if (line.compare(0, 5, "DEPTH") == 0) {
       if ((res = sscanf(line.c_str(), "DEPTH %f %f %d", &newSection.depth, &newSection.time, &newSection.nVehicle)) == 3) {

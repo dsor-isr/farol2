@@ -71,7 +71,7 @@ private:
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr planning_alive_pub_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr mission_log_pub_;
     std::unordered_map<std::string, rclcpp::Publisher<farol2_motion_planning::msg::StampedMatrix>::SharedPtr> control_points_pubs_;
-
+    std::unordered_map<std::string, rclcpp::Publisher<std_msgs::msg::String>::SharedPtr> mission_pubs_;
     // Timer for alive status
     rclcpp::TimerBase::SharedPtr alive_timer_;
 
