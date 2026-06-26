@@ -20,7 +20,10 @@
 #include "std_msgs/msg/float32.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+#include <thruster_geometry.hpp>
 #include <GeographicLib/UTMUPS.hpp>
 
 // Topic names (short form, remapped in launch file)
@@ -91,10 +94,16 @@ class AuvSim : public rclcpp::Node {
     rclcpp::Subscription<farol2_interfaces::msg::ThrusterRPM>::SharedPtr rpm_sub_;
     
     rclcpp::TimerBase::SharedPtr timer_;   
+    rclcpp::TimerBase::SharedPtr tf_initialisation_timer_;
+    rclcpp::Clock::SharedPtr clock_;
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   
 
     /* Callbacks */
     void rpmCallback(const farol2_interfaces::msg::ThrusterRPM::SharedPtr msg);
+    void initialiseAuv(const Eigen::MatrixXd &allocation_matrix);
+    void initialiseAuvFromTF();
 
     std::unique_ptr<AUV> auv_;
 
@@ -120,6 +129,10 @@ class AuvSim : public rclcpp::Node {
     std::vector<double> Dq;
     std::vector<double> added_mass;
     std::vector<double> allocation_flat;
+    std::string base_frame_;
+    Eigen::Vector3d thrust_axis_{1.0, 0.0, 0.0};
+    std::vector<std::string> thruster_frames_;
+    bool use_tf_allocation_{false};
     std::vector<double> lump_pos;
     std::vector<double> lump_neg;
     std::vector<double> minmax_input;
@@ -132,6 +145,10 @@ class AuvSim : public rclcpp::Node {
     std::vector<double> disturbance_sigma;
     std::vector<double> disturbance_min;
     std::vector<double> disturbance_max;
+    std::vector<double> initial_position_;
+    std::vector<double> initial_body_velocity_;
+    std::vector<double> initial_orientation_;
+    std::vector<double> initial_orientation_rate_;
 
     // Sensor / measurement publishing
     void publishMeasurements();

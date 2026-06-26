@@ -29,14 +29,15 @@
         added_mass_tensor: [20.0, 30.0, 80.088, 0.0, 0.0, 0.5] # diagonal (6x6) matrix with added mass terms
 
         actuators:
-          # For each thruster [Fx, Fy, Fz, lx, ly, lz] where F = forces and l = moments arms
-          # and each line of the matrix represents a thruster
-          allocation_matrix: [0.70710678,  0.70710678, 0.0, -0.306,  0.062,  0.0,
-                              0.70710678, -0.70710678, 0.0, -0.306, -0.062,  0.0,
-                              0.0,         0.0,        1.0,  0.087, -0.120, -0.120,
-                              0.0,         0.0,        1.0,  0.087,  0.120, -0.120,
-                              0.70710678, -0.70710678, 0.0,  0.300,  0.197,  0.0,
-                              0.70710678,  0.70710678, 0.0,  0.300, -0.197,  0.0]
+          base_frame: "base_link"
+          thrust_axis: [1.0, 0.0, 0.0]
+          frames:
+            - "thruster_portside_horizontal_back_link"
+            - "thruster_starboard_horizontal_back_link"
+            - "thruster_starboard_vertical_link"
+            - "thruster_portside_vertical_link"
+            - "thruster_portside_horizontal_front_link"
+            - "thruster_starboard_horizontal_front_link"
 
           # Thrusters parameter
           lump_param_positive: [0.00000177778, 0.0, 0.0]  # (a*|x|^{2} + b*|x| + c)
