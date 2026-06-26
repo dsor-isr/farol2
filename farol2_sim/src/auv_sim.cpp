@@ -351,14 +351,14 @@ void AuvSim::timerCallback() {
   body_vel_msg.z = auv_->getHeave();
   body_velocity_pub_->publish(body_vel_msg);
 
-  ori_msg.x = auv_->getRoll();
-  ori_msg.y = auv_->getPitch();
-  ori_msg.z = auv_->getYaw();
+  ori_msg.x = rad_to_deg(auv_->getRoll());
+  ori_msg.y = rad_to_deg(auv_->getPitch());
+  ori_msg.z = rad_to_deg(auv_->getYaw());
   orientation_pub_->publish(ori_msg);
 
-  ori_rate_msg.x = auv_->getRollRate();
-  ori_rate_msg.y = auv_->getPitchRate();
-  ori_rate_msg.z = auv_->getYawRate();
+  ori_rate_msg.x = rad_to_deg(auv_->getRollRate());
+  ori_rate_msg.y = rad_to_deg(auv_->getPitchRate());
+  ori_rate_msg.z = rad_to_deg(auv_->getYawRate());
   orientation_rate_pub_->publish(ori_rate_msg);
 
   body_acc_msg.x = auv_->getSurgeDot();

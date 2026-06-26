@@ -288,13 +288,13 @@ void MagicElectricSim::timerCallback()
   body_vel_msg.y = body_velocity_[1];
   body_vel_msg.z = body_velocity_[2];
 
-  ori_msg.x = orientation_[0];
-  ori_msg.y = orientation_[1];
-  ori_msg.z = orientation_[2];
+  ori_msg.x = rad_to_deg(orientation_[0]);
+  ori_msg.y = rad_to_deg(orientation_[1]);
+  ori_msg.z = rad_to_deg(orientation_[2]);
 
-  ori_rate_msg.x = orientation_rate_[0];
-  ori_rate_msg.y = orientation_rate_[1];
-  ori_rate_msg.z = orientation_rate_[2];
+  ori_rate_msg.x = rad_to_deg(orientation_rate_[0]);
+  ori_rate_msg.y = rad_to_deg(orientation_rate_[1]);
+  ori_rate_msg.z = rad_to_deg(orientation_rate_[2]);
 
   body_acc_msg.x = body_acceleration_[0];
   body_acc_msg.y = body_acceleration_[1];
