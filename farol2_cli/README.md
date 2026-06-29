@@ -70,6 +70,12 @@ farol bag topics my_bag
 farol bag play my_bag --rate 2
 farol bag crop my_bag 10 20 -a
 farol bag crop my_bag 10 20 '/magicelectric0/measurement/*'
+farol drivers profiles
+farol drivers set all
+farol drivers set magicelectric
+farol drivers status
+farol drivers enable
+farol drivers disable
 farol kill ros
 ```
 
@@ -96,9 +102,45 @@ cd "$(farol cd path_following)"
 | `farol bag play` | `libexec/farol-bag-play` |
 | `farol bag topics` | `libexec/farol-bag-topics` |
 | `farol bridge serial` / `farol serial bridge` | `libexec/farol-bridge-serial` |
+| `farol drivers ...` | `libexec/farol-drivers` |
 | `farol kill ros` | `libexec/farol-kill-ros` |
 | `farol ws status` | `libexec/farol-ws-status` |
 | `farol ws root` | `libexec/farol-ws-root` |
+
+## Driver Profiles
+
+`farol drivers` manages which packages under
+`$COLCON_ROOT/src/farol2_drivers` are visible to colcon.
+
+```bash
+farol drivers disable
+```
+
+creates a managed `COLCON_IGNORE` in the `farol2_drivers` repository root,
+so colcon ignores the entire drivers tree.
+
+```bash
+farol drivers enable
+```
+
+removes only the managed root `COLCON_IGNORE` from the `farol2_drivers`
+repository. Package-level profile ignores are left as they are, so
+`enable`/`disable` work as a quick on/off switch for the whole driver tree.
+`farol drivers set all` removes driver `COLCON_IGNORE` files outside the
+`legacy` subtree and rebuilds all active driver packages. The legacy
+`COLCON_IGNORE` is intentionally preserved.
+
+```bash
+farol drivers set magicelectric
+```
+
+removes the managed root ignore, enables the packages listed in
+`config/drivers.bash` for the `magicelectric` profile, and adds managed
+`COLCON_IGNORE` files to the other driver package directories. The current
+profile is recorded in `farol2_drivers/.farol_drivers_profile`.
+
+`farol cd` and Bash completion skip packages hidden by `COLCON_IGNORE`, so
+disabled driver packages stop appearing as navigation targets too.
 
 ## Completion
 
@@ -108,6 +150,8 @@ command completion is static. `farol cd` completion additionally scans
 `$COLCON_ROOT/src/**/package.xml` with Bash globbing and suggests package
 directory names with a leading `farol2_` stripped, so `farol2_planning`
 completes as `planning`.
+Packages under a `COLCON_IGNORE` are skipped, which keeps driver profile
+selection reflected in `farol cd <TAB>`.
 If your system does not load `~/.local/share/bash-completion/completions`
 automatically, source it manually:
 

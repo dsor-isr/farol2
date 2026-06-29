@@ -29,29 +29,44 @@ _farol_completion_workspace_root() {
     return 1
 }
 
+_farol_completion_path_is_ignored() {
+    local path="$1"
+    local stop="$2"
+    local current
+
+    current="$(cd -- "$path" 2>/dev/null && pwd)" || return 1
+    stop="$(cd -- "$stop" 2>/dev/null && pwd)" || return 1
+
+    while [[ "$current" != "/" ]]; do
+        [[ -e "$current/COLCON_IGNORE" ]] && return 0
+        [[ "$current" == "$stop" ]] && break
+        current="${current%/*}"
+        [[ -n "$current" ]] || current="/"
+    done
+
+    return 1
+}
+
 _farol_complete_cd_targets() {
-    local root package_xml package_name
+    local root package_xml package_dir package_name words
     root="$(_farol_completion_workspace_root)" || return 0
 
-    if [[ "${_FAROL_CD_CACHE_ROOT:-}" != "$root" ]]; then
-        _FAROL_CD_CACHE_ROOT="$root"
-        _FAROL_CD_CACHE_WORDS="root"
+    words="root"
+    local old_nullglob old_globstar
+    old_nullglob="$(shopt -p nullglob)"
+    old_globstar="$(shopt -p globstar)"
+    shopt -s nullglob globstar
+    for package_xml in "$root"/src/**/package.xml; do
+        package_dir="${package_xml%/package.xml}"
+        _farol_completion_path_is_ignored "$package_dir" "$root/src" && continue
+        package_name="${package_dir##*/}"
+        package_name="${package_name#farol2_}"
+        words+=" $package_name"
+    done
+    eval "$old_nullglob"
+    eval "$old_globstar"
 
-        local old_nullglob old_globstar
-        old_nullglob="$(shopt -p nullglob)"
-        old_globstar="$(shopt -p globstar)"
-        shopt -s nullglob globstar
-        for package_xml in "$root"/src/**/package.xml; do
-            package_name="${package_xml%/package.xml}"
-            package_name="${package_name##*/}"
-            package_name="${package_name#farol2_}"
-            _FAROL_CD_CACHE_WORDS+=" $package_name"
-        done
-        eval "$old_nullglob"
-        eval "$old_globstar"
-    fi
-
-    COMPREPLY=( $(compgen -W "$_FAROL_CD_CACHE_WORDS" -- "$cur") )
+    COMPREPLY=( $(compgen -W "$words" -- "$cur") )
 }
 
 _farol_complete() {
@@ -61,7 +76,7 @@ _farol_complete() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     if (( COMP_CWORD == 1 )); then
-        COMPREPLY=( $(compgen -W "build clean source cd pkg bag bridge serial kill ws help" -- "$cur") )
+        COMPREPLY=( $(compgen -W "build clean source cd pkg bag bridge serial drivers kill ws help" -- "$cur") )
         return 0
     fi
 
@@ -79,6 +94,13 @@ _farol_complete() {
                     --link|--baud) COMPREPLY=() ;;
                     *) COMPREPLY=( $(compgen -W "--link --baud --help" -- "$cur") ) ;;
                 esac
+            fi
+            ;;
+        drivers)
+            if (( COMP_CWORD == 2 )); then
+                COMPREPLY=( $(compgen -W "disable enable set status profiles help" -- "$cur") )
+            elif [[ "${COMP_WORDS[2]}" == "set" && $COMP_CWORD -eq 3 ]]; then
+                COMPREPLY=( $(compgen -W "all magicelectric" -- "$cur") )
             fi
             ;;
         serial)

@@ -31,6 +31,9 @@ Commands:
   bag play <bag> ...    Play a bag
   bag topics <bag>      List bag topics
   bridge serial ...     Bridge a real serial port to a PTY
+  drivers set <profile> Enable only the driver packages for a profile
+  drivers enable        Enable all driver packages
+  drivers disable       Ignore the whole drivers repository
   kill ros              Stop ROS 2-related processes
   ws status             Show workspace status
   ws root               Print workspace root
@@ -62,6 +65,16 @@ EOF
             cat <<'EOF'
 Usage:
   farol kill ros
+EOF
+            ;;
+        drivers)
+            cat <<'EOF'
+Usage:
+  farol drivers disable
+  farol drivers enable
+  farol drivers set <profile>
+  farol drivers status
+  farol drivers profiles
 EOF
             ;;
         pkg)
@@ -159,6 +172,15 @@ case "$cmd" in
             help|--help|-h) group_help bridge ;;
             serial) shift; run_backend farol-bridge-serial "$@" ;;
             *) unknown_subcommand bridge "$sub" "serial" ;;
+        esac
+        ;;
+    drivers)
+        shift
+        sub="${1:-help}"
+        case "$sub" in
+            help|--help|-h) group_help drivers ;;
+            disable|enable|set|status|profiles) run_backend farol-drivers "$@" ;;
+            *) unknown_subcommand drivers "$sub" "disable enable set status profiles" ;;
         esac
         ;;
     serial)

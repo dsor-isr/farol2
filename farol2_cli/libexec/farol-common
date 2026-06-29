@@ -72,3 +72,22 @@ farol_refuse_dangerous_root() {
             ;;
     esac
 }
+
+farol_path_is_colcon_ignored() {
+    local path="$1"
+    local stop="${2:-}"
+    local current
+
+    current="$(cd -- "$path" && pwd)" || return 1
+    if [[ -n "$stop" ]]; then
+        stop="$(cd -- "$stop" && pwd)" || return 1
+    fi
+
+    while [[ "$current" != "/" ]]; do
+        [[ -e "$current/COLCON_IGNORE" ]] && return 0
+        [[ -n "$stop" && "$current" == "$stop" ]] && break
+        current="$(dirname "$current")"
+    done
+
+    return 1
+}

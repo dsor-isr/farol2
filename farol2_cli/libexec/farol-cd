@@ -16,10 +16,12 @@ fi
 
 for candidate in "$target" "farol2_$target"; do
     if [[ -d "$root/src/$candidate" ]]; then
+        farol_path_is_colcon_ignored "$root/src/$candidate" "$root/src" && continue
         printf '%s\n' "$root/src/$candidate"
         exit 0
     fi
     if [[ -d "$root/src/farol2/$candidate" ]]; then
+        farol_path_is_colcon_ignored "$root/src/farol2/$candidate" "$root/src" && continue
         printf '%s\n' "$root/src/farol2/$candidate"
         exit 0
     fi
@@ -27,6 +29,7 @@ done
 
 for candidate in "$target" "farol2_$target"; do
     if path="$("$SCRIPT_DIR/farol-pkg-src" "$candidate" 2>/dev/null)"; then
+        farol_path_is_colcon_ignored "$path" "$root/src" && continue
         printf '%s\n' "$path"
         exit 0
     fi
