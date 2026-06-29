@@ -2,7 +2,7 @@
 #   Override Parameters
 ################################
 /**:
-  pid:
+  inner_loop:
     ros__parameters:
       node_frequency: 10.0
       course_instead_of_yaw: false   # set to true to control course angle instead of yaw

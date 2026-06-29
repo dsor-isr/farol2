@@ -3,57 +3,61 @@
 
   <!-- Constants -->
   <xacro:property name="M_PI" value="3.1415926535897931" />
+  <xacro:arg name="simple_allocation" default="true" />
 
   <!-- Base -->
   <link name="base_link"/>
 
-  <!-- Pseudo thruster (middle) -->
-  <link name="thruster_middle_link"/>
-  <joint name="base_to_thruster_middle" type="fixed">
-    <parent link="base_link"/>
-    <child link="thruster_middle_link"/>
-    <origin xyz="-4.0 0.0 0.0" rpy="0 0 0"/>
-  </joint>
+  <xacro:if value="$(arg simple_allocation)">
+    <!-- Pseudo thruster (middle) -->
+    <link name="thruster_middle_link"/>
+    <joint name="base_to_thruster_middle" type="fixed">
+      <parent link="base_link"/>
+      <child link="thruster_middle_link"/>
+      <origin xyz="-4.0 0.0 0.0" rpy="0 0 0"/>
+    </joint>
 
-  <!-- Pseudo rudder (middle, dynamic rotation) -->
-  <link name="rudder_middle_link"/>
-  <joint name="base_to_rudder_middle" type="continuous">
-    <parent link="base_link"/>
-    <child link="rudder_middle_link"/>
-    <origin xyz="-4.5 0.0 0.0" rpy="0 0 ${1*M_PI}"/>
-    <axis xyz="0 0 1"/>
-  </joint>
+    <!-- Pseudo rudder (middle, dynamic rotation) -->
+    <link name="rudder_middle_link"/>
+    <joint name="base_to_rudder_middle" type="continuous">
+      <parent link="base_link"/>
+      <child link="rudder_middle_link"/>
+      <origin xyz="-4.5 0.0 0.0" rpy="0 0 ${1*M_PI}"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+  </xacro:if>
 
-  <!-- Thrusters and rudders 
-  <link name="thruster_left_link"/>
-  <joint name="base_to_thruster_left" type="fixed">
-    <parent link="base_link"/>
-    <child link="thruster_left_link"/>
-    <origin xyz="-4.0 -1.5 0.0" rpy="0 0 0"/>
-  </joint>
+  <xacro:unless value="$(arg simple_allocation)">
+    <!-- Thrusters and rudders -->
+    <link name="thruster_left_link"/>
+    <joint name="base_to_thruster_left" type="fixed">
+      <parent link="base_link"/>
+      <child link="thruster_left_link"/>
+      <origin xyz="-4.0 -1.5 0.0" rpy="0 0 0"/>
+    </joint>
 
-  <link name="thruster_right_link"/>
-  <joint name="base_to_thruster_right" type="fixed">
-    <parent link="base_link"/>
-    <child link="thruster_right_link"/>
-    <origin xyz="-4.0 1.5 0.0" rpy="0 0 0"/>
-  </joint>
+    <link name="thruster_right_link"/>
+    <joint name="base_to_thruster_right" type="fixed">
+      <parent link="base_link"/>
+      <child link="thruster_right_link"/>
+      <origin xyz="-4.0 1.5 0.0" rpy="0 0 0"/>
+    </joint>
 
-  <link name="rudder_left_link"/>
-  <joint name="base_to_rudder_left" type="continuous">
-    <parent link="base_link"/>
-    <child link="rudder_left_link"/>
-    <origin xyz="-4.5 -1.5 0.0" rpy="0 0 0"/>
-    <axis xyz="0 0 1"/>
-  </joint>
+    <link name="rudder_left_link"/>
+    <joint name="base_to_rudder_left" type="continuous">
+      <parent link="base_link"/>
+      <child link="rudder_left_link"/>
+      <origin xyz="-4.5 -1.5 0.0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
 
-  <link name="rudder_right_link"/>
-  <joint name="base_to_rudder_right" type="continuous">
-    <parent link="base_link"/>
-    <child link="rudder_right_link"/>
-    <origin xyz="-4.5 1.5 0.0" rpy="0 0 0"/>
-    <axis xyz="0 0 1"/>
-  </joint>
-  -->
+    <link name="rudder_right_link"/>
+    <joint name="base_to_rudder_right" type="continuous">
+      <parent link="base_link"/>
+      <child link="rudder_right_link"/>
+      <origin xyz="-4.5 1.5 0.0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+  </xacro:unless>
 
 </robot>

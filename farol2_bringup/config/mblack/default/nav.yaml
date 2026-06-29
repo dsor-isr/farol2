@@ -12,9 +12,9 @@
       measurements:
         - "gnss"
         - "imu"
-        - "utm_ned"
-        - "altimeter"
-        - "thruster_rpm"
+        # - "utm_ned"
+        # - "altimeter"
+        # - "thruster_rpm"
       
       # plugins:
         

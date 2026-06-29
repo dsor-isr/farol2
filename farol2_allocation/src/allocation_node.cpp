@@ -32,10 +32,19 @@ void AllocationNode::loadParams() {
 	const auto allocation_type = declare_parameter<std::string>("allocation.type");
 	allocation_type_ = parseAllocationType(allocation_type);
 
+	frame_prefix_ = declare_parameter<std::string>("frame_prefix", "");
+	const auto apply_frame_prefix = [this](const std::string & frame) {
+		if (frame_prefix_.empty() || frame.rfind(frame_prefix_, 0) == 0) {
+			return frame;
+		}
+		return frame_prefix_ + frame;
+	};
+
 	base_frame_ = declare_parameter<std::string>("allocation.thrusters.base_frame");
 	if (base_frame_.empty()) {
 		throw std::runtime_error("allocation.thrusters.base_frame cannot be empty");
 	}
+	base_frame_ = apply_frame_prefix(base_frame_);
 
 	const auto thrust_axis = declare_parameter<std::vector<double>>("allocation.thrusters.thrust_axis");
 	if (thrust_axis.size() != 3) {
@@ -55,6 +64,9 @@ void AllocationNode::loadParams() {
 		if (frame.empty()) {
 			throw std::runtime_error("allocation.thrusters.frames cannot contain empty frame names");
 		}
+	}
+	for (auto & frame : thruster_frames_) {
+		frame = apply_frame_prefix(frame);
 	}
 
 	static_thruster_allocator_ = std::make_unique<StaticThrusterAllocator>(

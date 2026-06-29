@@ -1,4 +1,5 @@
 #include <static_thruster_allocator.hpp>
+#include <thruster_geometry.hpp>
 
 StaticThrusterAllocator::StaticThrusterAllocator(
   std::string base_frame,
@@ -60,36 +61,18 @@ bool StaticThrusterAllocator::buildAllocationMatrix(
   const rclcpp::Clock & clock,
   const rclcpp::Logger & logger)
 {
-  thrust_allocation_matrix_.resize(6, nr_thrusters_);
-
-  for (size_t i = 0; i < nr_thrusters_; ++i) {
-    geometry_msgs::msg::TransformStamped transform;
-    try {
-      transform = tf_buffer.lookupTransform(
-        base_frame_,
-        thruster_frames_[i],
-        tf2::TimePointZero);
-    } catch (const tf2::TransformException & ex) {
-      RCLCPP_WARN_THROTTLE(
-        logger,
-        clock,
-        5000,
-        "Waiting for transform %s -> %s: %s",
-        base_frame_.c_str(),
-        thruster_frames_[i].c_str(),
-        ex.what());
-      return false;
-    }
-
-    const auto & t = transform.transform.translation;
-    const auto & q_msg = transform.transform.rotation;
-    Eigen::Vector3d l(t.x, t.y, t.z);
-    Eigen::Quaterniond q(q_msg.w, q_msg.x, q_msg.y, q_msg.z);
-    Eigen::Vector3d f = q.normalized().toRotationMatrix() * thrust_axis_;
-
-    thrust_allocation_matrix_.block<3, 1>(0, i) = f;
-    thrust_allocation_matrix_.block<3, 1>(3, i) = l.cross(f);
+  std::vector<ThrusterGeometry> geometry;
+  if (!buildThrusterGeometryFromTF(
+      tf_buffer,
+      clock,
+      logger,
+      base_frame_,
+      thruster_frames_,
+      thrust_axis_,
+      geometry)) {
+    return false;
   }
 
+  thrust_allocation_matrix_ = buildThrustAllocationMatrix(geometry);
   return true;
 }

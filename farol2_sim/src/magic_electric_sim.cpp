@@ -27,6 +27,7 @@ void MagicElectricSim::loadParams()
 
   node_frequency_ = declare_parameter<int>("node_frequency");
   node_period_ = (1.0 / static_cast<double>(node_frequency_));
+  frame_prefix_ = declare_parameter<std::string>("frame_prefix", "");
 
   // ==========================
   // INITIAL STATE
@@ -143,6 +144,7 @@ void MagicElectricSim::loadParams()
   auto pos_param = declare_parameter<std::vector<double>>("initial_state.position");
   origin_latitude_  = pos_param[0];
   origin_longitude_ = pos_param[1];
+  position_[2] = pos_param[2];
   GeographicLib::UTMUPS::Forward(origin_latitude_, origin_longitude_, utm_zone_, northp_, easting_, northing_);
 }
 
@@ -210,6 +212,7 @@ void MagicElectricSim::initialisePublishers()
       TOPIC_PUB_VELOCITY_THROUGH_WATER, 1);
   depth_pub_ = create_publisher<std_msgs::msg::Float32>(
       TOPIC_PUB_DEPTH, 1);
+  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
   return;
 }
@@ -271,6 +274,7 @@ void MagicElectricSim::timerCallback()
   {
     updateRudder(rudder_command_, node_period_);
   }
+  const auto stamp = get_clock()->now();
 
   updateState();
 
@@ -284,13 +288,13 @@ void MagicElectricSim::timerCallback()
   body_vel_msg.y = body_velocity_[1];
   body_vel_msg.z = body_velocity_[2];
 
-  ori_msg.x = orientation_[0];
-  ori_msg.y = orientation_[1];
-  ori_msg.z = orientation_[2];
+  ori_msg.x = rad_to_deg(orientation_[0]);
+  ori_msg.y = rad_to_deg(orientation_[1]);
+  ori_msg.z = rad_to_deg(orientation_[2]);
 
-  ori_rate_msg.x = orientation_rate_[0];
-  ori_rate_msg.y = orientation_rate_[1];
-  ori_rate_msg.z = orientation_rate_[2];
+  ori_rate_msg.x = rad_to_deg(orientation_rate_[0]);
+  ori_rate_msg.y = rad_to_deg(orientation_rate_[1]);
+  ori_rate_msg.z = rad_to_deg(orientation_rate_[2]);
 
   body_acc_msg.x = body_acceleration_[0];
   body_acc_msg.y = body_acceleration_[1];
@@ -315,11 +319,12 @@ void MagicElectricSim::timerCallback()
   }
 
   sensor_msgs::msg::JointState joint_state_msg;
-  joint_state_msg.header.stamp = get_clock()->now();
+  joint_state_msg.header.stamp = stamp;
   joint_state_msg.name.push_back("base_to_rudder_middle");
   joint_state_msg.position.push_back(rudder_angle_);
   joint_states_pub_->publish(joint_state_msg);
 
+  publishWorldTransform(stamp);
   publishMeasurements();
 
   return;
@@ -507,6 +512,24 @@ void MagicElectricSim::publishMeasurements()
     imu_msg.linear_acceleration.z = body_acceleration_[2];
     imu_pub_->publish(imu_msg);
   }
+}
+
+void MagicElectricSim::publishWorldTransform(const rclcpp::Time & stamp)
+{
+  geometry_msgs::msg::TransformStamped transform;
+  transform.header.stamp = stamp;
+  transform.header.frame_id = "world";
+  transform.child_frame_id = frame_prefix_ + "base_link";
+  transform.transform.translation.x = position_[0];
+  transform.transform.translation.y = position_[1];
+  transform.transform.translation.z = position_[2];
+
+  tf2::Quaternion q;
+  q.setRPY(orientation_[0], orientation_[1], orientation_[2]);
+  q.normalize();
+  transform.transform.rotation = tf2::toMsg(q);
+
+  tf_broadcaster_->sendTransform(transform);
 }
 
 
