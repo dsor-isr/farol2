@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=farol-common
+source "$SCRIPT_DIR/farol-common"
+
+usage() {
+    cat <<'EOF'
+Usage:
+  farol build [-p PACKAGE ...] [-j N] [--release] [-- colcon args...]
+EOF
+}
+
+root="$(farol_workspace_root_or_die)"
+workers="$(farol_default_workers)"
+packages=()
+release=false
+extra=()
+
+while (($#)); do
+    case "$1" in
+        -h|--help|help)
+            usage
+            exit 0
+            ;;
+        -j|--cores)
+            shift
+            [[ $# -gt 0 ]] || farol_die "missing value for --cores"
+            workers="$1"
+            ;;
+        -p|--packages)
+            shift
+            [[ $# -gt 0 ]] || farol_die "missing package after --packages"
+            while (($#)) && [[ "$1" != -- ]] && [[ "$1" != -* ]]; do
+                packages+=("$1")
+                shift
+            done
+            continue
+            ;;
+        --release)
+            release=true
+            ;;
+        --)
+            shift
+            extra=("$@")
+            break
+            ;;
+        *)
+            extra+=("$1")
+            ;;
+    esac
+    shift || true
+done
+
+cmd=(colcon build --symlink-install --parallel-workers "$workers")
+if ((${#packages[@]})); then
+    cmd+=(--packages-select "${packages[@]}")
+fi
+cmd+=(--cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
+if [[ "$release" == true ]]; then
+    cmd+=(-DCMAKE_BUILD_TYPE=Release)
+fi
+cmd+=("${extra[@]}")
+
+printf 'Building in: %s\n' "$root"
+printf '+'
+printf ' %q' "${cmd[@]}"
+printf '\n'
+cd "$root"
+exec "${cmd[@]}"

@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+patterns=(
+    "ros2"
+    "ros2 launch"
+    "launch_ros"
+    "rviz2"
+    "rqt"
+    "component_container"
+    "robot_state_publisher"
+    "joint_state_publisher"
+    "/opt/ros/.*/lib/"
+    "/install/.*/lib/"
+)
+
+exclude_patterns=(
+    "plotjuggler"
+    "PlotJuggler"
+    "rqt"
+    "foxglove_bridge"
+    "foxglove[-_ ]bridge"
+    "bag_record"
+)
+
+is_excluded_pid() {
+    local pid="$1"
+    local cmdline
+    cmdline="$(ps -p "$pid" -o args= 2>/dev/null || true)"
+    local exclude
+    for exclude in "${exclude_patterns[@]}"; do
+        if [[ "$cmdline" =~ $exclude ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+pids=()
+self_pid="$$"
+for pattern in "${patterns[@]}"; do
+    while IFS= read -r pid; do
+        [[ -n "$pid" ]] || continue
+        [[ "$pid" == "$self_pid" ]] && continue
+        is_excluded_pid "$pid" && continue
+        pids+=("$pid")
+    done < <(pgrep -f "$pattern" || true)
+done
+
+mapfile -t pids < <(printf '%s\n' "${pids[@]:-}" | sed '/^$/d' | sort -u)
+if ((${#pids[@]} == 0)); then
+    echo "No ROS 2 processes found."
+    exit 0
+fi
+
+echo "Found ROS 2-related processes to kill:"
+ps -fp "${pids[@]}" || true
+echo
+echo "Protected processes matching:"
+printf '  - %s\n' "${exclude_patterns[@]}"
+echo
+
+remaining=("${pids[@]}")
+for signal_name in INT TERM KILL; do
+    ((${#remaining[@]})) || break
+    echo "Sending SIG$signal_name..."
+    kill "-$signal_name" "${remaining[@]}" 2>/dev/null || true
+    [[ "$signal_name" == "KILL" ]] || sleep 2
+    next=()
+    for pid in "${remaining[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            next+=("$pid")
+        fi
+    done
+    remaining=("${next[@]}")
+done
+
+echo "Stopping ROS 2 daemon..."
+ros2 daemon stop 2>/dev/null || true
+echo "Done."
