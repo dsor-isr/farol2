@@ -10,7 +10,6 @@
         type: "thrust"
         thrusters:
           base_frame: "base_link"
-          thrust_axis: [1.0, 0.0, 0.0]
           frames:
             - "thruster_portside_horizontal_back_link"
             - "thruster_starboard_horizontal_back_link"

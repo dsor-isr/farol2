@@ -3,10 +3,8 @@
 
 StaticThrusterAllocator::StaticThrusterAllocator(
   std::string base_frame,
-  Eigen::Vector3d thrust_axis,
   std::vector<std::string> thruster_frames)
 : base_frame_(std::move(base_frame)),
-  thrust_axis_(std::move(thrust_axis)),
   thruster_frames_(std::move(thruster_frames))
 {
   nr_thrusters_ = thruster_frames_.size();
@@ -68,7 +66,6 @@ bool StaticThrusterAllocator::buildAllocationMatrix(
       logger,
       base_frame_,
       thruster_frames_,
-      thrust_axis_,
       geometry)) {
     return false;
   }

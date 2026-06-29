@@ -15,7 +15,6 @@ class StaticThrusterAllocator {
   public:
     StaticThrusterAllocator(
       std::string base_frame,
-      Eigen::Vector3d thrust_axis,
       std::vector<std::string> thruster_frames);
 
     bool initialize(tf2_ros::Buffer & tf_buffer, const rclcpp::Clock & clock, const rclcpp::Logger & logger);
@@ -30,7 +29,6 @@ class StaticThrusterAllocator {
       const rclcpp::Logger & logger);
 
     std::string base_frame_;
-    Eigen::Vector3d thrust_axis_{1.0, 0.0, 0.0};
     std::vector<std::string> thruster_frames_;
     size_t nr_thrusters_{0};
     bool ready_{false};

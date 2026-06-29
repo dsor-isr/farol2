@@ -55,8 +55,6 @@ void AuvSim::loadParams() {
   allocation_flat = declare_parameter<std::vector<double>>(
     "vehicle.actuators.allocation_matrix", std::vector<double>{});
   base_frame_ = declare_parameter<std::string>("vehicle.actuators.base_frame", "");
-  auto thrust_axis = declare_parameter<std::vector<double>>(
-    "vehicle.actuators.thrust_axis", std::vector<double>{});
   thruster_frames_ = declare_parameter<std::vector<std::string>>(
     "vehicle.actuators.frames", std::vector<std::string>{});
   lump_pos = declare_parameter<std::vector<double>>("vehicle.actuators.lump_param_positive");
@@ -120,16 +118,6 @@ void AuvSim::loadParams() {
   };
 
   if (!base_frame_.empty() && !thruster_frames_.empty()) {
-    if (thrust_axis.size() != 3) {
-      throw std::runtime_error("vehicle.actuators.thrust_axis must have exactly 3 values");
-    }
-
-    thrust_axis_ << thrust_axis[0], thrust_axis[1], thrust_axis[2];
-    if (thrust_axis_.norm() <= 1e-9) {
-      throw std::runtime_error("vehicle.actuators.thrust_axis cannot have near-zero norm");
-    }
-    thrust_axis_.normalize();
-
     base_frame_ = apply_frame_prefix(base_frame_);
     for (auto & frame : thruster_frames_) {
       if (frame.empty()) {
@@ -144,7 +132,7 @@ void AuvSim::loadParams() {
 
   if (allocation_flat.empty() || allocation_flat.size() % 6 != 0) {
     throw std::runtime_error(
-      "auv_sim needs either vehicle.actuators.{base_frame, thrust_axis, frames} "
+      "auv_sim needs either vehicle.actuators.{base_frame, frames} "
       "or a vehicle.actuators.allocation_matrix with a multiple of 6 values");
   }
 
@@ -223,7 +211,6 @@ void AuvSim::initialiseAuvFromTF() {
       get_logger(),
       base_frame_,
       thruster_frames_,
-      thrust_axis_,
       geometry)) {
     return;
   }
