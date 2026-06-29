@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+[[ $# -ge 1 ]] || { echo "farol: usage: farol bag play <bag> [ros2 bag play args...]" >&2; exit 1; }
+exec ros2 bag play "$@"

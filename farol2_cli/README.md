@@ -1,78 +1,184 @@
-# FAROL2 CLI
+# FAROL CLI
 
-`farol2_cli` exposes the existing FAROL2 shell helpers through a ROS 2-style
-`farol2` command. The original scripts in `farol2_scripts` remain available
-during migration.
+`farol` is a fast, pure Bash command dispatcher for FAROL development helpers.
+It does not need `colcon build`, ROS package installation, Python imports, or
+workspace sourcing for top-level dispatch or completion.
 
-## Build
-
-From the colcon workspace root:
+## Install
 
 ```bash
-colcon build --symlink-install --packages-select farol2_cli
-source install/setup.bash
+./install.sh
 ```
 
-## Bash integration and completion
+This symlinks:
 
-Sourcing the workspace automatically loads the Bash wrapper so `farol2 cd`
-can change the current directory. The wrapper also enables `argcomplete` when
-it is installed:
+```text
+~/.local/bin/farol
+~/.local/share/bash-completion/completions/farol
+~/.local/share/farol/farol.bash
+```
+
+By default, `install.sh` also adds these idempotent lines to `~/.bashrc`:
+
+```text
+export PATH="$HOME/.local/bin:$PATH"
+source "$HOME/.local/share/farol/farol.bash"
+```
+
+That makes `farol` and `farol cd ...` work in future Bash terminals. To install
+only the symlinks and skip `.bashrc` edits:
 
 ```bash
-sudo apt install python3-argcomplete
-source install/setup.bash
+./install.sh --no-modify-shell-rc
 ```
 
-The existing `farol2_scripts/source_all.sh` loader also loads the wrapper.
-Without either setup script, `farol2 cd ...` only prints the resolved
-destination because an executable cannot change its parent shell's directory.
-
-Completion for `farol2 cd` includes workspace and installed ROS packages whose
-names start with `farol2_`, both in full and shortened form. For example,
-`farol2_path_following` also completes as `path_following`.
-
-## Examples
+For a one-off shell without installing:
 
 ```bash
-farol2 --help
-farol2 ws build
-farol2 ws build -p farol2_nav farol2_inner_loop --release
-farol2 ws clean
-farol2 ws root
-farol2 cd
-farol2 cd root
-farol2 cd drivers
-farol2 cd farol2_nav
-farol2 pkg src farol2_nav
-cd $(farol2 pkg src farol2_nav)
-farol2 pkg cd-src farol2_nav
-farol2 serial bridge /dev/ttyACM0
-farol2 bag info my_bag
-farol2 bag play my_bag -- --rate 2
-farol2 bag crop my_bag 10 20 -a
-farol2 bag crop my_bag 10 20 '/magicelectric0/measurement/*'
-farol2 kill ros
+export PATH="$PWD/bin:$PATH"
+source shell/farol.bash
 ```
 
-Arguments following `--` for `farol2 ws build` and `farol2 bag play` are passed
-to the underlying command.
+`shell/farol.bash` loads Bash completion automatically.
 
-`farol2 ws clean` preserves `build/farol2_cli`, `install/farol2_cli`, and the
-top-level install setup scripts. Preserving the build artifact is necessary
-because a symlink-installed Python package refers back to it. Cleanup refuses
-to modify an install space where `farol2_cli` cannot be preserved safely.
+`shell/farol.bash` also sources lightweight snippets from `profile.d/*.bash`.
+Use that folder for aliases, prompt tweaks, environment variables, and small
+shell functions that should always be available. Set
+`FAROL_DISABLE_PROFILE=1` before sourcing `shell/farol.bash` to skip them.
 
-## Migration
+## Uninstall
 
-| Existing helper | New command |
+```bash
+./uninstall.sh
+```
+
+## Commands
+
+```bash
+farol help
+farol build
+farol clean
+farol source
+farol ws status
+farol ws root
+farol pkg src farol2_nav
+farol pkg share farol2_nav
+farol cd planning
+farol bridge serial /dev/ttyACM0
+farol bag info my_bag
+farol bag topics my_bag
+farol bag play my_bag --rate 2
+farol bag crop my_bag 10 20 -a
+farol bag crop my_bag 10 20 '/magicelectric0/measurement/*'
+farol kill ros
+```
+
+`farol cd ...` changes directory when the optional shell integration is sourced.
+Without that integration, the executable prints a path and can still be used as:
+
+```bash
+cd "$(farol cd path_following)"
+```
+
+## Command Map
+
+| User command | Backend script |
 | --- | --- |
-| `farol_build` | `farol2 ws build` |
-| `farol_clean` | `farol2 ws clean` |
-| `crop_bag` | `farol2 bag crop` |
-| `serial_bridge` | `farol2 serial bridge` |
-| `nuke_ros2` | `farol2 kill ros` |
+| `farol build` / `farol ws build` | `libexec/farol-build` |
+| `farol clean` / `farol ws clean` | `libexec/farol-clean` |
+| `farol source` | `libexec/farol-source` |
+| `farol cd` | `libexec/farol-cd` |
+| `farol pkg src` | `libexec/farol-pkg-src` |
+| `farol pkg share` | `libexec/farol-pkg-share` |
+| `farol pkg cd-src` | `libexec/farol-pkg-cd-src` |
+| `farol bag crop` | `libexec/farol-bag-crop` |
+| `farol bag info` | `libexec/farol-bag-info` |
+| `farol bag play` | `libexec/farol-bag-play` |
+| `farol bag topics` | `libexec/farol-bag-topics` |
+| `farol bridge serial` / `farol serial bridge` | `libexec/farol-bridge-serial` |
+| `farol kill ros` | `libexec/farol-kill-ros` |
+| `farol ws status` | `libexec/farol-ws-status` |
+| `farol ws root` | `libexec/farol-ws-root` |
 
-`source_all.sh` and `display_git_branch_in_prompt.sh` remain shell-only helpers.
-There were no existing Docker helpers, so `farol2 docker` currently documents
-that no commands have been migrated rather than inventing new behavior.
+## Completion
+
+Bash completion does not call Python, ROS, colcon, or `farol`. It is loaded by
+`shell/farol.bash` and also installed as a standard bash-completion file. Most
+command completion is static. `farol cd` completion additionally scans
+`$COLCON_ROOT/src/**/package.xml` with Bash globbing and suggests package
+directory names with a leading `farol2_` stripped, so `farol2_planning`
+completes as `planning`.
+If your system does not load `~/.local/share/bash-completion/completions`
+automatically, source it manually:
+
+```bash
+source /path/to/farol2_cli/completion/farol.bash
+```
+
+Zsh users can source:
+
+```zsh
+source /path/to/farol2_cli/completion/farol.zsh
+```
+
+## Migration Notes
+
+The previous `farol2_cli` was an `ament_python` package with an argparse entry
+point. That has been removed. The CLI now runs directly from `bin/farol` and
+dispatches to `libexec/` scripts. Existing legacy functions in
+`farol2_scripts/` remain available.
+
+Legacy mapping:
+
+| Old helper | New command |
+| --- | --- |
+| `farol_build` | `farol build` |
+| `farol_clean` | `farol clean` |
+| `crop_bag` | `farol bag crop` |
+| `serial_bridge` | `farol bridge serial` |
+| `nuke_ros2` | `farol kill ros` |
+
+## Adding A New Command
+
+To add:
+
+```bash
+farol foo bar
+```
+
+create:
+
+```text
+libexec/farol-foo-bar
+```
+
+Then add `foo` and `bar` to:
+
+```text
+bin/farol
+completion/farol.bash
+completion/farol.zsh
+README.md
+```
+
+Keep dispatch and completion static. Put expensive work in the backend script.
+Put always-sourced shell customizations in `profile.d/*.bash`, not in
+`bin/`, `libexec/`, or `completion/`.
+
+## Speed Design
+
+`bin/farol` only parses one or two command words and `exec`s a backend. Static
+completion avoids all dynamic discovery. Commands that need ROS or colcon call
+those tools only after the concrete subcommand is selected.
+
+## Manual Test Checklist
+
+```bash
+./bin/farol help
+./bin/farol --help
+./bin/farol invalid_command
+./bin/farol bag help
+./bin/farol kill help
+grep -R "python" completion/
+time ./bin/farol help
+```

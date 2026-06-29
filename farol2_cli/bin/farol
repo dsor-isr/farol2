@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+    SOURCE_DIR="$(cd -- "$(dirname -- "$SOURCE")" && pwd)"
+    SOURCE="$(readlink -- "$SOURCE")"
+    [[ "$SOURCE" == /* ]] || SOURCE="$SOURCE_DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -- "$(dirname -- "$SOURCE")" && pwd)"
+ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+LIBEXEC_DIR="$ROOT_DIR/libexec"
+
+print_help() {
+    cat <<'EOF'
+farol - fast FAROL helper CLI
+
+Usage:
+  farol <command> [subcommand] [args...]
+
+Commands:
+  build                 Build the colcon workspace
+  clean                 Remove workspace build/install/log folders
+  source                Print a shell command to source the workspace
+  cd [target]           Print a workspace/package path for use with cd
+  pkg src <package>     Print a package source path
+  pkg share <package>   Print an installed package share path
+  bag crop ...          Crop a ROS 2 bag
+  bag info <bag>        Show bag information
+  bag play <bag> ...    Play a bag
+  bag topics <bag>      List bag topics
+  bridge serial ...     Bridge a real serial port to a PTY
+  kill ros              Stop ROS 2-related processes
+  ws status             Show workspace status
+  ws root               Print workspace root
+  ws build              Alias for 'farol build'
+  ws clean              Alias for 'farol clean'
+
+Run 'farol <command> help' for group help where available.
+EOF
+}
+
+group_help() {
+    case "$1" in
+        bag)
+            cat <<'EOF'
+Usage:
+  farol bag crop <bag> <t1> <t2> [topics_or_patterns...] [-a] [-o output]
+  farol bag info <bag>
+  farol bag play <bag> [ros2 bag play args...]
+  farol bag topics <bag>
+EOF
+            ;;
+        bridge)
+            cat <<'EOF'
+Usage:
+  farol bridge serial <device> [--link PATH] [--baud N]
+EOF
+            ;;
+        kill)
+            cat <<'EOF'
+Usage:
+  farol kill ros
+EOF
+            ;;
+        pkg)
+            cat <<'EOF'
+Usage:
+  farol pkg src <package>
+  farol pkg share <package>
+  farol pkg cd-src <package>
+EOF
+            ;;
+        ws)
+            cat <<'EOF'
+Usage:
+  farol ws status
+  farol ws root
+  farol ws build [options]
+  farol ws clean [--yes]
+EOF
+            ;;
+        *)
+            print_help
+            ;;
+    esac
+}
+
+run_backend() {
+    local backend="$1"
+    shift
+    exec "$LIBEXEC_DIR/$backend" "$@"
+}
+
+unknown_command() {
+    printf 'farol: unknown command: %s\n' "$1" >&2
+    printf "Run 'farol help' to see available commands.\n" >&2
+    exit 2
+}
+
+unknown_subcommand() {
+    local group="$1"
+    local subcommand="$2"
+    local available="$3"
+    printf 'farol: unknown subcommand: %s %s\n' "$group" "$subcommand" >&2
+    printf "Available subcommands for '%s': %s\n" "$group" "$available" >&2
+    exit 2
+}
+
+cmd="${1:-help}"
+case "$cmd" in
+    help|--help|-h)
+        print_help
+        ;;
+    build)
+        shift
+        run_backend farol-build "$@"
+        ;;
+    clean)
+        shift
+        run_backend farol-clean "$@"
+        ;;
+    source)
+        shift
+        run_backend farol-source "$@"
+        ;;
+    cd)
+        shift
+        run_backend farol-cd "$@"
+        ;;
+    pkg)
+        shift
+        sub="${1:-help}"
+        case "$sub" in
+            help|--help|-h) group_help pkg ;;
+            src) shift; run_backend farol-pkg-src "$@" ;;
+            share) shift; run_backend farol-pkg-share "$@" ;;
+            cd-src) shift; run_backend farol-pkg-cd-src "$@" ;;
+            *) unknown_subcommand pkg "$sub" "src share cd-src" ;;
+        esac
+        ;;
+    bag)
+        shift
+        sub="${1:-help}"
+        case "$sub" in
+            help|--help|-h) group_help bag ;;
+            crop) shift; run_backend farol-bag-crop "$@" ;;
+            info) shift; run_backend farol-bag-info "$@" ;;
+            play) shift; run_backend farol-bag-play "$@" ;;
+            topics) shift; run_backend farol-bag-topics "$@" ;;
+            *) unknown_subcommand bag "$sub" "crop info play topics" ;;
+        esac
+        ;;
+    bridge)
+        shift
+        sub="${1:-help}"
+        case "$sub" in
+            help|--help|-h) group_help bridge ;;
+            serial) shift; run_backend farol-bridge-serial "$@" ;;
+            *) unknown_subcommand bridge "$sub" "serial" ;;
+        esac
+        ;;
+    serial)
+        shift
+        sub="${1:-help}"
+        case "$sub" in
+            help|--help|-h) group_help bridge ;;
+            bridge) shift; run_backend farol-bridge-serial "$@" ;;
+            *) unknown_subcommand serial "$sub" "bridge" ;;
+        esac
+        ;;
+    kill)
+        shift
+        sub="${1:-help}"
+        case "$sub" in
+            help|--help|-h) group_help kill ;;
+            ros) shift; run_backend farol-kill-ros "$@" ;;
+            *) unknown_subcommand kill "$sub" "ros" ;;
+        esac
+        ;;
+    ws)
+        shift
+        sub="${1:-help}"
+        case "$sub" in
+            help|--help|-h) group_help ws ;;
+            status) shift; run_backend farol-ws-status "$@" ;;
+            root) shift; run_backend farol-ws-root "$@" ;;
+            build) shift; run_backend farol-build "$@" ;;
+            clean) shift; run_backend farol-clean "$@" ;;
+            *) unknown_subcommand ws "$sub" "status root build clean" ;;
+        esac
+        ;;
+    *)
+        unknown_command "$cmd"
+        ;;
+esac
