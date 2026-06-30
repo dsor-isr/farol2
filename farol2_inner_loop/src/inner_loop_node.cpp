@@ -241,11 +241,11 @@ void InnerLoopNode::loadParams() {
 void InnerLoopNode::initialiseSubscribers() {
   nav_state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
                     TOPIC_SUB_NAV_STATE,
-                    1, std::bind(&PID::navStateCallback, this, std::placeholders::_1));
+                    1, std::bind(&InnerLoopNode::navStateCallback, this, std::placeholders::_1));
   
   sim_state_sub_ = create_subscription<geometry_msgs::msg::Vector3>(
                     TOPIC_SUB_SIM_STATE,
-                    1, std::bind(&PID::simStateCallback, this, std::placeholders::_1));
+                    1, std::bind(&InnerLoopNode::simStateCallback, this, std::placeholders::_1));
 
   for (const auto &name : controller_names_) {
     if (controller_map_.count(name) == 0) {
@@ -345,11 +345,11 @@ void InnerLoopNode::navStateCallback(const farol2_interfaces::msg::NavigationSta
 
 }
 
-void PID::simStateCallback(const geometry_msgs::msg::Vector3 &msg) {
+void InnerLoopNode::simStateCallback(const geometry_msgs::msg::Vector3 &msg) {
   body_velocity_ = msg;
 }
 
-void PID::referenceCallback(const std::string &controller_name, double raw_value) {
+void InnerLoopNode::referenceCallback(const std::string &controller_name, double raw_value) {
   double ref_value = raw_value;
 
   // Linear channels use incoming values directly; angular channels keep
@@ -929,7 +929,7 @@ void InnerLoopNode::timerCallback() {
   return;
 }
 
-void PID::changeParamsCallback(const std::shared_ptr<farol2_inner_loop::srv::ChangeParams::Request> request,
+void InnerLoopNode::changeParamsCallback(const std::shared_ptr<farol2_inner_loop::srv::ChangeParams::Request> request,
                                std::shared_ptr<farol2_inner_loop::srv::ChangeParams::Response> response) {
   
   auto it = controller_ptrs_.find(request->controller);
