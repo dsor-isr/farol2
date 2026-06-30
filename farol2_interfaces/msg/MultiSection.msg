@@ -20,3 +20,9 @@ float32 velocity
 float32[] gamma_s
 # Gamma end
 float32[] gamma_e
+
+# Bezier types needed
+float64[] px
+float64[] py
+
+float64 tf

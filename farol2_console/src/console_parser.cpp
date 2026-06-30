@@ -516,11 +516,6 @@ void ConsoleParser::parseMission(std::istream &is) {
             double yPoints = std::stod(bezier_str[2 + num_points + i]);
             newSection.px.push_back(xPoints + xrefpoint);
             newSection.py.push_back(yPoints + yrefpoint);
-            
-            RCLCPP_INFO(get_logger(), 
-              "BEZIER point %d: x=%.3f, y=%.3f (after offset x=%.3f, y=%.3f)", 
-              i, xPoints, yPoints, 
-              newSection.px.back(), newSection.py.back());
               
           } catch (const std::invalid_argument& e) {
             RCLCPP_ERROR(get_logger(), 
@@ -588,6 +583,10 @@ void ConsoleParser::parseMission(std::istream &is) {
     FullSection.end_point.push_back(end_point);
     FullSection.gamma_s.push_back(newSection.gamma_s);
     FullSection.gamma_e.push_back(newSection.gamma_e);
+
+    FullSection.px = newSection.px;
+    FullSection.py = newSection.py;
+    FullSection.tf = newSection.tf;
 
     mission.push_back(newSection);
   }

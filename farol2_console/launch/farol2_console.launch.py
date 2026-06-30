@@ -94,6 +94,8 @@ def generate_launch_description():
       ('set_speed', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SetConstVdVehicle')]),
       ('pf_start', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/path_following/Start')]),
       ('pf_stop', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/path_following/Stop')]),
+      ('spawn_bezier', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SpawnBezier')]),
+      ('set_bezier_speed', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SetBezierSpeed')]),
     ]
   )
 

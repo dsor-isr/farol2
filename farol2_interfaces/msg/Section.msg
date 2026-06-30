@@ -30,3 +30,9 @@ float64 r0
 float64 gamma_s
 # Gamma end
 float64 gamma_e
+
+# Bezier types needed
+float64[] px
+float64[] py
+
+float64 tf

@@ -90,6 +90,8 @@ def generate_launch_description():
       ('line_path', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SpawnLinePath')]),
       ('speed_const_rabbit_speed', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SetConstVdRabbit')]),
       ('speed_const_vehicle_speed', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SetConstVdVehicle')]),
+      ('bezier_path', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SpawnBezier')]),
+      ('speed_bezier_vehicle_speed', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SetBezierSpeed')]),
     ]
   )
 
