@@ -31,7 +31,6 @@ def _launch(context, *args, **kwargs):
     launch_arguments={
       'vehicle_name': vehicle_name,
       'vehicle_id': vehicle_id,
-      'vn310': 'false',
       'vn100': 'true',
       'can_thrusters': 'false',
       'can_instrumentation': 'false',
