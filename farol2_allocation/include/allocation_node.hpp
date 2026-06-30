@@ -82,7 +82,6 @@ class AllocationNode : public rclcpp::Node {
 
     std::string base_frame_;
     std::string frame_prefix_;
-    Eigen::Vector3d thrust_axis_{1.0, 0.0, 0.0};
     std::vector<std::string> thruster_frames_;
     size_t nr_thrusters_{0};
     Eigen::Vector<double, 6> tau_;

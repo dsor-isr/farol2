@@ -25,7 +25,6 @@
         thrusters:
           open_loop: true
           base_frame: "base_link"
-          thrust_axis: [1.0, 0.0, 0.0]
           frames:
             - "thruster_middle_link"
   
@@ -43,4 +42,3 @@
       coef_bwd: [-0.00000177778, 0.0, 0.0]    # parameters for farol seabotix, eqn -> Thrust = f(rpm)
       max_rpm: 2200.0
       min_rpm: -2200.0
-

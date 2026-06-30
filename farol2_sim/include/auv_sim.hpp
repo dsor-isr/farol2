@@ -130,7 +130,6 @@ class AuvSim : public rclcpp::Node {
     std::vector<double> added_mass;
     std::vector<double> allocation_flat;
     std::string base_frame_;
-    Eigen::Vector3d thrust_axis_{1.0, 0.0, 0.0};
     std::vector<std::string> thruster_frames_;
     bool use_tf_allocation_{false};
     std::vector<double> lump_pos;

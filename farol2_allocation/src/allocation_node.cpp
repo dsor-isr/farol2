@@ -46,16 +46,6 @@ void AllocationNode::loadParams() {
 	}
 	base_frame_ = apply_frame_prefix(base_frame_);
 
-	const auto thrust_axis = declare_parameter<std::vector<double>>("allocation.thrusters.thrust_axis");
-	if (thrust_axis.size() != 3) {
-		throw std::runtime_error("allocation.thrusters.thrust_axis must have exactly 3 values");
-	}
-	thrust_axis_ << thrust_axis[0], thrust_axis[1], thrust_axis[2];
-	if (thrust_axis_.norm() <= 1e-9) {
-		throw std::runtime_error("allocation.thrusters.thrust_axis cannot have near-zero norm");
-	}
-	thrust_axis_.normalize();
-
 	thruster_frames_ = declare_parameter<std::vector<std::string>>("allocation.thrusters.frames");
 	if (thruster_frames_.empty()) {
 		throw std::runtime_error("allocation.thrusters.frames must contain at least one TF frame");
@@ -71,7 +61,6 @@ void AllocationNode::loadParams() {
 
 	static_thruster_allocator_ = std::make_unique<StaticThrusterAllocator>(
 		base_frame_,
-		thrust_axis_,
 		thruster_frames_);
 
 	if (allocation_type_ == AllocationType::THRUST_RUDDER) {

@@ -17,8 +17,7 @@ struct ThrusterGeometry {
 };
 
 inline ThrusterGeometry thrusterGeometryFromTransform(
-  const geometry_msgs::msg::TransformStamped & transform,
-  const Eigen::Vector3d & thrust_axis)
+  const geometry_msgs::msg::TransformStamped & transform)
 {
   const auto & t = transform.transform.translation;
   const auto & q_msg = transform.transform.rotation;
@@ -27,7 +26,7 @@ inline ThrusterGeometry thrusterGeometryFromTransform(
 
   ThrusterGeometry geometry;
   geometry.moment_arm_body << t.x, t.y, t.z;
-  geometry.force_axis_body = q.normalized().toRotationMatrix() * thrust_axis;
+  geometry.force_axis_body = q.normalized().toRotationMatrix() * Eigen::Vector3d::UnitX();
   return geometry;
 }
 
@@ -37,7 +36,6 @@ inline bool buildThrusterGeometryFromTF(
   const rclcpp::Logger & logger,
   const std::string & base_frame,
   const std::vector<std::string> & thruster_frames,
-  const Eigen::Vector3d & thrust_axis,
   std::vector<ThrusterGeometry> & geometry)
 {
   geometry.clear();
@@ -62,7 +60,7 @@ inline bool buildThrusterGeometryFromTF(
       return false;
     }
 
-    geometry.push_back(thrusterGeometryFromTransform(transform, thrust_axis));
+    geometry.push_back(thrusterGeometryFromTransform(transform));
   }
 
   return true;
