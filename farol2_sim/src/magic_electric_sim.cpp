@@ -122,6 +122,8 @@ void MagicElectricSim::loadParams()
 
   // Sensor params
   gnss_activate_         = declare_parameter<bool>("sensor.gnss");
+  gnss_velocity_over_ground_activate_ =
+    declare_parameter<bool>("sensor.gnss_velocity_over_ground");
   depth_sensor_activate_ = declare_parameter<bool>("sensor.depth_sensor");
   imu_activate_          = declare_parameter<bool>("sensor.imu");
   noise_activate_        = declare_parameter<bool>("sensor.noise.activate");
@@ -206,9 +208,9 @@ void MagicElectricSim::initialisePublishers()
       TOPIC_PUB_GNSS, 1);
   utm_ned_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
       TOPIC_PUB_UTM_NED, 1);
-  velocity_over_ground_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
+  velocity_over_ground_pub_ = create_publisher<farol2_interfaces::msg::Velocity>(
       TOPIC_PUB_VELOCITY_OVER_GROUND, 1);
-  velocity_through_water_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
+  velocity_through_water_pub_ = create_publisher<farol2_interfaces::msg::Velocity>(
       TOPIC_PUB_VELOCITY_THROUGH_WATER, 1);
   depth_pub_ = create_publisher<std_msgs::msg::Float32>(
       TOPIC_PUB_DEPTH, 1);
@@ -448,6 +450,7 @@ void MagicElectricSim::publishMeasurements()
     velocity_through_water_ned.x() * std::cos(yaw) + velocity_through_water_ned.y() * std::sin(yaw),
     -velocity_through_water_ned.x() * std::sin(yaw) + velocity_through_water_ned.y() * std::cos(yaw),
     velocity_through_water_ned.z());
+  const std::string base_frame = frame_prefix_ + "base_link";
 
   if (gnss_activate_) {
     const double north_meas = north + (noise_activate_ ? randn(pos_bias[0], pos_variance[0]) : 0.0);
@@ -470,20 +473,28 @@ void MagicElectricSim::publishMeasurements()
     gnss_msg.longitude = longitude;
     gnss_msg.altitude = -depth;
     gnss_pub_->publish(gnss_msg);
+
+    if (gnss_velocity_over_ground_activate_) {
+      farol2_interfaces::msg::Velocity vel_msg;
+      vel_msg.header.stamp = stamp;
+      vel_msg.header.frame_id = "world";
+      vel_msg.measured_frame_id = base_frame;
+      vel_msg.reference_frame_id = "world";
+      vel_msg.velocity.x = velocity_over_ground_ned.x() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0);
+      vel_msg.velocity.y = velocity_over_ground_ned.y() + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0);
+      vel_msg.velocity.z = velocity_over_ground_ned.z() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0);
+      velocity_over_ground_pub_->publish(vel_msg);
+    }
   }
 
-  geometry_msgs::msg::Vector3Stamped vel_msg;
-  vel_msg.header.stamp = stamp;
-  vel_msg.vector.x = velocity_over_ground_ned.x() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0);
-  vel_msg.vector.y = velocity_over_ground_ned.y() + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0);
-  vel_msg.vector.z = velocity_over_ground_ned.z() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0);
-  velocity_over_ground_pub_->publish(vel_msg);
-
-  geometry_msgs::msg::Vector3Stamped fluid_vel_msg;
+  farol2_interfaces::msg::Velocity fluid_vel_msg;
   fluid_vel_msg.header.stamp = stamp;
-  fluid_vel_msg.vector.x = velocity_through_water_body.x() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0);
-  fluid_vel_msg.vector.y = velocity_through_water_body.y() + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0);
-  fluid_vel_msg.vector.z = velocity_through_water_body.z() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0);
+  fluid_vel_msg.header.frame_id = base_frame;
+  fluid_vel_msg.measured_frame_id = base_frame;
+  fluid_vel_msg.reference_frame_id = "water";
+  fluid_vel_msg.velocity.x = velocity_through_water_body.x() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0);
+  fluid_vel_msg.velocity.y = velocity_through_water_body.y() + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0);
+  fluid_vel_msg.velocity.z = velocity_through_water_body.z() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0);
   velocity_through_water_pub_->publish(fluid_vel_msg);
 
   if (depth_sensor_activate_) {
