@@ -9,7 +9,14 @@ source "$SCRIPT_DIR/farol-common"
 usage() {
     cat <<'EOF'
 Usage:
-  farol build [-p PACKAGE ...] [-j N] [--release] [-- colcon args...]
+  farol build [PACKAGE|this ...] [-j N|-jN] [--release] [-- colcon args...]
+  farol build -p PACKAGE ... [-j N|-jN] [--release] [-- colcon args...]
+
+Examples:
+  farol build -j8
+  farol build this
+  farol build sim
+  farol build path_following -j4
 EOF
 }
 
@@ -19,11 +26,76 @@ packages=()
 release=false
 extra=()
 
+package_name_from_xml() {
+    local package_xml="$1"
+    sed -n 's:.*<name>[[:space:]]*\([^<[:space:]]\{1,\}\)[[:space:]]*</name>.*:\1:p' "$package_xml" | head -n 1
+}
+
+current_package_or_die() {
+    local current package_dir package_name
+    current="$(pwd)"
+
+    while [[ "$current" != "/" ]]; do
+        if [[ -f "$current/package.xml" ]]; then
+            package_dir="$(cd -- "$current" && pwd)"
+            case "$package_dir" in
+                "$root"/src/farol2/*|"$root"/src/farol2_drivers/*) ;;
+                *) farol_die "current package is not under the FAROL source tree: $package_dir" ;;
+            esac
+            farol_path_is_colcon_ignored "$package_dir" "$root/src" && farol_die "current package is ignored by COLCON_IGNORE: $package_dir"
+            package_name="$(package_name_from_xml "$package_dir/package.xml")"
+            [[ -n "$package_name" ]] || farol_die "could not read package name from: $package_dir/package.xml"
+            printf '%s\n' "$package_name"
+            return 0
+        fi
+        current="$(dirname "$current")"
+    done
+
+    farol_die "'this' only works inside a FAROL ROS package"
+}
+
+colcon_package_exists() {
+    local package="$1"
+    [[ -n "$(farol_colcon_list "$root" --names-only --packages-select "$package" 2>/dev/null | sed -n '1p')" ]]
+}
+
+resolve_package_or_die() {
+    local requested="$1"
+    local candidate
+
+    if [[ "$requested" == "this" ]]; then
+        current_package_or_die
+        return 0
+    fi
+
+    for candidate in "$requested" "farol2_$requested"; do
+        if colcon_package_exists "$candidate"; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+
+    farol_die "workspace package not found: $requested"
+}
+
+add_package_target() {
+    local requested="$1"
+    local resolved existing
+    resolved="$(resolve_package_or_die "$requested")"
+    for existing in "${packages[@]}"; do
+        [[ "$existing" == "$resolved" ]] && return 0
+    done
+    packages+=("$resolved")
+}
+
 while (($#)); do
     case "$1" in
         -h|--help|help)
             usage
             exit 0
+            ;;
+        -j[0-9]*)
+            workers="${1#-j}"
             ;;
         -j|--cores)
             shift
@@ -34,7 +106,7 @@ while (($#)); do
             shift
             [[ $# -gt 0 ]] || farol_die "missing package after --packages"
             while (($#)) && [[ "$1" != -- ]] && [[ "$1" != -* ]]; do
-                packages+=("$1")
+                add_package_target "$1"
                 shift
             done
             continue
@@ -47,12 +119,18 @@ while (($#)); do
             extra=("$@")
             break
             ;;
-        *)
+        -*)
             extra+=("$1")
+            ;;
+        *)
+            add_package_target "$1"
             ;;
     esac
     shift || true
 done
+
+[[ "$workers" =~ ^[0-9]+$ ]] || farol_die "worker count must be a positive integer: $workers"
+(( workers > 0 )) || farol_die "worker count must be greater than zero"
 
 cmd=(colcon build --symlink-install --parallel-workers "$workers")
 if ((${#packages[@]})); then
