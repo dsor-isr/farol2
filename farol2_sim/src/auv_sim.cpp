@@ -1,7 +1,19 @@
 #include <auv_sim.hpp>
 
+#include <algorithm>
+#include <stdexcept>
+
 /* Constructor */
 AuvSim::AuvSim() : Node("auv_sim"){
+  clock_ = this->get_clock();
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(clock_);
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(
+    *tf_buffer_,
+    get_node_base_interface(),
+    get_node_logging_interface(),
+    get_node_parameters_interface(),
+    get_node_topics_interface());
+
   loadParams();
   initialiseSubscribers();
   initialisePublishers();
@@ -12,7 +24,12 @@ AuvSim::AuvSim() : Node("auv_sim"){
 /* Destructor */
 AuvSim::~AuvSim() {
   /* Stop the timer */
-  timer_->cancel();
+  if (timer_) {
+    timer_->cancel();
+  }
+  if (tf_initialisation_timer_) {
+    tf_initialisation_timer_->cancel();
+  }
 }
 
 /**
@@ -22,6 +39,7 @@ void AuvSim::loadParams() {
 
   freq_ = declare_parameter<int>("node_frequency");
   node_period_ = 1.0/freq_;
+  frame_prefix_ = declare_parameter<std::string>("frame_prefix", "");
 
   fluid_density = declare_parameter<double>("environment.fluid_density");
 
@@ -34,7 +52,13 @@ void AuvSim::loadParams() {
   Dq = declare_parameter<std::vector<double>>("vehicle.quadratic_damping_tensor");
   added_mass = declare_parameter<std::vector<double>>("vehicle.added_mass_tensor");
 
-  allocation_flat = declare_parameter<std::vector<double>>("vehicle.actuators.allocation_matrix");
+  allocation_flat = declare_parameter<std::vector<double>>(
+    "vehicle.actuators.allocation_matrix", std::vector<double>{});
+  base_frame_ = declare_parameter<std::string>("vehicle.actuators.base_frame", "");
+  auto thrust_axis = declare_parameter<std::vector<double>>(
+    "vehicle.actuators.thrust_axis", std::vector<double>{});
+  thruster_frames_ = declare_parameter<std::vector<std::string>>(
+    "vehicle.actuators.frames", std::vector<std::string>{});
   lump_pos = declare_parameter<std::vector<double>>("vehicle.actuators.lump_param_positive");
   lump_neg = declare_parameter<std::vector<double>>("vehicle.actuators.lump_param_negative");
   minmax_input = declare_parameter<std::vector<double>>("vehicle.actuators.min_max_thruster_input");
@@ -80,14 +104,62 @@ void AuvSim::loadParams() {
     ori_rate_bias[i] = r_bias[i]; ori_rate_variance[i] = r_var[i];
   }
 
-  auto initial_position = declare_parameter<std::vector<double>>("initial_state.position");
-  auto initial_body_velocity = declare_parameter<std::vector<double>>("initial_state.body_velocity");
-  auto initial_orientation = declare_parameter<std::vector<double>>("initial_state.orientation");
-  auto initial_orientation_rate = declare_parameter<std::vector<double>>("initial_state.orientation_rate");
-  double originLat_ = initial_position[0];
-  double originLon_ = initial_position[1];
+  initial_position_ = declare_parameter<std::vector<double>>("initial_state.position");
+  initial_body_velocity_ = declare_parameter<std::vector<double>>("initial_state.body_velocity");
+  initial_orientation_ = declare_parameter<std::vector<double>>("initial_state.orientation");
+  initial_orientation_rate_ = declare_parameter<std::vector<double>>("initial_state.orientation_rate");
+  double originLat_ = initial_position_[0];
+  double originLon_ = initial_position_[1];
   GeographicLib::UTMUPS::Forward(originLat_, originLon_, utm_zone_, northp_, easting_, northing_);
 
+  const auto apply_frame_prefix = [this](const std::string & frame) {
+    if (frame_prefix_.empty() || frame.rfind(frame_prefix_, 0) == 0) {
+      return frame;
+    }
+    return frame_prefix_ + frame;
+  };
+
+  if (!base_frame_.empty() && !thruster_frames_.empty()) {
+    if (thrust_axis.size() != 3) {
+      throw std::runtime_error("vehicle.actuators.thrust_axis must have exactly 3 values");
+    }
+
+    thrust_axis_ << thrust_axis[0], thrust_axis[1], thrust_axis[2];
+    if (thrust_axis_.norm() <= 1e-9) {
+      throw std::runtime_error("vehicle.actuators.thrust_axis cannot have near-zero norm");
+    }
+    thrust_axis_.normalize();
+
+    base_frame_ = apply_frame_prefix(base_frame_);
+    for (auto & frame : thruster_frames_) {
+      if (frame.empty()) {
+        throw std::runtime_error("vehicle.actuators.frames cannot contain empty frame names");
+      }
+      frame = apply_frame_prefix(frame);
+    }
+
+    use_tf_allocation_ = true;
+    return;
+  }
+
+  if (allocation_flat.empty() || allocation_flat.size() % 6 != 0) {
+    throw std::runtime_error(
+      "auv_sim needs either vehicle.actuators.{base_frame, thrust_axis, frames} "
+      "or a vehicle.actuators.allocation_matrix with a multiple of 6 values");
+  }
+
+  size_t n_thrusters = allocation_flat.size() / 6;
+  Eigen::MatrixXd allocation_matrix(n_thrusters, 6);
+  for (size_t i = 0; i < n_thrusters; ++i) {
+    for (size_t j = 0; j < 6; ++j) {
+      allocation_matrix(i, j) = allocation_flat[i * 6 + j];
+    }
+  }
+
+  initialiseAuv(allocation_matrix);
+}
+
+void AuvSim::initialiseAuv(const Eigen::MatrixXd &allocation_matrix) {
   Eigen::Vector3d inertia_tensor(inertia[0], inertia[1], inertia[2]);
 
   Eigen::Matrix<double, 6, 1> Dl_tensor, Dq_tensor, added_mass_tensor;
@@ -97,12 +169,7 @@ void AuvSim::loadParams() {
     added_mass_tensor(i) = added_mass[i];
   }
 
-  size_t n_thrusters = allocation_flat.size() / 6;
-  rpm_ = Eigen::VectorXd::Zero(n_thrusters);
-  Eigen::MatrixXd allocation_matrix(n_thrusters, 6);
-  for (size_t i = 0; i < n_thrusters; ++i)
-    for (size_t j = 0; j < 6; ++j)
-      allocation_matrix(i, j) = allocation_flat[i * 6 + j];
+  rpm_ = Eigen::VectorXd::Zero(allocation_matrix.rows());
 
   Eigen::Vector3d lump_pos_vec(lump_pos[0], lump_pos[1], lump_pos[2]);
   Eigen::Vector3d lump_neg_vec(lump_neg[0], lump_neg[1], lump_neg[2]);
@@ -137,11 +204,40 @@ void AuvSim::loadParams() {
   );
 
   State initial_state;
-  initial_state.eta1 << 0.0, 0.0, initial_position[2];
-  initial_state.eta2 << initial_orientation[0], initial_orientation[1], initial_orientation[2];
-  initial_state.v1 << initial_body_velocity[0], initial_body_velocity[1], initial_body_velocity[2];
-  initial_state.v2 << initial_orientation_rate[0], initial_orientation_rate[1], initial_orientation_rate[2];
+  initial_state.eta1 << 0.0, 0.0, initial_position_[2];
+  initial_state.eta2 << initial_orientation_[0], initial_orientation_[1], initial_orientation_[2];
+  initial_state.v1 << initial_body_velocity_[0], initial_body_velocity_[1], initial_body_velocity_[2];
+  initial_state.v2 << initial_orientation_rate_[0], initial_orientation_rate_[1], initial_orientation_rate_[2];
   auv_->setState(initial_state);
+}
+
+void AuvSim::initialiseAuvFromTF() {
+  if (auv_ || !use_tf_allocation_) {
+    return;
+  }
+
+  std::vector<ThrusterGeometry> geometry;
+  if (!buildThrusterGeometryFromTF(
+      *tf_buffer_,
+      *clock_,
+      get_logger(),
+      base_frame_,
+      thruster_frames_,
+      thrust_axis_,
+      geometry)) {
+    return;
+  }
+
+  initialiseAuv(buildSimulatorThrusterMatrix(geometry));
+  RCLCPP_INFO(
+    get_logger(),
+    "AUV sim allocation ready with %zu TF thruster frames using base frame '%s'.",
+    geometry.size(),
+    base_frame_.c_str());
+
+  if (tf_initialisation_timer_) {
+    tf_initialisation_timer_->cancel();
+  }
 }
 
 /**
@@ -186,6 +282,7 @@ void AuvSim::initialisePublishers() {
       TOPIC_PUB_VELOCITY_THROUGH_WATER, 1);
   depth_pub_ = create_publisher<std_msgs::msg::Float32>(
       TOPIC_PUB_DEPTH, 1);
+  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
   return;
 }
@@ -207,6 +304,11 @@ void AuvSim::initialiseServices() {
  * @brief Initialise Timers
  */
 void AuvSim::initialiseTimers() {
+  if (use_tf_allocation_ && !auv_) {
+    tf_initialisation_timer_ = create_wall_timer(
+      std::chrono::milliseconds(500),
+      std::bind(&AuvSim::initialiseAuvFromTF, this));
+  }
 
   timer_ = create_timer(
       std::chrono::nanoseconds(static_cast<int64_t>(std::llround(node_period_ * 1e9))),
@@ -222,13 +324,19 @@ void AuvSim::initialiseTimers() {
 
 void AuvSim::rpmCallback(const farol2_interfaces::msg::ThrusterRPM::SharedPtr msg){
 
-  for(int i=0; i < rpm_.size(); i++) {
+  const int count = std::min<int>(rpm_.size(), msg->rpm.size());
+  for(int i=0; i < count; i++) {
     rpm_[i] = msg->rpm[i];
   }
 }
 
 void AuvSim::timerCallback() {
+  if (!auv_) {
+    return;
+  }
+
   RCLCPP_DEBUG(get_logger(), "Timer callback triggered");
+  const auto stamp = get_clock()->now();
   auv_->update(node_period_, rpm_);
 
   geometry_msgs::msg::Vector3 pos_msg, body_vel_msg, ori_msg, ori_rate_msg, body_acc_msg, ang_acc_msg;
@@ -243,14 +351,14 @@ void AuvSim::timerCallback() {
   body_vel_msg.z = auv_->getHeave();
   body_velocity_pub_->publish(body_vel_msg);
 
-  ori_msg.x = auv_->getRoll();
-  ori_msg.y = auv_->getPitch();
-  ori_msg.z = auv_->getYaw();
+  ori_msg.x = rad_to_deg(auv_->getRoll());
+  ori_msg.y = rad_to_deg(auv_->getPitch());
+  ori_msg.z = rad_to_deg(auv_->getYaw());
   orientation_pub_->publish(ori_msg);
 
-  ori_rate_msg.x = auv_->getRollRate();
-  ori_rate_msg.y = auv_->getPitchRate();
-  ori_rate_msg.z = auv_->getYawRate();
+  ori_rate_msg.x = rad_to_deg(auv_->getRollRate());
+  ori_rate_msg.y = rad_to_deg(auv_->getPitchRate());
+  ori_rate_msg.z = rad_to_deg(auv_->getYawRate());
   orientation_rate_pub_->publish(ori_rate_msg);
 
   body_acc_msg.x = auv_->getSurgeDot();
@@ -263,6 +371,7 @@ void AuvSim::timerCallback() {
   ang_acc_msg.z = auv_->getYawRateDot();
   angular_acceleration_pub_->publish(ang_acc_msg);
 
+  publishWorldTransform(stamp);
   publishMeasurements();
 
   return;
@@ -346,6 +455,24 @@ void AuvSim::publishMeasurements()
     imu_msg.linear_acceleration.z = auv_->getHeaveDot();
     imu_pub_->publish(imu_msg);
   }
+}
+
+void AuvSim::publishWorldTransform(const rclcpp::Time & stamp)
+{
+  geometry_msgs::msg::TransformStamped transform;
+  transform.header.stamp = stamp;
+  transform.header.frame_id = "world";
+  transform.child_frame_id = frame_prefix_ + "base_link";
+  transform.transform.translation.x = auv_->getX();
+  transform.transform.translation.y = auv_->getY();
+  transform.transform.translation.z = auv_->getZ();
+
+  tf2::Quaternion q;
+  q.setRPY(auv_->getRoll(), auv_->getPitch(), auv_->getYaw());
+  q.normalize();
+  transform.transform.rotation = tf2::toMsg(q);
+
+  tf_broadcaster_->sendTransform(transform);
 }
 
 double AuvSim::randn(double mu, double sigma)

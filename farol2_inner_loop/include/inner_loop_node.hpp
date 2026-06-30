@@ -105,24 +105,25 @@ struct ControllerConfig {
 };
 
 /**
- * @brief   PID
+ * @brief   InnerLoopNode
+ * @author  Ravi Regalo
  * @author  Eduardo Cunha
  */
-class PID : public rclcpp::Node {
+class InnerLoopNode : public rclcpp::Node {
   public:
     /**
-     * @brief Construct the PID node and initialize runtime resources.
+     * @brief Construct the Inner-loop node and initialize runtime resources.
      *
      * Initialization order is intentionally fixed:
      * load parameters -> create ROS interfaces -> create controllers ->
      * build controller configuration table.
      */
-    PID();
+    InnerLoopNode();
 
     /**
      * @brief Destroy the node and stop the periodic timer.
      */
-    ~PID();
+    ~InnerLoopNode();
 
   private:
     /**

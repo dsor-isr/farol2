@@ -43,6 +43,7 @@ def generate_launch_description():
             # vehicle namespace
             {'vehicle_name': LaunchConfiguration('vehicle_name')},
             {'vehicle_id': LaunchConfiguration('vehicle_id')},
+            {'frame_prefix': [vehicle_ns, TextSubstitution(text='/')]},
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
 
             # load default allocation configs
@@ -77,8 +78,6 @@ def generate_launch_description():
     parameters=params,
     remappings=[
       # Subscribers
-      ('/tf', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/tf')]),
-      ('/tf_static', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/tf_static')]),
       ('thrust_x', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thrust_x')]),
       ('thrust_y', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thrust_y')]),
       ('thrust_z', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thrust_z')]),
@@ -88,9 +87,8 @@ def generate_launch_description():
       ('nav_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
       ('mission_status', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/mission_status')]),
       # Publishers
-      ('thruster_force', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/thruster_force')]),
-      ('rudder_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rudder_command')]),
       ('rpm_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rpm_command')]),
+      ('rudder_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rudder_command')]),
     ]
   )
 

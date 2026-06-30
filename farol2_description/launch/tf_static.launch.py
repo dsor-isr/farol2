@@ -59,11 +59,8 @@ def generate_launch_description():
         parameters=[{
             "robot_description": robot_description,
             "use_sim_time": use_sim_time,
+            "frame_prefix": [vehicle_ns, TextSubstitution(text="/")],
         }],
-        remappings=[
-            ("/tf", [TextSubstitution(text="/"), vehicle_ns, TextSubstitution(text="/tf")]),
-            ("/tf_static", [TextSubstitution(text="/"), vehicle_ns, TextSubstitution(text="/tf_static")]),
-        ],
     )
 
     # If you only have fixed joints, you usually DON'T need joint_state_publisher.

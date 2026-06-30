@@ -1,4 +1,4 @@
-#include "pid.hpp"
+#include "inner_loop_node.hpp"
 
 #include <array>
 #include <limits>
@@ -36,7 +36,7 @@ const char *debugTopicForController(const std::string &name) {
 }  // namespace
 
 /* Constructor */
-PID::PID() : Node("pid", 
+InnerLoopNode::InnerLoopNode() : Node("inner_loop_node", 
                   rclcpp::NodeOptions()
                     .allow_undeclared_parameters(false)
                     .automatically_declare_parameters_from_overrides(true)) {
@@ -92,7 +92,7 @@ PID::PID() : Node("pid",
 }
 
 /* Destructor */
-PID::~PID() {
+InnerLoopNode::~InnerLoopNode() {
   /* Stop the timer */
   timer_->cancel();
 }
@@ -100,7 +100,7 @@ PID::~PID() {
 /**
  * @brief Load parameters
  */
-void PID::loadParams() {
+void InnerLoopNode::loadParams() {
   static std::map<std::string, rclcpp::Parameter> raw_controllers_configuration;
 
   configured_controllers_.clear();
@@ -238,7 +238,7 @@ void PID::loadParams() {
 /**
  * @brief Initialise Subscribers
  */
-void PID::initialiseSubscribers() {
+void InnerLoopNode::initialiseSubscribers() {
   nav_state_sub_ = create_subscription<farol2_interfaces::msg::NavigationState>(
                     TOPIC_SUB_NAV_STATE,
                     1, std::bind(&PID::navStateCallback, this, std::placeholders::_1));
@@ -269,7 +269,7 @@ void PID::initialiseSubscribers() {
 /**
  * @brief Initialise Publishers
  */
-void PID::initialisePublishers() {
+void InnerLoopNode::initialisePublishers() {
   thrust_x_pub_ = create_publisher<std_msgs::msg::Float32>(
                     TOPIC_PUB_THRUST_X, 1);
 
@@ -306,17 +306,17 @@ void PID::initialisePublishers() {
 /**
  * @brief Initialise Services
  */
-void PID::initialiseServices() {
+void InnerLoopNode::initialiseServices() {
   /* Service servers */
   /* Service to change controllers' parameters */
   change_params_srv_ = create_service<farol2_inner_loop::srv::ChangeParams>(
                         SERVICE_CHANGE_PARAMS,
-                        std::bind(&PID::changeParamsCallback, this, std::placeholders::_1, std::placeholders::_2));
+                        std::bind(&InnerLoopNode::changeParamsCallback, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Service to set course control flag */
   course_instead_of_yaw_srv_ = create_service<std_srvs::srv::SetBool>(
                         SERVICE_COURSE_CONTROL,
-                        std::bind(&PID::courseControlCallback, this, std::placeholders::_1, std::placeholders::_2));
+                        std::bind(&InnerLoopNode::courseControlCallback, this, std::placeholders::_1, std::placeholders::_2));
 
   /* service clients */
   /*... */
@@ -327,7 +327,7 @@ void PID::initialiseServices() {
 /**
  * @brief Initialise Timers
  */
-void PID::initialiseTimers() {
+void InnerLoopNode::initialiseTimers() {
 
 
   /* Get node frequency from parameters */
@@ -336,10 +336,10 @@ void PID::initialiseTimers() {
   /* Create timer */
   timer_ = create_timer
     (std::chrono::milliseconds(int(1.0/node_frequency_*1000)), 
-    std::bind(&PID::timerCallback, this));
+    std::bind(&InnerLoopNode::timerCallback, this));
 }
 
-void PID::navStateCallback(const farol2_interfaces::msg::NavigationState &msg) {
+void InnerLoopNode::navStateCallback(const farol2_interfaces::msg::NavigationState &msg) {
   nav_state_ = msg;
   has_nav_state_ = true;
 
@@ -384,7 +384,7 @@ void PID::referenceCallback(const std::string &controller_name, double raw_value
   controller_last_reference_[controller_name] = now;
 }
 
-void PID::createControllers() {
+void InnerLoopNode::createControllers() {
   const auto get_controller_param = [this](const std::string &name,
                                            const std::string &param,
                                            double default_value) {
@@ -486,7 +486,7 @@ void PID::createControllers() {
   controller_ptrs_["roll_rate"] = controller_roll_rate_.get();
 }
 
-void PID::initializeControllerConfigs() {
+void InnerLoopNode::initializeControllerConfigs() {
   controller_configs_.clear();
 
   const auto make_pid_config = [this](const std::string &name,
@@ -845,7 +845,7 @@ void PID::initializeControllerConfigs() {
  * @brief Timer callback for this node.
  *        Where the algorithms will constantly run.
  */
-void PID::timerCallback() {
+void InnerLoopNode::timerCallback() {
 
   auto now = clock_->now();
 
@@ -969,14 +969,14 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_inner_loop::srv::Cha
   tau_ = 0.0;
 }
 
-void PID::courseControlCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+void InnerLoopNode::courseControlCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                                 std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
   course_instead_of_yaw_ = request->data;
   response->success = true;
   response->message = "Course control flag set to: " + std::string(request->data ? "true" : "false");
 }
 
-bool PID::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const int &node_frequency) {
+bool InnerLoopNode::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const int &node_frequency) {
   /* Here it is assumed that a reference must have been received less than 2 times the node period ago */
   /* E.g. if the node is running at 10Hz, the period is 0.1s, so the last reference must have been     */
   /*      received less than 0.2s ago.  
@@ -995,7 +995,7 @@ bool PID::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const
   return false;
 }
 
-void PID::callControllers(double dt) {
+void InnerLoopNode::callControllers(double dt) {
   for (const auto &name : controller_names_) {
     // Compute only for enabled channels with fresh references.
     if (!has_nav_state_ || !controller_parameters_[name]["enabled"] || !controller_has_reference_[name] || !hasRecentReference(controller_last_reference_[name], node_frequency_)) {
@@ -1016,7 +1016,7 @@ void PID::callControllers(double dt) {
   return;
 }
 
-void PID::executeController(const ControllerConfig &cfg, double dt) {
+void InnerLoopNode::executeController(const ControllerConfig &cfg, double dt) {
   const auto ref_it = reference_outputs_.find(cfg.name);
   const bool has_ref_out = (ref_it != reference_outputs_.end());
   const double ref_used = has_ref_out ? ref_it->second.ref_used_for_control : cfg.get_ref();
@@ -1105,7 +1105,7 @@ void PID::executeController(const ControllerConfig &cfg, double dt) {
   cfg.accumulate_output(tau_);
 }
 
-void PID::resetBodyWrenchRequest() {
+void InnerLoopNode::resetBodyWrenchRequest() {
   /* Set body wrench request to 0 */
   body_wrench_request_msg_.wrench.force.x = 0.0;
   body_wrench_request_msg_.wrench.force.y = 0.0;
@@ -1121,7 +1121,7 @@ void PID::resetBodyWrenchRequest() {
 int main(int argc, char ** argv) {
   /* initialise ROS2 and start the node */
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<PID>());
+  rclcpp::spin(std::make_shared<InnerLoopNode>());
   rclcpp::shutdown();
   return 0;
 }

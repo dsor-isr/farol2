@@ -12,14 +12,14 @@
   <joint name="base_to_thruster_portside" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_portside_link"/>
-    <origin xyz="-0.29 0.14 0.0" rpy="0 0 0"/>
+    <origin xyz="-0.29 -0.14 0.0" rpy="0 0 0"/>
   </joint>
 
   <link name="thruster_starboard_link"/>
   <joint name="base_to_thruster_starboard" type="fixed">
     <parent link="base_link"/>
     <child link="thruster_starboard_link"/>
-    <origin xyz="-0.29 -0.14 0.0" rpy="0 0 0"/>
+    <origin xyz="-0.29 0.14 0.0" rpy="0 0 0"/>
   </joint>
 
 </robot>

@@ -49,6 +49,7 @@ def generate_launch_description():
   params = [
     {'vehicle_name': LaunchConfiguration('vehicle_name')},
     {'vehicle_id': LaunchConfiguration('vehicle_id')},
+    {'frame_prefix': [vehicle_ns, TextSubstitution(text='/')]},
 
     # default sim config
     PathJoinSubstitution([

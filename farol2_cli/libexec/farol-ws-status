@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=farol-common
+source "$SCRIPT_DIR/farol-common"
+
+root="$(farol_workspace_root_or_die)"
+printf 'workspace: %s\n' "$root"
+for name in src build install log; do
+    if [[ -e "$root/$name" ]]; then
+        printf '%-8s present\n' "$name:"
+    else
+        printf '%-8s missing\n' "$name:"
+    fi
+done

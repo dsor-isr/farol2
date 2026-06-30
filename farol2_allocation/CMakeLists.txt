@@ -99,6 +99,15 @@ install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 
+ament_export_include_directories(include/${PROJECT_NAME})
+ament_export_dependencies(
+  rclcpp
+  geometry_msgs
+  Eigen3
+  tf2
+  tf2_ros
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
