@@ -74,8 +74,6 @@ def generate_launch_description():
             'vehicle_id': LaunchConfiguration('vehicle_id'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'config_to_use': LaunchConfiguration('config_to_use'),
-            'static_thruster_allocation': 'false',
-            'thruster_rudder_allocation': 'true',
         }.items()
     )
 
@@ -91,7 +89,7 @@ def generate_launch_description():
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'config_to_use': LaunchConfiguration('config_to_use'),
             'pid': 'true',
-            'open_loop': 'true',
+            'open_loop': 'false',
         }.items()
     )
 

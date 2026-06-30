@@ -957,11 +957,13 @@ void PID::changeParamsCallback(const std::shared_ptr<farol2_inner_loop::srv::Cha
     controller->kp_ = request->kp;
     controller->ki_ = request->ki;
     controller->kd_ = request->kd;
+    controller->tau_min_ = request->tau_min;
+    controller->tau_max_ = request->tau_max;
     
-    response->success = true;  // ← THIS WAS MISSING!
+    response->success = true;
     response->message = "Changed " + request->controller + " controller params (direct). kp=" + 
                         std::to_string(controller->kp_) + ", ki=" + std::to_string(controller->ki_) + 
-                        ", kd=" + std::to_string(controller->kd_);
+                        ", kd=" + std::to_string(controller->kd_) + ", tau_min=" + std::to_string(controller->tau_min_) + ", tau_max=" + std::to_string(controller->tau_max_);
   }
   
   tau_ = 0.0;

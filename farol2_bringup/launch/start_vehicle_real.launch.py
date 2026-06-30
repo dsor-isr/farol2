@@ -32,7 +32,7 @@ def _launch(context, *args, **kwargs):
       'vehicle_name': vehicle_name,
       'vehicle_id': vehicle_id,
       'vn310': 'false',
-      'vn100': 'false',
+      'vn100': 'true',
       'can_thrusters': 'false',
       'can_instrumentation': 'false',
       'airmar200wx': 'false',

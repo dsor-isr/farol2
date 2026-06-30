@@ -17,11 +17,11 @@
         debug: true
         enabled: true
         delta_implementation: false
-        kp: 20.0
-        ki: 2.0
+        kp: 2.0
+        ki: 0.5
         lpf_wc: 31.4 # rad/s
-        tau_min: -30.0 # N
-        tau_max: 30.0 # N
+        tau_min: -50.0 # N
+        tau_max: 50.0 # N
       altitude:
         debug: false
         enabled: false
@@ -66,9 +66,9 @@
         use_ref_lpf: false
         use_rate_limiter: false
         rate_limit: 6.0 # deg/s
-        kp: 2.0
-        ki: 1.0
-        kd: 0.0 #47.6
+        kp: 1.0
+        ki: 0.05
+        kd: 0.0s
         kffv_lin: 0.0
         kffv_sq: 0.0
         kffa: 0.0
@@ -88,5 +88,5 @@
   open_loop:
     ros__parameters:
       surge:
-        enabled: true
+        enabled: false
         gain: 2000.0 # surge m/s to rpms
