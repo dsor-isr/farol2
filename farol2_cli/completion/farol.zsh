@@ -3,7 +3,7 @@
 _farol() {
   local -a commands bag_sub bridge_sub drivers_sub kill_sub pkg_sub ws_sub driver_profiles
   commands=(
-    'build:build the workspace'
+    'build:build the workspace or selected package'
     'clean:remove workspace build/install/log'
     'source:print workspace source command'
     'cd:print workspace/package path'

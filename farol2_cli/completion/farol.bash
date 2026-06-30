@@ -131,7 +131,14 @@ _farol_complete() {
         build)
             case "$prev" in
                 -p|--packages|-j|--cores) COMPREPLY=() ;;
-                *) COMPREPLY=( $(compgen -W "-p --packages -j --cores --release --help" -- "$cur") ) ;;
+                *)
+                    if [[ "$cur" == -* ]]; then
+                        COMPREPLY=( $(compgen -W "-p --packages -j --cores --release --help" -- "$cur") )
+                    else
+                        _farol_complete_cd_targets
+                        COMPREPLY=( $(compgen -W "this ${COMPREPLY[*]}" -- "$cur") )
+                    fi
+                    ;;
             esac
             ;;
         clean)

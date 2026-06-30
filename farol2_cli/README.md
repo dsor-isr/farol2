@@ -57,6 +57,9 @@ shell functions that should always be available. Set
 ```bash
 farol help
 farol build
+farol build -j8
+farol build this
+farol build sim
 farol clean
 farol source
 farol ws status
@@ -106,6 +109,35 @@ cd "$(farol cd path_following)"
 | `farol kill ros` | `libexec/farol-kill-ros` |
 | `farol ws status` | `libexec/farol-ws-status` |
 | `farol ws root` | `libexec/farol-ws-root` |
+
+## Build Shortcuts
+
+`farol build` builds the whole workspace with a sensible default worker count.
+You can choose workers with either `-j N`, `--cores N`, or the compact form
+`-jN`:
+
+```bash
+farol build -j8
+```
+
+To build only the package containing the current directory:
+
+```bash
+farol build this
+```
+
+That fails unless the current directory is inside a non-ignored package under
+`$COLCON_ROOT/src/farol2` or `$COLCON_ROOT/src/farol2_drivers`.
+
+To build one or more named packages, pass them directly. A missing `farol2_`
+prefix is added automatically when that package exists:
+
+```bash
+farol build sim
+farol build path_following nav
+```
+
+Raw colcon arguments still go after `--`.
 
 ## Driver Profiles
 
