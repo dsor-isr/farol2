@@ -15,7 +15,6 @@
 #include "sim_utilis/Utilis.hpp"
 #include <Eigen/Dense>
 #include "farol2_interfaces/msg/utm.hpp"
-#include "farol2_interfaces/msg/velocity.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
 #include "std_msgs/msg/float32.hpp"
@@ -87,8 +86,8 @@ class AuvSim : public rclcpp::Node {
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr utm_ned_pub_;
-    rclcpp::Publisher<farol2_interfaces::msg::Velocity>::SharedPtr velocity_over_ground_pub_;
-    rclcpp::Publisher<farol2_interfaces::msg::Velocity>::SharedPtr velocity_through_water_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_over_ground_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_through_water_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr depth_pub_;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
