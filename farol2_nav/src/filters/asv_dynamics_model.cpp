@@ -47,9 +47,11 @@ void AsvDynamicsModelFilter::configure(rclcpp::Node & node)
   damping_quadratic_ =
     node.declare_parameter<double>("plugins.asv_dynamics_model.damping_quadratic", 260.675031);
   rudder_cm_distance_ = node.declare_parameter<double>("plugins.asv_dynamics_model.rudder_arm", 4.0);
-  const double rudder_angle_limit_deg =
-    node.declare_parameter<double>("plugins.asv_dynamics_model.rudder_angle_limit_deg", 36.0);
-  rudder_angle_limit_rad_ = farol2_utils::deg2rad(std::abs(rudder_angle_limit_deg));
+  const double control_surface_deflection_limit_deg =
+    node.declare_parameter<double>(
+      "plugins.asv_dynamics_model.control_surface_deflection_limit_deg", 36.0);
+  control_surface_deflection_limit_rad_ =
+    farol2_utils::deg2rad(std::abs(control_surface_deflection_limit_deg));
   K_L_ = node.declare_parameter<double>("plugins.asv_dynamics_model.K_L", 1.398093);
   K_D0_ = node.declare_parameter<double>("plugins.asv_dynamics_model.K_D0", 0.000575);
   K_D1_ = node.declare_parameter<double>("plugins.asv_dynamics_model.K_D1", 0.520834);
@@ -63,10 +65,17 @@ void AsvDynamicsModelFilter::configure(rclcpp::Node & node)
   rpm_model_state_ = 0.0;
 }
 
-double AsvDynamicsModelFilter::get_tau_r(double rudder_angle_rad, double u, double v, double r) const
+double AsvDynamicsModelFilter::get_tau_r(
+  double control_surface_deflection_rad,
+  double u,
+  double v,
+  double r) const
 {
   const double delta_rud =
-    std::clamp(rudder_angle_rad, -rudder_angle_limit_rad_, rudder_angle_limit_rad_);
+    std::clamp(
+      control_surface_deflection_rad,
+      -control_surface_deflection_limit_rad_,
+      control_surface_deflection_limit_rad_);
 
   Eigen::Vector2d V_s;
   V_s(0) = u;
@@ -116,11 +125,14 @@ void AsvDynamicsModelFilter::compute(double dt_s, const MeasurementSnapshot & m,
     }
   }
 
-  double rudder_angle_rad = 0.0;
-  if (m.rudder_angle != nullptr) {
-    rudder_angle_rad = farol2_utils::deg2rad(m.rudder_angle->data);
+  double control_surface_deflection_rad = 0.0;
+  if (m.control_surface_deflection != nullptr &&
+    !m.control_surface_deflection->deflection_angle.empty())
+  {
+    control_surface_deflection_rad =
+      farol2_utils::deg2rad(m.control_surface_deflection->deflection_angle.front());
   }
-  const double tau_r = get_tau_r(rudder_angle_rad, u_model_, v_model_, r_model_);
+  const double tau_r = get_tau_r(control_surface_deflection_rad, u_model_, v_model_, r_model_);
 
   const double u_dot =
     (1.0 / m_u_) * (tau_u + m_v_ * v_model_ * r_model_ + x_u_ * u_model_ + x_uu_ * std::abs(u_model_) * u_model_);

@@ -49,7 +49,6 @@ void FilterNode::initialise_subscribers()
       TOPIC_SUB_IMU, rclcpp::QoS(10),
       [this](sensor_msgs::msg::Imu::SharedPtr msg) {
         snapshot_.imu = std::move(msg);
-        snapshot_.imu_stamp = now();
       });
   }
 
@@ -58,7 +57,6 @@ void FilterNode::initialise_subscribers()
       TOPIC_SUB_GNSS, rclcpp::QoS(10),
       [this](sensor_msgs::msg::NavSatFix::SharedPtr msg) {
         snapshot_.gnss = std::move(msg);
-        snapshot_.gnss_stamp = now();
       });
   }
 
@@ -67,7 +65,6 @@ void FilterNode::initialise_subscribers()
       TOPIC_SUB_UTM_NED, rclcpp::QoS(10),
       [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
         snapshot_.utm_ned = std::move(msg);
-        snapshot_.utm_ned_stamp = now();
       });
   }
 
@@ -76,7 +73,6 @@ void FilterNode::initialise_subscribers()
       TOPIC_SUB_VELOCITY_OVER_GROUND, rclcpp::QoS(10),
       [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
         snapshot_.velocity_over_ground = std::move(msg);
-        snapshot_.velocity_over_ground_stamp = now();
       });
   }
 
@@ -85,34 +81,31 @@ void FilterNode::initialise_subscribers()
       TOPIC_SUB_VELOCITY_THROUGH_WATER, rclcpp::QoS(10),
       [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
         snapshot_.velocity_through_water = std::move(msg);
-        snapshot_.velocity_through_water_stamp = now();
       });
   }
 
   if (is_active("depth")) {
-    depth_sub_ = create_subscription<std_msgs::msg::Float32>(
+    depth_sub_ = create_subscription<farol2_interfaces::msg::Depth>(
       TOPIC_SUB_DEPTH, rclcpp::QoS(10),
-      [this](std_msgs::msg::Float32::SharedPtr msg) {
+      [this](farol2_interfaces::msg::Depth::SharedPtr msg) {
         snapshot_.depth = std::move(msg);
-        snapshot_.depth_stamp = now();
       });
   }
 
   if (is_active("altimeter")) {
-    altimeter_sub_ = create_subscription<std_msgs::msg::Float32>(
+    altimeter_sub_ = create_subscription<sensor_msgs::msg::Range>(
       TOPIC_SUB_ALTIMETER, rclcpp::QoS(10),
-      [this](std_msgs::msg::Float32::SharedPtr msg) {
+      [this](sensor_msgs::msg::Range::SharedPtr msg) {
         snapshot_.altimeter = std::move(msg);
-        snapshot_.altimeter_stamp = now();
       });
   }
 
-  if (is_active("rudder_angle")) {
-    rudder_angle_sub_ = create_subscription<std_msgs::msg::Float32>(
-      TOPIC_SUB_RUDDER_ANGLE, rclcpp::QoS(10),
-      [this](std_msgs::msg::Float32::SharedPtr msg) {
-        snapshot_.rudder_angle = std::move(msg);
-        snapshot_.rudder_angle_stamp = now();
+  if (is_active("control_surface_deflection")) {
+    control_surface_deflection_sub_ =
+      create_subscription<farol2_interfaces::msg::ControlSurfaceDeflection>(
+      TOPIC_SUB_CONTROL_SURFACE_DEFLECTION, rclcpp::QoS(10),
+      [this](farol2_interfaces::msg::ControlSurfaceDeflection::SharedPtr msg) {
+        snapshot_.control_surface_deflection = std::move(msg);
       });
   }
 
@@ -121,7 +114,6 @@ void FilterNode::initialise_subscribers()
       TOPIC_SUB_THRUSTER_RPM, rclcpp::QoS(10),
       [this](farol2_interfaces::msg::ThrusterRPM::SharedPtr msg) {
         snapshot_.thruster_rpm = std::move(msg);
-        snapshot_.thruster_rpm_stamp = now();
       });
   }
 }
@@ -178,6 +170,8 @@ void FilterNode::on_timer()
 
   // Every cycle starts from a clean state. sample_and_hold runs first and repopulates it.
   state_ = farol2_nav::filters::State{};
+
+  // add here the measurement pre processing -> convert to base_link
 
   // run filter pipeline 
   for (size_t i = 0; i < pipeline_.size(); ++i) {

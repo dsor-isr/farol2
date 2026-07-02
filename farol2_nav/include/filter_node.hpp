@@ -4,13 +4,15 @@
 #include <farol2_nav/measurement_snapshot.hpp>
 #include <farol2_nav/state.hpp>
 
+#include <farol2_interfaces/msg/control_surface_deflection.hpp>
+#include <farol2_interfaces/msg/depth.hpp>
 #include <farol2_interfaces/msg/thruster_rpm.hpp>
 #include <farol2_interfaces/msg/navigation_state.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
-#include <std_msgs/msg/float32.hpp>
+#include <sensor_msgs/msg/range.hpp>
 
 #include <memory>
 #include <string>
@@ -26,7 +28,7 @@ static constexpr char TOPIC_SUB_VELOCITY_THROUGH_WATER[] = "velocity_through_wat
 static constexpr char TOPIC_SUB_CURRENT_NED[] = "current_velocity";
 static constexpr char TOPIC_SUB_DEPTH[] = "depth";
 static constexpr char TOPIC_SUB_ALTIMETER[] = "altimeter";
-static constexpr char TOPIC_SUB_RUDDER_ANGLE[] = "rudder_angle";
+static constexpr char TOPIC_SUB_CONTROL_SURFACE_DEFLECTION[] = "control_surface_deflection";
 static constexpr char TOPIC_SUB_THRUSTER_RPM[] = "thruster_rpm";
 // Publishers
 static constexpr char TOPIC_PUB_STATE[] = "state";
@@ -54,9 +56,9 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::Vector3Stamped>::SharedPtr utm_ned_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_over_ground_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_through_water_sub_;
-  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr depth_sub_;
-  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr altimeter_sub_;
-  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rudder_angle_sub_;
+  rclcpp::Subscription<farol2_interfaces::msg::Depth>::SharedPtr depth_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::Range>::SharedPtr altimeter_sub_;
+  rclcpp::Subscription<farol2_interfaces::msg::ControlSurfaceDeflection>::SharedPtr control_surface_deflection_sub_;
   rclcpp::Subscription<farol2_interfaces::msg::ThrusterRPM>::SharedPtr thruster_rpm_sub_;
 
   rclcpp::Publisher<farol2_interfaces::msg::NavigationState>::SharedPtr final_state_pub_;

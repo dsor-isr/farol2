@@ -29,7 +29,6 @@ void PositionCurrentEkfFilter::configure(rclcpp::Node & node)
   p0_current_ = node.declare_parameter<double>("plugins.position_current_ekf.init_cov_current", 1.0);
   init_current_x_ = node.declare_parameter<double>("plugins.position_current_ekf.init_current_x", 0.0);
   init_current_y_ = node.declare_parameter<double>("plugins.position_current_ekf.init_current_y", 0.0);
-  override_position_state_ = node.declare_parameter<bool>("plugins.position_current_ekf.override_position_state", true);
 
   rpm_min_ = node.declare_parameter<double>("plugins.position_current_ekf.rpm_min", -2000.0);
   rpm_max_ = node.declare_parameter<double>("plugins.position_current_ekf.rpm_max", 2000.0);
@@ -218,10 +217,6 @@ void PositionCurrentEkfFilter::compute(double dt_s, const MeasurementSnapshot & 
   }
 
   // Write estimator output back to the shared pipeline state.
-  if (override_position_state_) {
-    s.northing = x_(0);
-    s.easting = x_(1);
-  }
   s.current_velocity_ned(0) = x_(2);
   s.current_velocity_ned(1) = x_(3);
   s.current_velocity_ned(2) = 0.0;

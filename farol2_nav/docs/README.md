@@ -61,7 +61,7 @@ Unknown keys are skipped with a warning.
 - `velocity_through_water`
 - `depth`
 - `altimeter`
-- `rudder_angle`
+- `control_surface_deflection`
 - `thruster_rpm`
 
 ### Published

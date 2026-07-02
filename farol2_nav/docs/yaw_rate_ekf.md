@@ -63,7 +63,7 @@ Because moving-average introduces delay, the filter keeps a short history of pre
 
 - IMU angular velocity (`imu.angular_velocity.z`).
 - IMU orientation quaternion (`imu.orientation`) used to extract yaw measurement.
-- Rudder angle command (`rudder_angle`).
+- Control surface deflection measurement (`control_surface_deflection`).
 - Through-water velocity (`velocity_through_water_ned`) from shared state.
 
 ## Outputs written/published

@@ -234,12 +234,15 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
     z_yaw = farol2_utils::wrapToPi(yaw_maf_.y());
   }
 
-  // Input torque from rudder command + fluid velocity estimate.
-  double rudder_angle = 0.0;
-  if (m.rudder_angle != nullptr) {
-    rudder_angle = farol2_utils::deg2rad(m.rudder_angle->data);
+  // Input torque from control surface deflection + fluid velocity estimate.
+  double control_surface_deflection = 0.0;
+  if (m.control_surface_deflection != nullptr &&
+    !m.control_surface_deflection->deflection_angle.empty())
+  {
+    control_surface_deflection =
+      farol2_utils::deg2rad(m.control_surface_deflection->deflection_angle.front());
   }
-  const double tau_r = get_torque(rudder_angle, s.velocity_through_water_body, x_(0));
+  const double tau_r = get_torque(control_surface_deflection, s.velocity_through_water_body, x_(0));
 
   if (!initialized_) {
     x_.setZero();

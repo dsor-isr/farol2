@@ -10,7 +10,7 @@
       measurements:
         - "gnss"
         - "imu"
-        # - "rudder_angle"
+        # - "control_surface_deflection"
         # - "thruster_rpm"
       
       filters: 
@@ -82,7 +82,7 @@
           damping: 14.334052
           damping_quadratic: 260.675031
           rudder_arm: 4.0
-          rudder_angle_limit_deg: 36.0
+          control_surface_deflection_limit_deg: 36.0
           K_L: 1.398093
           K_D0: 0.000575
           K_D1: 0.520834
