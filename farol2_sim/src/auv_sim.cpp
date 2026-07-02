@@ -279,7 +279,7 @@ void AuvSim::initialisePublishers() {
       TOPIC_PUB_VELOCITY_OVER_GROUND, 1);
   velocity_through_water_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
       TOPIC_PUB_VELOCITY_THROUGH_WATER, 1);
-  depth_pub_ = create_publisher<std_msgs::msg::Float32>(
+  depth_pub_ = create_publisher<farol2_interfaces::msg::Depth>(
       TOPIC_PUB_DEPTH, 1);
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
@@ -451,8 +451,11 @@ void AuvSim::publishMeasurements()
   }
 
   if (depth_sensor_activate_) {
-    std_msgs::msg::Float32 depth_msg;
-    depth_msg.data = static_cast<float>(depth + (noise_activate_ ? randn(pos_bias[2], pos_variance[2]) : 0.0));
+    farol2_interfaces::msg::Depth depth_msg;
+    depth_msg.header.stamp = stamp;
+    depth_msg.header.frame_id = frame_prefix_ + "depth_link";
+    depth_msg.depth = depth + (noise_activate_ ? randn(pos_bias[2], pos_variance[2]) : 0.0);
+    depth_msg.depth_variance = noise_activate_ ? pos_variance[2] : 0.0;
     depth_pub_->publish(depth_msg);
   }
 

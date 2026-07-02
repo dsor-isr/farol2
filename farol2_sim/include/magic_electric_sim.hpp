@@ -12,6 +12,8 @@
 #include "geometry_msgs/msg/vector3.hpp"
 #include "geometry_msgs/msg/vector3_stamped.hpp"
 #include <Eigen/Dense>
+#include "farol2_interfaces/msg/control_surface_deflection.hpp"
+#include "farol2_interfaces/msg/depth.hpp"
 #include "farol2_interfaces/msg/utm.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
@@ -35,7 +37,7 @@ static constexpr char TOPIC_PUB_ORIENTATION[] = "orientation";
 static constexpr char TOPIC_PUB_ORIENTATION_RATE[] = "orientation_rate";
 static constexpr char TOPIC_PUB_BODY_ACCELERATION[] = "body_acceleration";
 static constexpr char TOPIC_PUB_ANGULAR_ACCELERATION[] = "angular_acceleration";
-static constexpr char TOPIC_PUB_RUDDER_ANGLE[] = "rudder_angle";
+static constexpr char TOPIC_PUB_CONTROL_SURFACE_DEFLECTION[] = "control_surface_deflection";
 static constexpr char TOPIC_PUB_JOINT_STATES[] = "joint_states";
 static constexpr char TOPIC_PUB_IMU[] = "imu";
 static constexpr char TOPIC_PUB_GNSS[] = "gnss";
@@ -85,14 +87,14 @@ class MagicElectricSim : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr oreintation_rate_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_acceleration_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr body_acceleration_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::ControlSurfaceDeflection>::SharedPtr control_surface_deflection_pub_;
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr utm_ned_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_over_ground_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_through_water_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr depth_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::Depth>::SharedPtr depth_pub_;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
     rclcpp::Subscription<farol2_interfaces::msg::ThrusterRPM>::SharedPtr rpm_sub_;
