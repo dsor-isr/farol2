@@ -80,9 +80,21 @@ void AuvSim::loadParams() {
 
   // Sensor params
   gnss_activate_         = declare_parameter<bool>("sensor.gnss");
+  gnss_velocity_over_ground_activate_ =
+    declare_parameter<bool>("sensor.gnss_velocity_over_ground");
   depth_sensor_activate_ = declare_parameter<bool>("sensor.depth_sensor");
   imu_activate_          = declare_parameter<bool>("sensor.imu");
+  dvl_activate_          = declare_parameter<bool>("sensor.dvl_activate");
+  dvl_mode_              = declare_parameter<std::string>("sensor.dvl.mode", "bottom_track");
+  dvl_output_frame_      = declare_parameter<std::string>("sensor.dvl.output_frame", "body");
   noise_activate_        = declare_parameter<bool>("sensor.noise.activate");
+
+  if (dvl_mode_ != "bottom_track" && dvl_mode_ != "water_track") {
+    throw std::runtime_error("sensor.dvl.mode must be either 'bottom_track' or 'water_track'");
+  }
+  if (dvl_output_frame_ != "body" && dvl_output_frame_ != "inertial") {
+    throw std::runtime_error("sensor.dvl.output_frame must be either 'body' or 'inertial'");
+  }
 
   auto p_bias = declare_parameter<std::vector<double>>("sensor.noise.position.bias");
   auto p_var  = declare_parameter<std::vector<double>>("sensor.noise.position.variance");
@@ -267,7 +279,7 @@ void AuvSim::initialisePublishers() {
       TOPIC_PUB_VELOCITY_OVER_GROUND, 1);
   velocity_through_water_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
       TOPIC_PUB_VELOCITY_THROUGH_WATER, 1);
-  depth_pub_ = create_publisher<std_msgs::msg::Float32>(
+  depth_pub_ = create_publisher<farol2_interfaces::msg::Depth>(
       TOPIC_PUB_DEPTH, 1);
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
@@ -374,7 +386,8 @@ void AuvSim::publishMeasurements()
   Eigen::Vector3d ocean_current_inertial = auv_->getOceanCurrent();
   Eigen::Matrix3d body_to_inertial = rotationBodyToInertial(auv_->getRoll(), auv_->getPitch(), auv_->getYaw());
   Eigen::Vector3d inertial_velocity = body_to_inertial * fluid_velocity_body + ocean_current_inertial;
-  Eigen::Vector3d fluid_velocity = body_to_inertial.transpose() * (inertial_velocity - ocean_current_inertial);
+  Eigen::Vector3d bottom_track_velocity_body = body_to_inertial.transpose() * inertial_velocity;
+  Eigen::Vector3d water_track_velocity_inertial = body_to_inertial * fluid_velocity_body;
 
 
 
@@ -385,6 +398,7 @@ void AuvSim::publishMeasurements()
 
     geometry_msgs::msg::Vector3Stamped utm_msg;
     utm_msg.header.stamp = stamp;
+    utm_msg.header.frame_id = frame_prefix_ + "gnss_link";
     utm_msg.vector.x = north_meas;
     utm_msg.vector.y = east_meas;
     utm_msg.vector.z = static_cast<double>(utm_zone_);
@@ -396,29 +410,52 @@ void AuvSim::publishMeasurements()
 
     sensor_msgs::msg::NavSatFix gnss_msg;
     gnss_msg.header.stamp = stamp;
+    gnss_msg.header.frame_id = frame_prefix_ + "gnss_link";
     gnss_msg.latitude = latitude;
     gnss_msg.longitude = longitude;
     gnss_msg.altitude = -depth;
     gnss_pub_->publish(gnss_msg);
+
+    if (gnss_velocity_over_ground_activate_) {
+      geometry_msgs::msg::Vector3Stamped gnss_vel_msg;
+      gnss_vel_msg.header.stamp = stamp;
+      gnss_vel_msg.header.frame_id = frame_prefix_ + "gnss_link";
+      gnss_vel_msg.vector.x = inertial_velocity.x() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0);
+      gnss_vel_msg.vector.y = inertial_velocity.y() + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0);
+      gnss_vel_msg.vector.z = inertial_velocity.z() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0);
+      velocity_over_ground_pub_->publish(gnss_vel_msg);
+    }
   }
 
-  geometry_msgs::msg::Vector3Stamped vel_msg;
-  vel_msg.header.stamp = stamp;
-  vel_msg.vector.x = inertial_velocity.x() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0);
-  vel_msg.vector.y = inertial_velocity.y() + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0);
-  vel_msg.vector.z = inertial_velocity.z() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0);
-  velocity_over_ground_pub_->publish(vel_msg);
+  if (dvl_activate_) {
+    const bool bottom_track = dvl_mode_ == "bottom_track";
+    const bool body_frame = dvl_output_frame_ == "body";
+    const Eigen::Vector3d dvl_velocity = bottom_track
+      ? (body_frame ? bottom_track_velocity_body : inertial_velocity)
+      : (body_frame ? fluid_velocity_body : water_track_velocity_inertial);
+    const auto & bias = bottom_track ? vel_bias : fluid_vel_bias;
+    const auto & variance = bottom_track ? vel_variance : fluid_vel_variance;
 
-  geometry_msgs::msg::Vector3Stamped fluid_vel_msg;
-  fluid_vel_msg.header.stamp = stamp;
-  fluid_vel_msg.vector.x = fluid_velocity.x() + (noise_activate_ ? randn(fluid_vel_bias[0], fluid_vel_variance[0]) : 0.0);
-  fluid_vel_msg.vector.y = fluid_velocity.y() + (noise_activate_ ? randn(fluid_vel_bias[1], fluid_vel_variance[1]) : 0.0);
-  fluid_vel_msg.vector.z = fluid_velocity.z() + (noise_activate_ ? randn(fluid_vel_bias[2], fluid_vel_variance[2]) : 0.0);
-  velocity_through_water_pub_->publish(fluid_vel_msg);
+    geometry_msgs::msg::Vector3Stamped dvl_msg;
+    dvl_msg.header.stamp = stamp;
+    dvl_msg.header.frame_id = frame_prefix_ + "dvl_link";
+    dvl_msg.vector.x = dvl_velocity.x() + (noise_activate_ ? randn(bias[0], variance[0]) : 0.0);
+    dvl_msg.vector.y = dvl_velocity.y() + (noise_activate_ ? randn(bias[1], variance[1]) : 0.0);
+    dvl_msg.vector.z = dvl_velocity.z() + (noise_activate_ ? randn(bias[2], variance[2]) : 0.0);
+
+    if (bottom_track) {
+      velocity_over_ground_pub_->publish(dvl_msg);
+    } else {
+      velocity_through_water_pub_->publish(dvl_msg);
+    }
+  }
 
   if (depth_sensor_activate_) {
-    std_msgs::msg::Float32 depth_msg;
-    depth_msg.data = static_cast<float>(depth + (noise_activate_ ? randn(pos_bias[2], pos_variance[2]) : 0.0));
+    farol2_interfaces::msg::Depth depth_msg;
+    depth_msg.header.stamp = stamp;
+    depth_msg.header.frame_id = frame_prefix_ + "depth_link";
+    depth_msg.depth = depth + (noise_activate_ ? randn(pos_bias[2], pos_variance[2]) : 0.0);
+    depth_msg.depth_variance = noise_activate_ ? pos_variance[2] : 0.0;
     depth_pub_->publish(depth_msg);
   }
 

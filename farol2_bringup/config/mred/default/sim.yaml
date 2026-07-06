@@ -49,8 +49,13 @@
           period: 0.01
       sensor:
         gnss: true
+        gnss_velocity_over_ground: true
         depth_sensor: true
         imu: true
+        dvl_activate: false
+        dvl:
+          mode: "bottom_track"
+          output_frame: "body"
         noise:
           activate: false
           position:

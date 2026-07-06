@@ -8,11 +8,16 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 add_library(${PROJECT_NAME}
   src/low_pass_filter.cpp
   src/notch_filter.cpp
   src/moving_average_filter.cpp
+  src/tf_utils.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -20,7 +25,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen)
+target_link_libraries(${PROJECT_NAME} Eigen3::Eigen)
+ament_target_dependencies(${PROJECT_NAME}
+  rclcpp
+  tf2
+  tf2_eigen
+  tf2_ros
+)
 
 # enforce at least c++ 17
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
@@ -40,7 +51,7 @@ install(
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_export_include_directories(include)
-ament_export_dependencies(Eigen3)
+ament_export_dependencies(Eigen3 rclcpp tf2 tf2_eigen tf2_ros)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)

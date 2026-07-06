@@ -57,6 +57,7 @@
 
       sensor:
         gnss: true
+        gnss_velocity_over_ground: true
         depth_sensor: false
         imu: true
         noise:

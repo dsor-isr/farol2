@@ -14,6 +14,7 @@
 #include "sim_utilis/AUV.hpp"
 #include "sim_utilis/Utilis.hpp"
 #include <Eigen/Dense>
+#include "farol2_interfaces/msg/depth.hpp"
 #include "farol2_interfaces/msg/utm.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
@@ -88,7 +89,7 @@ class AuvSim : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr utm_ned_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_over_ground_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_through_water_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr depth_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::Depth>::SharedPtr depth_pub_;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
     rclcpp::Subscription<farol2_interfaces::msg::ThrusterRPM>::SharedPtr rpm_sub_;
@@ -155,8 +156,12 @@ class AuvSim : public rclcpp::Node {
     double randn(double mu, double sigma);
 
     bool gnss_activate_;
+    bool gnss_velocity_over_ground_activate_;
     bool depth_sensor_activate_;
     bool imu_activate_;
+    bool dvl_activate_;
+    std::string dvl_mode_;
+    std::string dvl_output_frame_;
     bool noise_activate_;
 
     int    utm_zone_;

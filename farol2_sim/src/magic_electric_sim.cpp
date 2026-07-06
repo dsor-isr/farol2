@@ -122,6 +122,8 @@ void MagicElectricSim::loadParams()
 
   // Sensor params
   gnss_activate_         = declare_parameter<bool>("sensor.gnss");
+  gnss_velocity_over_ground_activate_ =
+    declare_parameter<bool>("sensor.gnss_velocity_over_ground");
   depth_sensor_activate_ = declare_parameter<bool>("sensor.depth_sensor");
   imu_activate_          = declare_parameter<bool>("sensor.imu");
   noise_activate_        = declare_parameter<bool>("sensor.noise.activate");
@@ -166,9 +168,10 @@ void MagicElectricSim::initialiseSubscribers()
   }
   else
   {
-    rudder_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-        TOPIC_SUB_RUDDER_REF,
-        1, std::bind(&MagicElectricSim::rudderAngleCallback, this, std::placeholders::_1));
+    control_surface_angle_ref_sub_ =
+      create_subscription<farol2_interfaces::msg::ControlSurfaceAngle>(
+        TOPIC_SUB_CONTROL_SURFACE_ANGLE_REF,
+        1, std::bind(&MagicElectricSim::controlSurfaceAngleCallback, this, std::placeholders::_1));
   }
 
   return;
@@ -196,8 +199,9 @@ void MagicElectricSim::initialisePublishers()
 
   if (rudder_actuation_sim_)
   {
-    rudder_pub_ = create_publisher<std_msgs::msg::Float32>(
-        TOPIC_PUB_RUDDER_ANGLE, 1);
+    control_surface_angle_pub_ =
+      create_publisher<farol2_interfaces::msg::ControlSurfaceAngle>(
+        TOPIC_PUB_CONTROL_SURFACE_ANGLE, 1);
   }
 
   imu_pub_ = create_publisher<sensor_msgs::msg::Imu>(
@@ -210,7 +214,7 @@ void MagicElectricSim::initialisePublishers()
       TOPIC_PUB_VELOCITY_OVER_GROUND, 1);
   velocity_through_water_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
       TOPIC_PUB_VELOCITY_THROUGH_WATER, 1);
-  depth_pub_ = create_publisher<std_msgs::msg::Float32>(
+  depth_pub_ = create_publisher<farol2_interfaces::msg::Depth>(
       TOPIC_PUB_DEPTH, 1);
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
@@ -258,6 +262,17 @@ void MagicElectricSim::rudderAngleCallback(const std_msgs::msg::Float32::SharedP
   }
 
   rudder_command_ = std::clamp(static_cast<double>(msg->data), -1.0, 1.0);
+}
+
+void MagicElectricSim::controlSurfaceAngleCallback(
+  const farol2_interfaces::msg::ControlSurfaceAngle::SharedPtr msg)
+{
+  if (msg->angle.empty()) {
+    return;
+  }
+
+  rudder_angle_ = deg_to_rad(msg->angle.front());
+  rudder_angle_ = std::clamp(rudder_angle_, min_rudder_angle_, max_rudder_angle_);
 }
 
 void MagicElectricSim::rpmCallback(const farol2_interfaces::msg::ThrusterRPM::SharedPtr msg)
@@ -313,9 +328,11 @@ void MagicElectricSim::timerCallback()
 
   if (rudder_actuation_sim_)
   {
-    std_msgs::msg::Float32 rudder_msg;
-    rudder_msg.data = static_cast<float>(rudder_angle_ * 180.0 / M_PI);
-    rudder_pub_->publish(rudder_msg);
+    farol2_interfaces::msg::ControlSurfaceAngle control_surface_msg;
+    control_surface_msg.header.stamp = stamp;
+    control_surface_msg.header.frame_id = frame_prefix_ + "rudder_link";
+    control_surface_msg.angle.push_back(rudder_angle_ * 180.0 / M_PI);
+    control_surface_angle_pub_->publish(control_surface_msg);
   }
 
   sensor_msgs::msg::JointState joint_state_msg;
@@ -448,7 +465,6 @@ void MagicElectricSim::publishMeasurements()
     velocity_through_water_ned.x() * std::cos(yaw) + velocity_through_water_ned.y() * std::sin(yaw),
     -velocity_through_water_ned.x() * std::sin(yaw) + velocity_through_water_ned.y() * std::cos(yaw),
     velocity_through_water_ned.z());
-
   if (gnss_activate_) {
     const double north_meas = north + (noise_activate_ ? randn(pos_bias[0], pos_variance[0]) : 0.0);
     const double east_meas = east + (noise_activate_ ? randn(pos_bias[1], pos_variance[1]) : 0.0);
@@ -470,25 +486,32 @@ void MagicElectricSim::publishMeasurements()
     gnss_msg.longitude = longitude;
     gnss_msg.altitude = -depth;
     gnss_pub_->publish(gnss_msg);
-  }
 
-  geometry_msgs::msg::Vector3Stamped vel_msg;
-  vel_msg.header.stamp = stamp;
-  vel_msg.vector.x = velocity_over_ground_ned.x() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0);
-  vel_msg.vector.y = velocity_over_ground_ned.y() + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0);
-  vel_msg.vector.z = velocity_over_ground_ned.z() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0);
-  velocity_over_ground_pub_->publish(vel_msg);
+    if (gnss_velocity_over_ground_activate_) {
+      geometry_msgs::msg::Vector3Stamped vel_msg;
+      vel_msg.header.stamp = stamp;
+      vel_msg.header.frame_id = frame_prefix_ + "gnss_link";
+      vel_msg.vector.x = velocity_over_ground_ned.x() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0);
+      vel_msg.vector.y = velocity_over_ground_ned.y() + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0);
+      vel_msg.vector.z = velocity_over_ground_ned.z() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0);
+      velocity_over_ground_pub_->publish(vel_msg);
+    }
+  }
 
   geometry_msgs::msg::Vector3Stamped fluid_vel_msg;
   fluid_vel_msg.header.stamp = stamp;
+  fluid_vel_msg.header.frame_id = frame_prefix_ + "dvl_link";
   fluid_vel_msg.vector.x = velocity_through_water_body.x() + (noise_activate_ ? randn(vel_bias[0], vel_variance[0]) : 0.0);
   fluid_vel_msg.vector.y = velocity_through_water_body.y() + (noise_activate_ ? randn(vel_bias[1], vel_variance[1]) : 0.0);
   fluid_vel_msg.vector.z = velocity_through_water_body.z() + (noise_activate_ ? randn(vel_bias[2], vel_variance[2]) : 0.0);
   velocity_through_water_pub_->publish(fluid_vel_msg);
 
   if (depth_sensor_activate_) {
-    std_msgs::msg::Float32 depth_msg;
-    depth_msg.data = static_cast<float>(depth + (noise_activate_ ? randn(pos_bias[2], pos_variance[2]) : 0.0));
+    farol2_interfaces::msg::Depth depth_msg;
+    depth_msg.header.stamp = stamp;
+    depth_msg.header.frame_id = frame_prefix_ + "depth_link";
+    depth_msg.depth = depth + (noise_activate_ ? randn(pos_bias[2], pos_variance[2]) : 0.0);
+    depth_msg.depth_variance = noise_activate_ ? pos_variance[2] : 0.0;
     depth_pub_->publish(depth_msg);
   }
 

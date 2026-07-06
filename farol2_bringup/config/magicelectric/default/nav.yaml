@@ -10,16 +10,18 @@
       measurements:
         - "gnss"
         - "imu"
-        # - "rudder_angle"
-        # - "thruster_rpm"
+        - "velocity_over_ground"
+        - "velocity_through_water"
+        - "control_surface_angle"
+        - "thruster_rpm"
       
       filters: 
         - "asv_dynamics_model"
-        - "position_current_ekf"
-        - "yaw_rate_ekf"
+        - "current_estimator"
+        # - "yaw_rate_ekf"
       
       plugins:
-        position_current_ekf:
+        current_estimator:
           override_position_state: false
           process_noise_pos: 0.1
           process_noise_current: 0.01
@@ -82,7 +84,7 @@
           damping: 14.334052
           damping_quadratic: 260.675031
           rudder_arm: 4.0
-          rudder_angle_limit_deg: 36.0
+          control_surface_angle_limit_deg: 36.0
           K_L: 1.398093
           K_D0: 0.000575
           K_D1: 0.520834
