@@ -86,7 +86,7 @@ def generate_launch_description():
     remappings=[
       # Subscribers
       ('rpm_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rpm_command')]),
-      ('rudder_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rudder_command')]),
+      ('control_surface_angle_ref', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/control_surface_angle')]),
       # Publishers
       ('position', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/position')]),
       ('body_velocity', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/body_velocity')]),
@@ -95,7 +95,7 @@ def generate_launch_description():
       ('body_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/body_acceleration')]),
       ('angular_acceleration', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/sim/angular_acceleration')]),
       ('joint_states', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/joint_states')]),
-      ('control_surface_deflection', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/control_surface_deflection')]),
+      ('control_surface_angle', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/control_surface_angle')]),
       ('imu', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/imu')]),
       ('gnss', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/gnss')]),
       ('ned_utm', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/ned_utm')]),

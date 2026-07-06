@@ -168,9 +168,10 @@ void MagicElectricSim::initialiseSubscribers()
   }
   else
   {
-    rudder_ref_sub_ = create_subscription<std_msgs::msg::Float32>(
-        TOPIC_SUB_RUDDER_REF,
-        1, std::bind(&MagicElectricSim::rudderAngleCallback, this, std::placeholders::_1));
+    control_surface_angle_ref_sub_ =
+      create_subscription<farol2_interfaces::msg::ControlSurfaceAngle>(
+        TOPIC_SUB_CONTROL_SURFACE_ANGLE_REF,
+        1, std::bind(&MagicElectricSim::controlSurfaceAngleCallback, this, std::placeholders::_1));
   }
 
   return;
@@ -198,9 +199,9 @@ void MagicElectricSim::initialisePublishers()
 
   if (rudder_actuation_sim_)
   {
-    control_surface_deflection_pub_ =
-      create_publisher<farol2_interfaces::msg::ControlSurfaceDeflection>(
-        TOPIC_PUB_CONTROL_SURFACE_DEFLECTION, 1);
+    control_surface_angle_pub_ =
+      create_publisher<farol2_interfaces::msg::ControlSurfaceAngle>(
+        TOPIC_PUB_CONTROL_SURFACE_ANGLE, 1);
   }
 
   imu_pub_ = create_publisher<sensor_msgs::msg::Imu>(
@@ -263,6 +264,17 @@ void MagicElectricSim::rudderAngleCallback(const std_msgs::msg::Float32::SharedP
   rudder_command_ = std::clamp(static_cast<double>(msg->data), -1.0, 1.0);
 }
 
+void MagicElectricSim::controlSurfaceAngleCallback(
+  const farol2_interfaces::msg::ControlSurfaceAngle::SharedPtr msg)
+{
+  if (msg->angle.empty()) {
+    return;
+  }
+
+  rudder_angle_ = deg_to_rad(msg->angle.front());
+  rudder_angle_ = std::clamp(rudder_angle_, min_rudder_angle_, max_rudder_angle_);
+}
+
 void MagicElectricSim::rpmCallback(const farol2_interfaces::msg::ThrusterRPM::SharedPtr msg)
 {
 
@@ -316,11 +328,11 @@ void MagicElectricSim::timerCallback()
 
   if (rudder_actuation_sim_)
   {
-    farol2_interfaces::msg::ControlSurfaceDeflection control_surface_msg;
+    farol2_interfaces::msg::ControlSurfaceAngle control_surface_msg;
     control_surface_msg.header.stamp = stamp;
     control_surface_msg.header.frame_id = frame_prefix_ + "rudder_link";
-    control_surface_msg.deflection_angle.push_back(rudder_angle_ * 180.0 / M_PI);
-    control_surface_deflection_pub_->publish(control_surface_msg);
+    control_surface_msg.angle.push_back(rudder_angle_ * 180.0 / M_PI);
+    control_surface_angle_pub_->publish(control_surface_msg);
   }
 
   sensor_msgs::msg::JointState joint_state_msg;

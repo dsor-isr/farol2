@@ -12,7 +12,7 @@
 #include "geometry_msgs/msg/vector3.hpp"
 #include "geometry_msgs/msg/vector3_stamped.hpp"
 #include <Eigen/Dense>
-#include "farol2_interfaces/msg/control_surface_deflection.hpp"
+#include "farol2_interfaces/msg/control_surface_angle.hpp"
 #include "farol2_interfaces/msg/depth.hpp"
 #include "farol2_interfaces/msg/utm.hpp"
 #include "sensor_msgs/msg/imu.hpp"
@@ -30,14 +30,14 @@
 // Topic names (short form, remapped in launch file)
 static constexpr char TOPIC_SUB_RPM_COMMAND[] = "rpm_command";
 static constexpr char TOPIC_SUB_RUDDER_CMD[] = "rudder_cmd";
-static constexpr char TOPIC_SUB_RUDDER_REF[] = "rudder_ref";
+static constexpr char TOPIC_SUB_CONTROL_SURFACE_ANGLE_REF[] = "control_surface_angle_ref";
 static constexpr char TOPIC_PUB_POSITION[] = "position";
 static constexpr char TOPIC_PUB_BODY_VELOCITY[] = "body_velocity";
 static constexpr char TOPIC_PUB_ORIENTATION[] = "orientation";
 static constexpr char TOPIC_PUB_ORIENTATION_RATE[] = "orientation_rate";
 static constexpr char TOPIC_PUB_BODY_ACCELERATION[] = "body_acceleration";
 static constexpr char TOPIC_PUB_ANGULAR_ACCELERATION[] = "angular_acceleration";
-static constexpr char TOPIC_PUB_CONTROL_SURFACE_DEFLECTION[] = "control_surface_deflection";
+static constexpr char TOPIC_PUB_CONTROL_SURFACE_ANGLE[] = "control_surface_angle";
 static constexpr char TOPIC_PUB_JOINT_STATES[] = "joint_states";
 static constexpr char TOPIC_PUB_IMU[] = "imu";
 static constexpr char TOPIC_PUB_GNSS[] = "gnss";
@@ -87,7 +87,7 @@ class MagicElectricSim : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr oreintation_rate_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr angular_acceleration_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr body_acceleration_pub_;
-    rclcpp::Publisher<farol2_interfaces::msg::ControlSurfaceDeflection>::SharedPtr control_surface_deflection_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::ControlSurfaceAngle>::SharedPtr control_surface_angle_pub_;
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_pub_;
@@ -99,7 +99,7 @@ class MagicElectricSim : public rclcpp::Node {
 
     rclcpp::Subscription<farol2_interfaces::msg::ThrusterRPM>::SharedPtr rpm_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rudder_angle_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rudder_ref_sub_;
+    rclcpp::Subscription<farol2_interfaces::msg::ControlSurfaceAngle>::SharedPtr control_surface_angle_ref_sub_;
 
     rclcpp::TimerBase::SharedPtr timer_;  
     
@@ -126,6 +126,8 @@ class MagicElectricSim : public rclcpp::Node {
     std::array<double,1> rpm_{};
 
     void rudderAngleCallback(const std_msgs::msg::Float32::SharedPtr msg);
+    void controlSurfaceAngleCallback(
+      const farol2_interfaces::msg::ControlSurfaceAngle::SharedPtr msg);
     void rpmCallback(const farol2_interfaces::msg::ThrusterRPM::SharedPtr msg);
     void updateRudder(double command, double dt);
     void updateState();

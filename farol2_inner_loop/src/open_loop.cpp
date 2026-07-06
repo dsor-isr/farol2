@@ -18,8 +18,8 @@ OpenLoop::~OpenLoop() = default;
  * @brief Load parameters
  */
 void OpenLoop::loadParams() {
-  surge_enabled_ = declare_parameter<bool>("surge.enabled");
-  surge_gain_ = declare_parameter<double>("surge.gain");
+  surge_enabled_ = declare_parameter<bool>("surge.enabled", false);
+  surge_gain_ = declare_parameter<double>("surge.gain", 1.0);
 }
 
 
