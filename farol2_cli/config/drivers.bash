@@ -5,6 +5,7 @@
 
 FAROL_DRIVER_PROFILES=(
     magicelectric
+    bluerov
 )
 
 FAROL_DRIVER_PROFILE_magicelectric=(
@@ -18,4 +19,11 @@ FAROL_DRIVER_PROFILE_magicelectric=(
     airmar200wx
     airmardx900
     ashtech_asio
+)
+
+FAROL_DRIVER_PROFILE_bluerov=(
+    farol2_drivers_bringup
+    serial_lib
+    vn100
+    bluerov_interface
 )

@@ -13,6 +13,7 @@ find_package(farol2_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(farol2_allocation REQUIRED)
+find_package(rosgraph_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -27,6 +28,7 @@ pkg_check_modules(GEOGRAPHICLIB REQUIRED geographiclib)
 
 add_executable(auv_sim src/auv_sim.cpp)
 add_executable(magic_electric_sim src/magic_electric_sim.cpp)
+add_executable(sim_clock src/sim_clock.cpp)
 
 # ======================
 # Dependencies linking
@@ -58,6 +60,12 @@ ament_target_dependencies(
   tf2_ros
 )
 
+ament_target_dependencies(
+  sim_clock
+  rclcpp
+  rosgraph_msgs
+)
+
 target_include_directories(auv_sim PUBLIC
   ${EIGEN3_INCLUDE_DIR}
   ${GEOGRAPHICLIB_INCLUDE_DIRS}
@@ -80,12 +88,19 @@ target_link_libraries(magic_electric_sim
   ${GEOGRAPHICLIB_LIBRARIES}
 )
 
+target_include_directories(sim_clock PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+)
+
 target_compile_features(auv_sim PUBLIC cxx_std_17)
 target_compile_features(magic_electric_sim PUBLIC cxx_std_17)
+target_compile_features(sim_clock PUBLIC cxx_std_17)
 
 install(TARGETS
   auv_sim
   magic_electric_sim
+  sim_clock
   DESTINATION lib/${PROJECT_NAME}
 )
 

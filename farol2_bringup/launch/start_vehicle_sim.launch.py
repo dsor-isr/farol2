@@ -22,7 +22,7 @@ def _launch(context, *args, **kwargs):
   ###################################################
   clock = IncludeLaunchDescription(
     PythonLaunchDescriptionSource([
-      PathJoinSubstitution([FindPackageShare('farol2_clock'), 'launch', 'farol2_clock.launch.py'])
+      PathJoinSubstitution([FindPackageShare('farol2_sim'), 'launch', 'sim_clock.launch.py'])
     ]),
     launch_arguments={
       'vehicle_name': vehicle_name,

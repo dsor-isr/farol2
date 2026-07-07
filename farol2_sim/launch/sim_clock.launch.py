@@ -36,7 +36,7 @@ def generate_launch_description():
   ])
 
   clock_node = Node(
-    package='farol2_clock',
+    package='farol2_sim',
     namespace=[vehicle_ns, '/sim'],
     executable='sim_clock',
     name='sim_clock',
