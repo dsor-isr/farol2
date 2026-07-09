@@ -5,6 +5,7 @@
   inner_loop:
     ros__parameters:
       node_frequency: 10.0
+      ref_timeout: 2.0 # seconds before resetting reference generator to current state
       course_instead_of_yaw: false   # set to true to control course angle instead of yaw
       lpf_order: 3
       lpf_method: "tustin"
@@ -40,17 +41,19 @@
         debug: true
         enabled: true
         delta_implementation: false
-        use_ref_lpf: false
+        use_ref_lpf: true
         use_rate_limiter: true
         rate_limit: 4.0 # deg/s
+        # kp: 21.384000 
+        # ki: 2.079000 
+        # kd: 110.880000
         kp: 31.6800
         ki: 1.0
         kd: 59.9200
         kffv_lin: 0.0
         kffv_sq: 0.0
         kffa: 0.0
-        lpf_wc: 6.28 # rad/s (2hz about the maximum possible given that sampling is 10hz)
-        # lpf_wc: 12.5664 # rad/s (2hz about the maximum possible given that sampling is 10hz)
+        lpf_wc: 2.0 # rad/s  ( 12.5664 rad/s = 2hz about the maximum possible given that sampling is 10hz)
         tau_min: -6.0  # N.m (actual in simulation is 5.93)
         tau_max: 6.0 # N.m
 

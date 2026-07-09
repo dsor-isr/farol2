@@ -1,7 +1,8 @@
 #pragma once
 
 #include <farol2_nav/filters/base_filter.hpp>
-#include <farol2_nav/srv/tune_position_ekf.hpp>
+#include <farol2_nav/srv/tune_current_estimator.hpp>
+#include <farol2_nav/msg/current_estimator_debug.hpp>
 
 #include <Eigen/Dense>
 
@@ -10,18 +11,18 @@ namespace farol2_nav
 namespace filters
 {
 
-class PositionCurrentEkfFilter : public BaseFilter
+class CurrentEstimatorFilter : public BaseFilter
 {
 public:
-  std::string name() const override { return "position_current_ekf"; }
+  std::string name() const override { return "current_estimator"; }
   void configure(rclcpp::Node & node) override;
   void compute(double dt_s, const MeasurementSnapshot & measurements, State & state) override;
 
 private:
   Eigen::Vector2d rpm_to_body_velocity_mps(const MeasurementSnapshot & m, const State & s, double dt_s);
   void on_tune_ekf(
-    const std::shared_ptr<farol2_nav::srv::TunePositionEkf::Request> req,
-    std::shared_ptr<farol2_nav::srv::TunePositionEkf::Response> res);
+    const std::shared_ptr<farol2_nav::srv::TuneCurrentEstimator::Request> req,
+    std::shared_ptr<farol2_nav::srv::TuneCurrentEstimator::Response> res);
 
   bool initialized_{false};
   Eigen::Vector4d x_{Eigen::Vector4d::Zero()};
@@ -36,9 +37,13 @@ private:
   double r_pos_{1.0};
   double p0_pos_{25.0};
   double p0_current_{1.0};
-  double init_current_x_{0.0};
-  double init_current_y_{0.0};
+  double init_current_speed_{0.0};
+  double init_current_direction_{0.0};
   bool override_position_state_{true};
+
+  Eigen::Vector2d y_;
+  Eigen::Matrix2d S_;
+  Eigen::Matrix<double, 4, 2> K_;
 
   // Surge dynamics model parameters.
   double rpm_min_{-2000.0};
@@ -62,7 +67,10 @@ private:
   double u_estimated_{0.0};
   double v_estimated_{0.0};
 
-  rclcpp::Service<farol2_nav::srv::TunePositionEkf>::SharedPtr tune_ekf_srv_{};
+  rclcpp::Service<farol2_nav::srv::TuneCurrentEstimator>::SharedPtr tune_ekf_srv_{};
+  rclcpp::Publisher<farol2_nav::msg::CurrentEstimatorDebug>::SharedPtr debug_pub_{};
+  farol2_nav::msg::CurrentEstimatorDebug debug_msg_;
+    
 };
 
 }  // namespace filters

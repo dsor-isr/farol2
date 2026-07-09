@@ -173,9 +173,10 @@ void AllocationNode::initialisePublishers() {
 		rclcpp::QoS(1));
 
 	if (allocation_type_ == AllocationType::THRUST_RUDDER) {
-		rudder_command_pub_ = create_publisher<std_msgs::msg::Float32>(
-			TOPIC_PUB_RUDDER_COMMAND,
-			rclcpp::QoS(1));
+		control_surface_angle_pub_ =
+			create_publisher<farol2_interfaces::msg::ControlSurfaceAngle>(
+				TOPIC_PUB_CONTROL_SURFACE_ANGLE,
+				rclcpp::QoS(1));
 	}
 }
 
@@ -274,12 +275,14 @@ void AllocationNode::processBodyWrenchRequest(const geometry_msgs::msg::WrenchSt
 			const auto stamp = msg.header.stamp;
 			std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
 
-			rpm_converter_->setSurge(nav_state_.velocity_through_water_body.x);
+			rpm_converter_->setSurge(nav_state_.velocity_through_water.x);
 			rpm_command_pub_->publish(rpm_converter_->convert(forces_vec, stamp));
 		}
 
-		rudder_command_msg_.data = farol2_utils::rad2deg(rudder_angle_);
-		rudder_command_pub_->publish(rudder_command_msg_);
+		control_surface_angle_msg_.header.stamp = msg.header.stamp;
+		control_surface_angle_msg_.angle.clear();
+		control_surface_angle_msg_.angle.push_back(farol2_utils::rad2deg(rudder_angle_));
+		control_surface_angle_pub_->publish(control_surface_angle_msg_);
 		return;
 	}
 
@@ -287,7 +290,7 @@ void AllocationNode::processBodyWrenchRequest(const geometry_msgs::msg::WrenchSt
 	const auto stamp = msg.header.stamp;
 	std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
 
-	rpm_converter_->setSurge(nav_state_.velocity_through_water_body.x);
+	rpm_converter_->setSurge(nav_state_.velocity_through_water.x);
 	rpm_command_pub_->publish(rpm_converter_->convert(forces_vec, stamp));
 }
 

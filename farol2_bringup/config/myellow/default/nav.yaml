@@ -13,12 +13,14 @@
       measurements:
         - "gnss"
         - "imu"
-        - "utm_ned"
         - "velocity_over_ground"
         - "velocity_through_water"
         - "depth"
         - "altimeter"
         - "thruster_rpm"
       
-      # plugins:
-       
+      plugins:
+        sample_and_hold:
+          initializer_measurements:
+            - "gnss"
+            - "imu"

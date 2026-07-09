@@ -55,4 +55,40 @@
     <origin xyz="0.300 0.197 0.0" rpy="0 0 ${0.25*M_PI}"/>
   </joint>
 
+
+  <link name="dvl_link"/>
+  <joint name="base_to_dvl" type="fixed">
+    <parent link="base_link"/>
+    <child link="dvl_link"/>
+    <origin xyz="0.5 0.0 -0.265" rpy="0 0 0"/>
+  </joint>
+
+  <link name="gnss_link"/>
+  <joint name="base_to_gnss" type="fixed">
+    <parent link="base_link"/>
+    <child link="gnss_link"/>
+    <origin xyz="-0.5 0.0 0.4" rpy="0 0 0"/>
+  </joint>
+
+  <link name="imu_link"/>
+  <joint name="base_to_imu" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="depth_link"/>
+  <joint name="base_to_depth" type="fixed">
+    <parent link="base_link"/>
+    <child link="depth_link"/>
+    <origin xyz="-0.3 0.0 0.2" rpy="0 0 0"/>
+  </joint>
+
+  <link name="altimeter_link"/>
+  <joint name="base_to_altimeter" type="fixed">
+    <parent link="base_link"/>
+    <child link="altimeter_link"/>
+    <origin xyz="-0.3 0.0 -0.2" rpy="0 0 0"/>
+  </joint>
+
 </robot>

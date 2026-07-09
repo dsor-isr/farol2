@@ -58,8 +58,8 @@
       sensor:
         gnss: true
         gnss_velocity_over_ground: true
-        depth_sensor: false
         imu: true
+        depth_sensor: false
         noise:
           activate: false
           position: 
@@ -73,7 +73,7 @@
             variance: [0.0, 0.0, 0.0] # Roll, Pitch, Yaw
           orientation_rate:
             bias: [0.0, 0.0, 0.0] # Roll rate, Pitch rate, Yaw rate
-            variance: [0.0, 0.0, 0.0] # Roll rate, Pitch rate, Y
+            variance: [0.0, 0.0, 0.0] # Roll rate, Pitch rate, Yaw rate
 
 
 

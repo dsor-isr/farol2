@@ -234,15 +234,15 @@ void YawRateEkfFilter::compute(double dt_s, const MeasurementSnapshot & m, State
     z_yaw = farol2_utils::wrapToPi(yaw_maf_.y());
   }
 
-  // Input torque from control surface deflection + fluid velocity estimate.
-  double control_surface_deflection = 0.0;
-  if (m.control_surface_deflection != nullptr &&
-    !m.control_surface_deflection->deflection_angle.empty())
+  // Input torque from control surface angle + fluid velocity estimate.
+  double control_surface_angle = 0.0;
+  if (m.control_surface_angle != nullptr &&
+    !m.control_surface_angle->angle.empty())
   {
-    control_surface_deflection =
-      farol2_utils::deg2rad(m.control_surface_deflection->deflection_angle.front());
+    control_surface_angle =
+      farol2_utils::deg2rad(m.control_surface_angle->angle.front());
   }
-  const double tau_r = get_torque(control_surface_deflection, s.velocity_through_water_body, x_(0));
+  const double tau_r = get_torque(control_surface_angle, s.velocity_through_water_body, x_(0));
 
   if (!initialized_) {
     x_.setZero();

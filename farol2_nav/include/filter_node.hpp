@@ -4,7 +4,7 @@
 #include <farol2_nav/measurement_snapshot.hpp>
 #include <farol2_nav/state.hpp>
 
-#include <farol2_interfaces/msg/control_surface_deflection.hpp>
+#include <farol2_interfaces/msg/control_surface_angle.hpp>
 #include <farol2_interfaces/msg/depth.hpp>
 #include <farol2_interfaces/msg/thruster_rpm.hpp>
 #include <farol2_interfaces/msg/navigation_state.hpp>
@@ -28,7 +28,7 @@ static constexpr char TOPIC_SUB_VELOCITY_THROUGH_WATER[] = "velocity_through_wat
 static constexpr char TOPIC_SUB_CURRENT_NED[] = "current_velocity";
 static constexpr char TOPIC_SUB_DEPTH[] = "depth";
 static constexpr char TOPIC_SUB_ALTIMETER[] = "altimeter";
-static constexpr char TOPIC_SUB_CONTROL_SURFACE_DEFLECTION[] = "control_surface_deflection";
+static constexpr char TOPIC_SUB_CONTROL_SURFACE_ANGLE[] = "control_surface_angle";
 static constexpr char TOPIC_SUB_THRUSTER_RPM[] = "thruster_rpm";
 // Publishers
 static constexpr char TOPIC_PUB_STATE[] = "state";
@@ -58,7 +58,7 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_through_water_sub_;
   rclcpp::Subscription<farol2_interfaces::msg::Depth>::SharedPtr depth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Range>::SharedPtr altimeter_sub_;
-  rclcpp::Subscription<farol2_interfaces::msg::ControlSurfaceDeflection>::SharedPtr control_surface_deflection_sub_;
+  rclcpp::Subscription<farol2_interfaces::msg::ControlSurfaceAngle>::SharedPtr control_surface_angle_sub_;
   rclcpp::Subscription<farol2_interfaces::msg::ThrusterRPM>::SharedPtr thruster_rpm_sub_;
 
   rclcpp::Publisher<farol2_interfaces::msg::NavigationState>::SharedPtr final_state_pub_;

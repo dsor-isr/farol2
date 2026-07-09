@@ -1,6 +1,7 @@
 #include "inner_loop_node.hpp"
 
 #include <array>
+#include <cmath>
 #include <limits>
 
 namespace {
@@ -227,6 +228,16 @@ void InnerLoopNode::loadParams() {
     RCLCPP_WARN(get_logger(), "No enabled controllers found. Node will run without applying control effort.");
   }
 
+  node_frequency_ = this->get_parameter("node_frequency").as_double();
+  if (!this->has_parameter("ref_timeout")) {
+    this->declare_parameter<double>("ref_timeout", 2.0);
+  }
+  ref_timeout_ = this->get_parameter("ref_timeout").as_double();
+  if (ref_timeout_ <= 0.0) {
+    RCLCPP_WARN(get_logger(), "Invalid ref_timeout (%f). Falling back to 2.0 seconds.", ref_timeout_);
+    ref_timeout_ = 2.0;
+  }
+
   course_instead_of_yaw_ = this->get_parameter("course_instead_of_yaw").as_bool();
   lpf_order_ = this->get_parameter("lpf_order").as_int();
   lpf_method_ = this->get_parameter("lpf_method").as_string();
@@ -322,11 +333,6 @@ void InnerLoopNode::initialiseServices() {
  * @brief Initialise Timers
  */
 void InnerLoopNode::initialiseTimers() {
-
-
-  /* Get node frequency from parameters */
-  node_frequency_ = get_parameter("node_frequency").as_double();
-
   /* Create timer */
   timer_ = create_timer
     (std::chrono::milliseconds(int(1.0/node_frequency_*1000)), 
@@ -496,7 +502,7 @@ void InnerLoopNode::initializeControllerConfigs() {
         controller_configs_[name] = make_pid_no_rate_config(
           name,
           SURGE,
-          [this]() { return nav_state_.velocity_through_water_body.x; },
+          [this]() { return nav_state_.velocity_through_water.x; },
           [this]() { return surge_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.x += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
@@ -524,7 +530,7 @@ void InnerLoopNode::initializeControllerConfigs() {
         controller_configs_[name] = make_pid_no_rate_config(
           name,
           SWAY,
-          [this]() { return nav_state_.velocity_through_water_body.y; },
+          [this]() { return nav_state_.velocity_through_water.y; },
           [this]() { return sway_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.y += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
@@ -552,7 +558,7 @@ void InnerLoopNode::initializeControllerConfigs() {
         controller_configs_[name] = make_pid_no_rate_config(
           name,
           HEAVE,
-          [this]() { return nav_state_.velocity_through_water_body.z; },
+          [this]() { return nav_state_.velocity_through_water.z; },
           [this]() { return heave_ref_; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.z += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
@@ -582,7 +588,7 @@ void InnerLoopNode::initializeControllerConfigs() {
           DEPTH,
           [this]() { return static_cast<double>(nav_state_.depth); },
           [this]() { return depth_ref_; },
-          [this]() { return nav_state_.velocity_over_ground_body.z; },
+          [this]() { return nav_state_.velocity_over_ground.z; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.z += tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             const auto &ref = reference_outputs_["depth"];
@@ -613,7 +619,7 @@ void InnerLoopNode::initializeControllerConfigs() {
           ALTITUDE,
           [this]() { return static_cast<double>(nav_state_.altimeter); },
           [this]() { return altitude_ref_; },
-          [this]() { return -nav_state_.velocity_over_ground_body.z; },
+          [this]() { return -nav_state_.velocity_over_ground.z; },
           [this](double tau) { body_wrench_request_msg_.wrench.force.z -= tau; },
           [this](farol2_inner_loop::msg::PidDebug &debug_msg) {
             const auto &ref = reference_outputs_["altitude"];
@@ -838,7 +844,7 @@ void InnerLoopNode::timerCallback() {
   static std::set<std::string>::iterator it;
   for (it = controller_names_.begin(); it != controller_names_.end(); it++) {
     /* If controller is not enabled or hasn't received a reference, skip it publishing */
-    if (!has_nav_state_ || !controller_parameters_[*it]["enabled"] || !controller_has_reference_[*it] || !hasRecentReference(controller_last_reference_[*it], node_frequency_)) {
+    if (!has_nav_state_ || !controller_parameters_[*it]["enabled"] || !controller_has_reference_[*it] || !hasRecentReference(controller_last_reference_[*it])) {
       continue;
     }
 
@@ -961,15 +967,9 @@ void InnerLoopNode::courseControlCallback(const std::shared_ptr<std_srvs::srv::S
   response->message = "Course control flag set to: " + std::string(request->data ? "true" : "false");
 }
 
-bool InnerLoopNode::hasRecentReference(const rclcpp::Time &last_reference_timestamp, const int &node_frequency) {
-  /* Here it is assumed that a reference must have been received less than 2 times the node period ago */
-  /* E.g. if the node is running at 10Hz, the period is 0.1s, so the last reference must have been     */
-  /*      received less than 0.2s ago.  
-                                                                 */
-
-  double threshold = 20.0/(double)node_frequency;
-  static int32_t secs = (int32_t)floor(threshold);
-  static uint32_t nanosecs = (uint32_t)((threshold - floor(threshold))*1e9);
+bool InnerLoopNode::hasRecentReference(const rclcpp::Time &last_reference_timestamp) {
+  const int32_t secs = static_cast<int32_t>(std::floor(ref_timeout_));
+  const uint32_t nanosecs = static_cast<uint32_t>((ref_timeout_ - std::floor(ref_timeout_))*1e9);
   
   RCLCPP_DEBUG(get_logger(), "Now: %ld, Last: %ld, Duration: %ld.", clock_->now().nanoseconds(), last_reference_timestamp.nanoseconds(), rclcpp::Duration(secs, nanosecs).nanoseconds());
 
@@ -982,8 +982,7 @@ bool InnerLoopNode::hasRecentReference(const rclcpp::Time &last_reference_timest
 
 void InnerLoopNode::callControllers(double dt) {
   for (const auto &name : controller_names_) {
-    // Compute only for enabled channels with fresh references.
-    if (!has_nav_state_ || !controller_parameters_[name]["enabled"] || !controller_has_reference_[name] || !hasRecentReference(controller_last_reference_[name], node_frequency_)) {
+    if (!has_nav_state_ || !controller_parameters_[name]["enabled"] || !controller_has_reference_[name]) {
       continue;
     }
 
@@ -991,6 +990,13 @@ void InnerLoopNode::callControllers(double dt) {
     if (it != controller_configs_.end()) {
       auto rg_it = reference_generators_.find(name);
       if (rg_it != reference_generators_.end() && rg_it->second) {
+        if (!hasRecentReference(controller_last_reference_[name])) {
+          const double state = it->second.get_state();
+          rg_it->second->reset(state);
+          reference_outputs_[name] = rg_it->second->update(state, dt);
+          continue;
+        }
+
         // Use control-loop dt to make reference derivatives deterministic and less noisy.
         reference_outputs_[name] = rg_it->second->update(it->second.get_ref(), dt);
       }
