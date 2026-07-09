@@ -14,3 +14,7 @@ This package provides simulators for DSOR vehicles. The simulators receive actua
 - Receives thruster RPM commands and rudder control inputs (commands or reference setpoints)
 - Optionally simulates rudder behavior based on user configuration in the YAML file
 - C++ implementation of the Simulink-based simulator
+
+**sim_clock**
+- Publishes the simulation `/clock`
+- Launched separately from the simulator nodes because it must run with `use_sim_time: false`
