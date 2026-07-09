@@ -102,8 +102,8 @@ double ControllerPID::callControllerImpl(double state, double state_ref, double 
   error_ = state_for_control - ref_for_control;
   if (wrapToPi_)  // Wrap to [-pi, pi] if needed
     error_ = farol2_utils::wrapToPi(error_);
-  // error_rate_ = state_rate_used_ - dref_;
-  error_rate_ =  0.0- dref_;
+  error_rate_ = state_rate_used_ - dref_;
+  // error_rate_ =  0.0- dref_;
   
   // Manual derivaties of everything because delta implementation
   error_dot_ = (error_ - error_prev_) / dt; // this is outside so we dont miss the initial step so that delta behaves more like tradition pid

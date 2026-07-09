@@ -15,13 +15,11 @@ float32 altitude_wgs84 # ellipsoidal altitude WGS84
 LocalDatum altitude_local_datum # local datum altitude
 
 # Velocity over ground
-geometry_msgs/Vector3 velocity_over_ground_body # velocity relative to static frame (NED), expressed in the body (m/s)
-geometry_msgs/Vector3 velocity_over_ground_ned # velocity relative to static frame, expressed in the NED frame (m/s)
+geometry_msgs/Vector3 velocity_over_ground # velocity relative to static frame (NED), expressed in the body (m/s)
 float64 speed_over_ground # speed over ground (m/s)
 
 # Velocity through water
-geometry_msgs/Vector3 velocity_through_water_ned # velocity relative to the fluid expressed in the NED frame (m/s)
-geometry_msgs/Vector3 velocity_through_water_body # velocity relative to the fluid frame (NED-oriented but moving with water), expressed in the body (m/s)
+geometry_msgs/Vector3 velocity_through_water # velocity relative to the fluid frame (NED-oriented but moving with water), expressed in the body (m/s)
 float64 speed_through_water # speed through water (m/s)
 
 # Velocity of the current

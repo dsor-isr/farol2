@@ -5,6 +5,7 @@
   inner_loop:
     ros__parameters:
       node_frequency: 10.0
+      ref_timeout: 2.0 # seconds before resetting reference generator to current state
       course_instead_of_yaw: false   # set to true to control course angle instead of yaw
       lpf_order: 2
       lpf_method: "tustin"

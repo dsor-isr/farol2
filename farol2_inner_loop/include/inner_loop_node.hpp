@@ -227,6 +227,9 @@ class InnerLoopNode : public rclcpp::Node {
         /** Control-loop frequency in Hz. */
     double node_frequency_;
 
+        /** Reference timeout in seconds before resetting the generator to current state. */
+    double ref_timeout_;
+
         /** Wrench accumulator updated by active controllers each cycle. */
     geometry_msgs::msg::WrenchStamped body_wrench_request_msg_;
 
@@ -314,7 +317,7 @@ class InnerLoopNode : public rclcpp::Node {
     /**
      * @brief Check if the controller reference is still considered recent.
      */
-    bool hasRecentReference(const rclcpp::Time &last_reference_timestamp, const int &node_frequency);
+    bool hasRecentReference(const rclcpp::Time &last_reference_timestamp);
 
     /**
      * @brief Execute all enabled controllers that pass recent-reference gating.

@@ -18,5 +18,8 @@
         - "depth"
         - "altimeter"
         - "thruster_rpm"
-      # plugins:
-       
+      plugins:
+        sample_and_hold:
+          initializer_measurements:
+            - "gnss"
+            - "imu"

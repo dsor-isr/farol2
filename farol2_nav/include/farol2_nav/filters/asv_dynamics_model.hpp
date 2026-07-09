@@ -17,7 +17,7 @@ public:
   void compute(double dt_s, const MeasurementSnapshot & measurements, State & state) override;
 
 private:
-  double get_tau_r(double control_surface_deflection_rad, double u, double v, double r) const;
+  double get_tau_r(double control_surface_angle_rad, double u, double v, double r) const;
 
   // Surge/sway model parameters.
   double rpm_min_{-2000.0};
@@ -40,7 +40,7 @@ private:
   double damping_linear_{14.334052};
   double damping_quadratic_{260.675031};
   double rudder_cm_distance_{4.0};
-  double control_surface_deflection_limit_rad_{0.6283185307179586};
+  double control_surface_angle_limit_rad_{0.6283185307179586};
   double K_L_{1.398093};
   double K_D0_{0.000575};
   double K_D1_{0.520834};

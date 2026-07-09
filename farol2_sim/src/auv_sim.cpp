@@ -390,8 +390,6 @@ void AuvSim::publishMeasurements()
   Eigen::Vector3d water_track_velocity_inertial = body_to_inertial * fluid_velocity_body;
 
 
-
-  
   if (gnss_activate_) {
     const double north_meas = north + (noise_activate_ ? randn(pos_bias[0], pos_variance[0]) : 0.0);
     const double east_meas = east + (noise_activate_ ? randn(pos_bias[1], pos_variance[1]) : 0.0);
@@ -402,7 +400,7 @@ void AuvSim::publishMeasurements()
     utm_msg.vector.x = north_meas;
     utm_msg.vector.y = east_meas;
     utm_msg.vector.z = static_cast<double>(utm_zone_);
-    utm_ned_pub_->publish(utm_msg);
+    // utm_ned_pub_->publish(utm_msg);
 
     double latitude = 0.0;
     double longitude = 0.0;

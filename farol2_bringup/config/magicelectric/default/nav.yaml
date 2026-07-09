@@ -21,6 +21,11 @@
         # - "yaw_rate_ekf"
       
       plugins:
+        sample_and_hold:
+          initializer_measurements:
+            - "gnss"
+            - "imu"
+
         current_estimator:
           override_position_state: false
           process_noise_pos: 0.1
@@ -28,18 +33,9 @@
           measurement_noise_pos: 10000.0
           init_cov_pos: 25.0
           init_cov_current: 1.0
-          init_current_x: 0.0
-          init_current_y: 0.0
-          rpm_min: -2200.0
-          rpm_max: 2200.0
-          rpm_rate_limit: 200.0
-          rho: 1025.0
-          prop_pitch: 0.381
-          prop_diameter: 0.4318
-          k_t_bp: 0.061461915
-          m_u: 3100.0
-          x_u: 0.0
-          x_uu: -96.2270
+          init_current_speed: 0.0
+          init_current_direction: 0.0
+        
 
         yaw_rate_ekf:
           process_noise_yaw_rate: 0.02

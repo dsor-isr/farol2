@@ -1,10 +1,9 @@
 #pragma once
 
 #include <farol2_nav/filters/base_filter.hpp>
+#include <farol2_utils/tf_utils.hpp>
 
 #include <rclcpp/rclcpp.hpp>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <Eigen/Dense>
 
@@ -26,24 +25,17 @@ public:
   bool initialized() const override { return initialized_; }
 
 private:
-  bool has_measurement(const std::string & name) const;
+  bool has_initializer_measurement(const std::string & name) const;
   void mark_received(const std::string & name);
-  bool all_required_measurements_received() const;
-  bool lookup_sensor_to_base_transform(
-    const std::string & sensor_frame,
-    const rclcpp::Time & stamp,
-    Eigen::Isometry3d & transform_base_sensor) const;
+  bool all_initializer_measurements_received() const;
 
   bool initialized_{false};
-  std::vector<std::string> required_measurements_{};
-  std::vector<std::string> received_measurements_{};
+  std::vector<std::string> initializer_measurements_{};
+  std::vector<std::string> received_initializer_measurements_{};
   State s_{};
   std::string frame_prefix_ = std::string{};
   std::string base_frame_ = "base_link";
-  rclcpp::Clock::SharedPtr clock_{};
-  rclcpp::Logger logger_{rclcpp::get_logger("sample_and_hold")};
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_{};
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_{};
+  std::unique_ptr<farol2_utils::StaticTransformLookup> static_tf_lookup_{};
 };
 
 }  // namespace filters

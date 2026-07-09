@@ -9,7 +9,7 @@ At each timer tick:
 1. A measurement snapshot is assembled from asynchronous topics.
 2. The pipeline starts from a clean internal state.
 3. `sample_and_hold` (pass-through) fills state channels directly from sensors.
-4. Additional filters (for example `position_current_ekf`, `yaw_rate_ekf`) refine selected parts of that state.
+4. Additional filters (for example `current_estimator`, `yaw_rate_ekf`) refine selected parts of that state.
 5. The final fused `NavigationState` is published.
 
 This architecture favors composition: each filter can focus on one sub-problem and still cooperate through a shared state.
@@ -45,7 +45,7 @@ The timer runs at `node_frequency` and computes `dt` from wall time. On each tic
 
 Then each key in `filters` instantiates one plugin:
 
-- `position_current_ekf`
+- `current_estimator`
 - `yaw_rate_ekf`
 
 Unknown keys are skipped with a warning.
@@ -61,7 +61,7 @@ Unknown keys are skipped with a warning.
 - `velocity_through_water`
 - `depth`
 - `altimeter`
-- `control_surface_deflection`
+- `control_surface_angle`
 - `thruster_rpm`
 
 ### Published
@@ -79,7 +79,8 @@ Unknown keys are skipped with a warning.
 
 Plugin parameters live under:
 
-- `plugins.position_current_ekf.*`
+- `plugins.sample_and_hold.*`
+- `plugins.current_estimator.*`
 - `plugins.yaw_rate_ekf.*`
 
 See dedicated filter pages below for details.
@@ -87,7 +88,7 @@ See dedicated filter pages below for details.
 ## Per-filter documentation
 
 - [sample_and_hold](sample_and_hold.md)
-- [position_current_ekf](position_current_ekf.md)
+- [current_estimator](current_estimator.md)
 - [yaw_rate_ekf](yaw_rate_ekf.md)
 
 ## Adding a new filter plugin

@@ -13,6 +13,7 @@
 #include "std_msgs/msg/int8.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
+#include "farol2_interfaces/msg/control_surface_angle.hpp"
 #include "farol2_interfaces/msg/navigation_state.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
@@ -29,7 +30,7 @@ static constexpr char TOPIC_SUB_TORQUE_Y[] = "torque_y";
 static constexpr char TOPIC_SUB_TORQUE_Z[] = "torque_z";
 static constexpr char TOPIC_SUB_NAV_STATE[] = "nav_state";
 static constexpr char TOPIC_SUB_MISSION_STATUS[] = "mission_status";
-static constexpr char TOPIC_PUB_RUDDER_COMMAND[] = "rudder_command";
+static constexpr char TOPIC_PUB_CONTROL_SURFACE_ANGLE[] = "control_surface_angle";
 
 class AllocationNode : public rclcpp::Node {
   public:
@@ -58,7 +59,7 @@ class AllocationNode : public rclcpp::Node {
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
     rclcpp::Publisher<farol2_interfaces::msg::ThrusterRPM>::SharedPtr rpm_command_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr rudder_command_pub_;
+    rclcpp::Publisher<farol2_interfaces::msg::ControlSurfaceAngle>::SharedPtr control_surface_angle_pub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr thrust_x_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr thrust_y_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr thrust_z_sub_;
@@ -72,7 +73,7 @@ class AllocationNode : public rclcpp::Node {
     std::unique_ptr<RudderAllocator> rudder_allocator_;
     std::unique_ptr<ThrusterRpmConverter> rpm_converter_;
 
-    std_msgs::msg::Float32 rudder_command_msg_;
+    farol2_interfaces::msg::ControlSurfaceAngle control_surface_angle_msg_;
     farol2_interfaces::msg::NavigationState nav_state_;
 
     AllocationType allocation_type_{AllocationType::THRUST};

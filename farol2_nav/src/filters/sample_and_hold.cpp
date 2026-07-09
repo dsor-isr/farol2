@@ -2,7 +2,6 @@
 
 #include <farol2_utils/angles.hpp>
 #include <tf2/LinearMath/Matrix3x3.h>
-#include <tf2/exceptions.h>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <algorithm>
@@ -15,93 +14,56 @@ namespace filters
 
 void SampleAndHoldFilter::configure(rclcpp::Node & node)
 {
-  node.get_parameter("measurements", required_measurements_);
-  received_measurements_.clear();
-  initialized_ = required_measurements_.empty();
+  std::vector<std::string> subscribed_measurements;
+  node.get_parameter("measurements", subscribed_measurements);
+  initializer_measurements_ = node.declare_parameter<std::vector<std::string>>(
+    "plugins.sample_and_hold.initializer_measurements",
+    subscribed_measurements);
+  received_initializer_measurements_.clear();
+  initialized_ = initializer_measurements_.empty();
   frame_prefix_ = node.declare_parameter<std::string>("frame_prefix", "");
   base_frame_ = frame_prefix_ + "base_link";
-  clock_ = node.get_clock();
-  logger_ = node.get_logger();
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(clock_);
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(
-    *tf_buffer_,
-    node.get_node_base_interface(),
-    node.get_node_logging_interface(),
-    node.get_node_parameters_interface(),
-    node.get_node_topics_interface());
+  static_tf_lookup_ = std::make_unique<farol2_utils::StaticTransformLookup>(node);
 }
 
-bool SampleAndHoldFilter::has_measurement(const std::string & name) const
+bool SampleAndHoldFilter::has_initializer_measurement(const std::string & name) const
 {
-  return std::find(required_measurements_.begin(), required_measurements_.end(), name) !=
-    required_measurements_.end();
+  return std::find(initializer_measurements_.begin(), initializer_measurements_.end(), name) !=
+    initializer_measurements_.end();
 }
 
 void SampleAndHoldFilter::mark_received(const std::string & name)
 {
-  if (!has_measurement(name)) {
+  if (!has_initializer_measurement(name)) {
     return;
   }
 
-  const auto it = std::find(received_measurements_.begin(), received_measurements_.end(), name);
-  if (it == received_measurements_.end()) {
-    received_measurements_.push_back(name);
+  const auto it = std::find(
+    received_initializer_measurements_.begin(),
+    received_initializer_measurements_.end(),
+    name);
+  if (it == received_initializer_measurements_.end()) {
+    received_initializer_measurements_.push_back(name);
   }
 }
 
-bool SampleAndHoldFilter::all_required_measurements_received() const
+bool SampleAndHoldFilter::all_initializer_measurements_received() const
 {
-  return received_measurements_.size() >= required_measurements_.size();
-}
-
-bool SampleAndHoldFilter::lookup_sensor_to_base_transform(
-  const std::string & sensor_frame,
-  const rclcpp::Time & stamp,
-  Eigen::Isometry3d & transform_base_sensor) const
-{
-  transform_base_sensor = Eigen::Isometry3d::Identity();
-
-  if (sensor_frame.empty() || sensor_frame == base_frame_) {
-    return true;
-  }
-
-  try {
-    const auto transform_msg = tf_buffer_->lookupTransform(base_frame_, sensor_frame, stamp);
-    transform_base_sensor = tf2::transformToEigen(transform_msg);
-    return true;
-  } catch (const tf2::TransformException & ex) {
-    RCLCPP_WARN_THROTTLE(
-      logger_,
-      *clock_,
-      5000,
-      "Skipping measurement in frame '%s': cannot transform to '%s' (%s)",
-      sensor_frame.c_str(),
-      base_frame_.c_str(),
-      ex.what());
-    return false;
-  }
+  return received_initializer_measurements_.size() >= initializer_measurements_.size();
 }
 
 void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State & s)
 {
   if (m.imu != nullptr) {
-    Eigen::Isometry3d tf_base_sensor;
-    if (!lookup_sensor_to_base_transform(
-        m.imu->header.frame_id,
-        m.imu->header.stamp,
-        tf_base_sensor)) {
-      if (initialized_) {
-        s = s_;
-      }
-      return;
-    }
+    const auto & T_base_sensor =
+      static_tf_lookup_->lookup(base_frame_, m.imu->header.frame_id);
 
     mark_received("imu");
     Eigen::Quaterniond q_ns;
     tf2::fromMsg(m.imu->orientation, q_ns);
     const Eigen::Matrix3d rotation_ns = q_ns.normalized().toRotationMatrix();
 
-    const Eigen::Matrix3d rotation_bs = tf_base_sensor.linear();
+    const Eigen::Matrix3d rotation_bs = T_base_sensor.rotation();
     s_.rotation_bn = rotation_ns * rotation_bs.transpose();
 
     const tf2::Matrix3x3 r_bn_tf(
@@ -128,16 +90,8 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
   }
 
   if (m.gnss != nullptr) {
-    Eigen::Isometry3d tf_base_sensor;
-    if (!lookup_sensor_to_base_transform(
-        m.gnss->header.frame_id,
-        m.gnss->header.stamp,
-        tf_base_sensor)) {
-      if (initialized_) {
-        s = s_;
-      }
-      return;
-    }
+    const auto & T_base_sensor =
+      static_tf_lookup_->lookup(base_frame_, m.gnss->header.frame_id);
 
     mark_received("gnss");
     if (std::isfinite(m.gnss->latitude) && std::isfinite(m.gnss->longitude) &&
@@ -152,7 +106,7 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
 
       const Eigen::Vector3d sensor_position_ned(northing, easting, -m.gnss->altitude);
       const Eigen::Vector3d sensor_offset_ned =
-        s_.rotation_bn * tf_base_sensor.translation();
+        s_.rotation_bn * T_base_sensor.translation();
       const Eigen::Vector3d base_position_ned = sensor_position_ned - sensor_offset_ned;
 
       s_.northing = base_position_ned(0);
@@ -168,16 +122,8 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
   }
 
   if (m.utm_ned != nullptr) {
-    Eigen::Isometry3d tf_base_sensor;
-    if (!lookup_sensor_to_base_transform(
-        m.utm_ned->header.frame_id,
-        m.utm_ned->header.stamp,
-        tf_base_sensor)) {
-      if (initialized_) {
-        s = s_;
-      }
-      return;
-    }
+    const auto & T_base_sensor =
+      static_tf_lookup_->lookup(base_frame_, m.utm_ned->header.frame_id);
 
     mark_received("utm_ned");
     const Eigen::Vector3d sensor_position_ned(
@@ -185,7 +131,7 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
       m.utm_ned->vector.y,
       s_.depth);
     const Eigen::Vector3d sensor_offset_ned =
-      s_.rotation_bn * tf_base_sensor.translation();
+      s_.rotation_bn * T_base_sensor.translation();
     const Eigen::Vector3d base_position_ned = sensor_position_ned - sensor_offset_ned;
     s_.northing = base_position_ned(0);
     s_.easting = base_position_ned(1);
@@ -193,20 +139,12 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
   }
 
   if (m.velocity_over_ground != nullptr) {
-    Eigen::Isometry3d tf_base_sensor;
-    if (!lookup_sensor_to_base_transform(
-        m.velocity_over_ground->header.frame_id,
-        m.velocity_over_ground->header.stamp,
-        tf_base_sensor)) {
-      if (initialized_) {
-        s = s_;
-      }
-      return;
-    }
+    const auto & T_base_sensor =
+      static_tf_lookup_->lookup(base_frame_, m.velocity_over_ground->header.frame_id);
 
     mark_received("velocity_over_ground");
-    const Eigen::Matrix3d rotation_bs = tf_base_sensor.linear();
-    const Eigen::Vector3d sensor_offset_body = tf_base_sensor.translation();
+    const Eigen::Matrix3d rotation_bs = T_base_sensor.rotation();
+    const Eigen::Vector3d sensor_offset_body = T_base_sensor.translation();
     const Eigen::Vector3d angular_velocity_body = farol2_utils::deg2rad(1.0) * s_.angular_velocity;
     const Eigen::Vector3d velocity_sensor(
       m.velocity_over_ground->vector.x,
@@ -214,24 +152,15 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
       m.velocity_over_ground->vector.z);
     s_.velocity_over_ground_body =
       rotation_bs * velocity_sensor - angular_velocity_body.cross(sensor_offset_body);
-    s_.velocity_over_ground_ned = s_.rotation_bn * s_.velocity_over_ground_body;
   }
 
   if (m.velocity_through_water != nullptr) {
-    Eigen::Isometry3d tf_base_sensor;
-    if (!lookup_sensor_to_base_transform(
-        m.velocity_through_water->header.frame_id,
-        m.velocity_through_water->header.stamp,
-        tf_base_sensor)) {
-      if (initialized_) {
-        s = s_;
-      }
-      return;
-    }
+    const auto & T_base_sensor =
+      static_tf_lookup_->lookup(base_frame_, m.velocity_through_water->header.frame_id);
 
     mark_received("velocity_through_water");
-    const Eigen::Matrix3d rotation_bs = tf_base_sensor.linear();
-    const Eigen::Vector3d sensor_offset_body = tf_base_sensor.translation();
+    const Eigen::Matrix3d rotation_bs = T_base_sensor.rotation();
+    const Eigen::Vector3d sensor_offset_body = T_base_sensor.translation();
     const Eigen::Vector3d angular_velocity_body = farol2_utils::deg2rad(1.0) * s_.angular_velocity;
     const Eigen::Vector3d velocity_sensor(
       m.velocity_through_water->vector.x,
@@ -239,24 +168,15 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
       m.velocity_through_water->vector.z);
     s_.velocity_through_water_body =
       rotation_bs * velocity_sensor - angular_velocity_body.cross(sensor_offset_body);
-    s_.velocity_through_water_ned = s_.rotation_bn * s_.velocity_through_water_body;
   }
 
   if (m.depth != nullptr) {
-    Eigen::Isometry3d tf_base_sensor;
-    if (!lookup_sensor_to_base_transform(
-        m.depth->header.frame_id,
-        m.depth->header.stamp,
-        tf_base_sensor)) {
-      if (initialized_) {
-        s = s_;
-      }
-      return;
-    }
+    const auto & T_base_sensor =
+      static_tf_lookup_->lookup(base_frame_, m.depth->header.frame_id);
 
     mark_received("depth");
     const Eigen::Vector3d sensor_offset_ned =
-      s_.rotation_bn * tf_base_sensor.translation();
+      s_.rotation_bn * T_base_sensor.translation();
     s_.depth = m.depth->depth - sensor_offset_ned(2);
   }
 
@@ -265,15 +185,15 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
     s_.altimeter = m.altimeter->range;
   }
 
-  if (m.control_surface_deflection != nullptr) {
-    mark_received("control_surface_deflection");
+  if (m.control_surface_angle != nullptr) {
+    mark_received("control_surface_angle");
   }
 
   if (m.thruster_rpm != nullptr) {
     mark_received("thruster_rpm");
   }
 
-  if (!initialized_ && all_required_measurements_received()) {
+  if (!initialized_ && all_initializer_measurements_received()) {
     initialized_ = true;
   }
 

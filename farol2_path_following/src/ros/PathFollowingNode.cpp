@@ -403,9 +403,9 @@ void PathFollowingNode::vehicleStateCallback(const farol2_interfaces::msg::Navig
   this->vehicle_state_.eta2 << roll, pitch, yaw;
 
   /* Update the vehicle linear velocity */
-  this->vehicle_state_.v1 << msg.velocity_over_ground_body.x,
-                             msg.velocity_over_ground_body.y,
-                             msg.velocity_over_ground_body.z;
+  this->vehicle_state_.v1 << msg.velocity_over_ground.x,
+                             msg.velocity_over_ground.y,
+                             msg.velocity_over_ground.z;
 
   /* Update the vehicle angular velocity */
   this->vehicle_state_.v2 << farol2_utils::deg2rad(msg.angular_velocity.x),
