@@ -1,8 +1,8 @@
-# position_current_ekf
+# current_estimator
 
 ## Purpose
 
-`position_current_ekf` estimates horizontal current velocity while smoothing horizontal position.
+`current_estimator` estimates horizontal current velocity while smoothing horizontal position.
 
 It is designed to work after `sample_and_hold`: it consumes the already-populated position/yaw channels from shared state, then writes back corrected position and current estimate.
 
@@ -64,9 +64,7 @@ $$
 
 ## Outputs written to shared state
 
-- `current_velocity_ned.{x,y}` from EKF current estimate.
-- `velocity_through_water_ned.{x,y}` from model projection.
-- `velocity_through_water_body.{x,y}` from modeled surge and sway.
+- `current_velocity_ned.{x,y}` from the EKF current estimate.
 - Optional overwrite of position:
   - `northing`, `easting` if `override_position_state=true`.
 
@@ -80,7 +78,7 @@ $$
 
 ## Parameters
 
-All parameters are under `plugins.position_current_ekf.*`.
+All parameters are under `plugins.current_estimator.*`.
 
 Noise and covariance:
 
@@ -103,7 +101,7 @@ Surge model and propulsion constants:
 
 ## Runtime tuning service
 
-Service: `position_current_ekf/tune` (`farol2_nav/srv/TunePositionEkf`)
+Service: `current_estimator/tune` (`farol2_nav/srv/TunePositionEkf`)
 
 Request fields:
 

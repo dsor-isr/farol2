@@ -26,13 +26,13 @@ RudderAllocationResult RudderAllocator::compute(
   const farol2_interfaces::msg::NavigationState & nav_state,
   double tau_r) const
 {
-  auto velocity_x = nav_state.velocity_through_water_body.x;
+  auto velocity_x = nav_state.velocity_through_water.x;
   if (std::abs(velocity_x) < 0.05) {
     velocity_x = std::copysign(0.05, velocity_x == 0.0 ? 1.0 : velocity_x);
   }
 
   const double sideslip_angle = (velocity_x != 0.0)
-    ? std::atan2(nav_state.velocity_through_water_body.y, velocity_x)
+    ? std::atan2(nav_state.velocity_through_water.y, velocity_x)
     : 0.0;
 
   const double course_angle = nav_state.attitude.yaw + sideslip_angle;
@@ -40,7 +40,7 @@ RudderAllocationResult RudderAllocator::compute(
     std::cos(course_angle),
     std::sin(course_angle));
   const Eigen::Vector2d v_cm_scaled =
-    v_cm * std::hypot(velocity_x, nav_state.velocity_through_water_body.y);
+    v_cm * std::hypot(velocity_x, nav_state.velocity_through_water.y);
 
   const Eigen::Vector2d v_r(
     std::sin(nav_state.attitude.yaw),

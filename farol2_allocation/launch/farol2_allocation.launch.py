@@ -88,7 +88,7 @@ def generate_launch_description():
       ('mission_status', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/mission_status')]),
       # Publishers
       ('rpm_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rpm_command')]),
-      ('rudder_command', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/rudder_command')]),
+      ('control_surface_angle', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/allocation/control_surface_angle')]),
     ]
   )
 

@@ -44,6 +44,7 @@ def generate_launch_description():
             # vehicle namespace
             {'vehicle_id': LaunchConfiguration('vehicle_id')},
             {'vehicle_name': LaunchConfiguration('vehicle_name')},
+            {'frame_prefix': [vehicle_ns, TextSubstitution(text='/')]},
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
 
             # load default nav configs
@@ -88,7 +89,7 @@ def generate_launch_description():
       ('depth', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/depth')]),
       ('altimeter', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/altimeter')]),
       ('altitude', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/altitude')]),
-      ('control_surface_deflection', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/control_surface_deflection')]),
+      ('control_surface_angle', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/control_surface_angle')]),
       ('thruster_rpm', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/measurement/thruster_rpm')]),
       # Publishers
       ('state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
@@ -101,7 +102,7 @@ def generate_launch_description():
       ## instead we roll like this, every new filter plugin needs to be added here manually:
       ##############################################################################################################################
       ('sample_and_hold/state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/sample_and_hold/state')]),
-      ('position_current_ekf/state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/position_current_ekf/state')]),
+      ('current_estimator/state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/current_estimator/state')]),
       ('yaw_rate_ekf/state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/yaw_rate_ekf/state')]),
     ]
   )

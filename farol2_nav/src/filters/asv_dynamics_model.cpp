@@ -47,11 +47,11 @@ void AsvDynamicsModelFilter::configure(rclcpp::Node & node)
   damping_quadratic_ =
     node.declare_parameter<double>("plugins.asv_dynamics_model.damping_quadratic", 260.675031);
   rudder_cm_distance_ = node.declare_parameter<double>("plugins.asv_dynamics_model.rudder_arm", 4.0);
-  const double control_surface_deflection_limit_deg =
+  const double control_surface_angle_limit_deg =
     node.declare_parameter<double>(
-      "plugins.asv_dynamics_model.control_surface_deflection_limit_deg", 36.0);
-  control_surface_deflection_limit_rad_ =
-    farol2_utils::deg2rad(std::abs(control_surface_deflection_limit_deg));
+      "plugins.asv_dynamics_model.control_surface_angle_limit_deg", 36.0);
+  control_surface_angle_limit_rad_ =
+    farol2_utils::deg2rad(std::abs(control_surface_angle_limit_deg));
   K_L_ = node.declare_parameter<double>("plugins.asv_dynamics_model.K_L", 1.398093);
   K_D0_ = node.declare_parameter<double>("plugins.asv_dynamics_model.K_D0", 0.000575);
   K_D1_ = node.declare_parameter<double>("plugins.asv_dynamics_model.K_D1", 0.520834);
@@ -66,16 +66,16 @@ void AsvDynamicsModelFilter::configure(rclcpp::Node & node)
 }
 
 double AsvDynamicsModelFilter::get_tau_r(
-  double control_surface_deflection_rad,
+  double control_surface_angle_rad,
   double u,
   double v,
   double r) const
 {
   const double delta_rud =
     std::clamp(
-      control_surface_deflection_rad,
-      -control_surface_deflection_limit_rad_,
-      control_surface_deflection_limit_rad_);
+      control_surface_angle_rad,
+      -control_surface_angle_limit_rad_,
+      control_surface_angle_limit_rad_);
 
   Eigen::Vector2d V_s;
   V_s(0) = u;
@@ -125,14 +125,14 @@ void AsvDynamicsModelFilter::compute(double dt_s, const MeasurementSnapshot & m,
     }
   }
 
-  double control_surface_deflection_rad = 0.0;
-  if (m.control_surface_deflection != nullptr &&
-    !m.control_surface_deflection->deflection_angle.empty())
+  double control_surface_angle_rad = 0.0;
+  if (m.control_surface_angle != nullptr &&
+    !m.control_surface_angle->angle.empty())
   {
-    control_surface_deflection_rad =
-      farol2_utils::deg2rad(m.control_surface_deflection->deflection_angle.front());
+    control_surface_angle_rad =
+      farol2_utils::deg2rad(m.control_surface_angle->angle.front());
   }
-  const double tau_r = get_tau_r(control_surface_deflection_rad, u_model_, v_model_, r_model_);
+  const double tau_r = get_tau_r(control_surface_angle_rad, u_model_, v_model_, r_model_);
 
   const double u_dot =
     (1.0 / m_u_) * (tau_u + m_v_ * v_model_ * r_model_ + x_u_ * u_model_ + x_uu_ * std::abs(u_model_) * u_model_);
@@ -150,7 +150,7 @@ void AsvDynamicsModelFilter::compute(double dt_s, const MeasurementSnapshot & m,
   // Feed the modeled through-water velocity into the shared state for downstream filters.
   const Eigen::Vector3d vtw_body(u_model_, v_model_, 0.0);
   s.velocity_through_water_body = vtw_body;
-  s.velocity_through_water_ned = s.rotation_bn * vtw_body;
+  s.angular_velocity(2) = farol2_utils::rad2deg(r_model_);
 
   uvr_msg_.x = u_model_;
   uvr_msg_.y = v_model_;

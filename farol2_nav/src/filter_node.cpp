@@ -1,7 +1,7 @@
 #include "filter_node.hpp"
 
 #include <farol2_nav/filters/sample_and_hold.hpp>
-#include <farol2_nav/filters/position_current_ekf.hpp>
+#include <farol2_nav/filters/current_estimator.hpp>
 #include <farol2_nav/filters/yaw_rate_ekf.hpp>
 #include <farol2_nav/filters/asv_dynamics_model.hpp>
 #include <farol2_utils/angles.hpp>
@@ -100,12 +100,12 @@ void FilterNode::initialise_subscribers()
       });
   }
 
-  if (is_active("control_surface_deflection")) {
-    control_surface_deflection_sub_ =
-      create_subscription<farol2_interfaces::msg::ControlSurfaceDeflection>(
-      TOPIC_SUB_CONTROL_SURFACE_DEFLECTION, rclcpp::QoS(10),
-      [this](farol2_interfaces::msg::ControlSurfaceDeflection::SharedPtr msg) {
-        snapshot_.control_surface_deflection = std::move(msg);
+  if (is_active("control_surface_angle")) {
+    control_surface_angle_sub_ =
+      create_subscription<farol2_interfaces::msg::ControlSurfaceAngle>(
+      TOPIC_SUB_CONTROL_SURFACE_ANGLE, rclcpp::QoS(10),
+      [this](farol2_interfaces::msg::ControlSurfaceAngle::SharedPtr msg) {
+        snapshot_.control_surface_angle = std::move(msg);
       });
   }
 
@@ -128,8 +128,8 @@ void FilterNode::build_pipeline()
 
   for (const auto & key : filters_) {
     std::unique_ptr<farol2_nav::filters::BaseFilter> filter;
-    if (key == "position_current_ekf") {
-      filter = std::make_unique<farol2_nav::filters::PositionCurrentEkfFilter>();
+    if (key == "current_estimator") {
+      filter = std::make_unique<farol2_nav::filters::CurrentEstimatorFilter>();
     } else if (key == "yaw_rate_ekf") {
       filter = std::make_unique<farol2_nav::filters::YawRateEkfFilter>();
     } else if (key == "asv_dynamics_model") {
@@ -220,18 +220,14 @@ void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
   msg_.altitude_wgs84 = state_.altitude_wgs84;
   msg_.altitude_local_datum.altitude = state_.altitude_local_datum_altitude;
 
-  msg_.velocity_over_ground_body.x = state_.velocity_over_ground_body(0);
-  msg_.velocity_over_ground_body.y = state_.velocity_over_ground_body(1);
-  msg_.velocity_over_ground_body.z = state_.velocity_over_ground_body(2);
-  msg_.velocity_through_water_body.x = state_.velocity_through_water_body(0);
-  msg_.velocity_through_water_body.y = state_.velocity_through_water_body(1);
-  msg_.velocity_through_water_body.z = state_.velocity_through_water_body(2);
-  msg_.velocity_over_ground_ned.x = state_.velocity_over_ground_ned(0);
-  msg_.velocity_over_ground_ned.y = state_.velocity_over_ground_ned(1);
-  msg_.velocity_over_ground_ned.z = state_.velocity_over_ground_ned(2);
-  msg_.velocity_through_water_ned.x = state_.velocity_through_water_ned(0);
-  msg_.velocity_through_water_ned.y = state_.velocity_through_water_ned(1);
-  msg_.velocity_through_water_ned.z = state_.velocity_through_water_ned(2);
+  msg_.velocity_over_ground.x = state_.velocity_over_ground_body(0);
+  msg_.velocity_over_ground.y = state_.velocity_over_ground_body(1);
+  msg_.velocity_over_ground.z = state_.velocity_over_ground_body(2);
+  msg_.velocity_through_water.x = state_.velocity_through_water_body(0);
+  msg_.velocity_through_water.y = state_.velocity_through_water_body(1);
+  msg_.velocity_through_water.z = state_.velocity_through_water_body(2);
+  msg_.speed_over_ground = state_.velocity_over_ground_body.norm();
+  msg_.speed_through_water = state_.velocity_through_water_body.norm();
   msg_.course_over_ground = state_.course_over_ground;
   msg_.current_velocity_ned.x = state_.current_velocity_ned(0);
   msg_.current_velocity_ned.y = state_.current_velocity_ned(1);
