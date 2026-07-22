@@ -53,6 +53,8 @@ private:
 
   // Runtime model state.
   bool initialized_{false};
+  double rpm_command_{0.0};
+  double control_surface_angle_rad_{0.0};
   double rpm_model_state_{0.0};
   double u_model_{0.0};
   double v_model_{0.0};

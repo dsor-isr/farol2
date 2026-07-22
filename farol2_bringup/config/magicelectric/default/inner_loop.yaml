@@ -44,12 +44,9 @@
         use_ref_lpf: true
         use_rate_limiter: true
         rate_limit: 4.0 # deg/s
-        # kp: 21.384000 
-        # ki: 2.079000 
-        # kd: 110.880000
-        kp: 31.6800
-        ki: 1.0
-        kd: 59.9200
+        kp: 9.504000 
+        ki: 0.616000 
+        kd: 73.920000
         kffv_lin: 0.0
         kffv_sq: 0.0
         kffa: 0.0

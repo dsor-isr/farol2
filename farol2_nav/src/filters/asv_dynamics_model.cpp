@@ -62,6 +62,8 @@ void AsvDynamicsModelFilter::configure(rclcpp::Node & node)
   init_r_ = node.declare_parameter<double>("plugins.asv_dynamics_model.init_r", 0.0);
 
   initialized_ = false;
+  rpm_command_ = 0.0;
+  control_surface_angle_rad_ = 0.0;
   rpm_model_state_ = 0.0;
 }
 
@@ -98,14 +100,12 @@ void AsvDynamicsModelFilter::compute(double dt_s, const MeasurementSnapshot & m,
     return;
   }
 
-  double rpm_cmd = 0.0;
   if (m.thruster_rpm != nullptr && !m.thruster_rpm->rpm.empty()) {
-    rpm_cmd = m.thruster_rpm->rpm[0];
+    rpm_command_ = std::clamp(m.thruster_rpm->rpm[0], rpm_min_, rpm_max_);
   }
-  rpm_cmd = std::clamp(rpm_cmd, rpm_min_, rpm_max_);
 
   if (!initialized_) {
-    rpm_model_state_ = rpm_cmd;
+    rpm_model_state_ = rpm_command_;
     u_model_ = init_u_;
     v_model_ = init_v_;
     r_model_ = init_r_;
@@ -113,7 +113,8 @@ void AsvDynamicsModelFilter::compute(double dt_s, const MeasurementSnapshot & m,
   }
 
   const double max_rpm_step = std::max(0.0, rpm_rate_limit_) * dt;
-  rpm_model_state_ = std::clamp(rpm_cmd, rpm_model_state_ - max_rpm_step, rpm_model_state_ + max_rpm_step);
+  rpm_model_state_ =
+    std::clamp(rpm_command_, rpm_model_state_ - max_rpm_step, rpm_model_state_ + max_rpm_step);
 
   const double rps = rpm_model_state_ / 60.0;
   double tau_u = 0.0;
@@ -125,14 +126,13 @@ void AsvDynamicsModelFilter::compute(double dt_s, const MeasurementSnapshot & m,
     }
   }
 
-  double control_surface_angle_rad = 0.0;
   if (m.control_surface_angle != nullptr &&
     !m.control_surface_angle->angle.empty())
   {
-    control_surface_angle_rad =
+    control_surface_angle_rad_ =
       farol2_utils::deg2rad(m.control_surface_angle->angle.front());
   }
-  const double tau_r = get_tau_r(control_surface_angle_rad, u_model_, v_model_, r_model_);
+  const double tau_r = get_tau_r(control_surface_angle_rad_, u_model_, v_model_, r_model_);
 
   const double u_dot =
     (1.0 / m_u_) * (tau_u + m_v_ * v_model_ * r_model_ + x_u_ * u_model_ + x_uu_ * std::abs(u_model_) * u_model_);
@@ -150,7 +150,7 @@ void AsvDynamicsModelFilter::compute(double dt_s, const MeasurementSnapshot & m,
   // Feed the modeled through-water velocity into the shared state for downstream filters.
   const Eigen::Vector3d vtw_body(u_model_, v_model_, 0.0);
   s.velocity_through_water_body = vtw_body;
-  s.angular_velocity(2) = farol2_utils::rad2deg(r_model_);
+  // s.angular_velocity(2) = farol2_utils::rad2deg(r_model_);
 
   uvr_msg_.x = u_model_;
   uvr_msg_.y = v_model_;
@@ -159,7 +159,7 @@ void AsvDynamicsModelFilter::compute(double dt_s, const MeasurementSnapshot & m,
 
   tau_msg_.x = tau_u;
   tau_msg_.y = tau_r;
-  tau_msg_.z = 0.0;
+  tau_msg_.z = farol2_utils::rad2deg(r_model_);
   tau_pub_->publish(tau_msg_);
 }
 
