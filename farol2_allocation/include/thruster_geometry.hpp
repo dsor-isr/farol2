@@ -12,10 +12,13 @@
 #include "tf2_ros/buffer.h"
 
 struct ThrusterGeometry {
-  Eigen::Vector3d force_axis_body{1.0, 0.0, 0.0};
-  Eigen::Vector3d moment_arm_body{0.0, 0.0, 0.0};
+  Eigen::Vector3d force_axis_body{1.0, 0.0, 0.0};  ///< Unit thrust axis expressed in the body frame.
+  Eigen::Vector3d moment_arm_body{0.0, 0.0, 0.0};  ///< Thruster position relative to the body origin.
 };
 
+/**
+ * @brief Convert a body-to-thruster transform into body-frame thruster geometry.
+ */
 inline ThrusterGeometry thrusterGeometryFromTransform(
   const geometry_msgs::msg::TransformStamped & transform)
 {
@@ -30,6 +33,9 @@ inline ThrusterGeometry thrusterGeometryFromTransform(
   return geometry;
 }
 
+/**
+ * @brief Load all configured thruster geometries from TF.
+ */
 inline bool buildThrusterGeometryFromTF(
   tf2_ros::Buffer & tf_buffer,
   const rclcpp::Clock & clock,
@@ -66,6 +72,9 @@ inline bool buildThrusterGeometryFromTF(
   return true;
 }
 
+/**
+ * @brief Build the matrix that maps thruster forces to a body wrench.
+ */
 inline Eigen::Matrix<double, 6, Eigen::Dynamic> buildThrustAllocationMatrix(
   const std::vector<ThrusterGeometry> & geometry)
 {
@@ -81,6 +90,9 @@ inline Eigen::Matrix<double, 6, Eigen::Dynamic> buildThrustAllocationMatrix(
   return matrix;
 }
 
+/**
+ * @brief Build the geometry matrix used by the simulator thruster model.
+ */
 inline Eigen::MatrixXd buildSimulatorThrusterMatrix(
   const std::vector<ThrusterGeometry> & geometry)
 {

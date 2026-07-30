@@ -72,9 +72,9 @@ def generate_launch_description():
 
   filter_node = Node(
     package='farol2_nav',
-    namespace=PathJoinSubstitution([vehicle_ns, 'nav']),
+    namespace=PathJoinSubstitution([vehicle_ns]),
     executable='filter_node',
-    name='filter_node',
+    name='navigation_filter',
     output='screen',
     condition=IfCondition(LaunchConfiguration('filter_node')),
     parameters=params,

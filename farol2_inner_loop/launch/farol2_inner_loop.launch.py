@@ -83,7 +83,7 @@ def generate_launch_description():
   
   inner_loop_node = Node(
     package='farol2_inner_loop',
-    namespace=PathJoinSubstitution([vehicle_ns, 'inner_loop']),
+    namespace=PathJoinSubstitution([vehicle_ns]),
     executable='inner_loop_node',
     name='inner_loop',
     output='screen',

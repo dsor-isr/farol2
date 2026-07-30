@@ -3,7 +3,7 @@
 ################################
 
 /**:
-  thruster_allocation:
+  actuator_allocation:
     ros__parameters:
       node_frequency: 10.0
       allocation:
@@ -13,19 +13,8 @@
           frames:
             - "thruster_portside_link"
             - "thruster_starboard_link"
-
-  wrench_manager:
-    ros__parameters:
-      node_frequency: 10.0
-
-  rpm_conversion:
-    ros__parameters:
-      allocation_type: "static_thruster_allocation"
-      coef_fwd: [0.00000177778, 0.0, 0.0]
-      coef_bwd: [-0.00000177778, 0.0, 0.0]
-      max_rpm: 5000.0
-      min_rpm: -5000.0
-
-  throttle_conversion:
-    ros__parameters:
-      k: 20.0
+      rpm_conversion:
+        coef_fwd: [0.00000177778, 0.0, 0.0]
+        coef_bwd: [-0.00000177778, 0.0, 0.0]
+        max_rpm: 5000.0
+        min_rpm: -5000.0

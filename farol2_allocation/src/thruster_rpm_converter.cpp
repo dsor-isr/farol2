@@ -57,6 +57,7 @@ farol2_interfaces::msg::ThrusterRPM ThrusterRpmConverter::convert(
   rpm_msg.rpm.reserve(forces.size());
 
   for (const double force : forces) {
+    // Select the inverse model per command so both converter modes share message handling.
     if (mode_ == Mode::STATIC_CURVE) {
       rpm_msg.rpm.push_back(forceToRpmStatic(force));
     } else {
@@ -74,11 +75,13 @@ double ThrusterRpmConverter::forceToRpmStatic(double force) const
   }
 
   if (force > 0.0) {
+    // Invert the forward quadratic calibration and cap the physical RPM command.
     const double discriminant = coef_fwd_[1] * coef_fwd_[1] - 4.0 * coef_fwd_[0] * (coef_fwd_[2] - force);
     const double rpm_value = (-coef_fwd_[1] + std::sqrt(discriminant)) / (2.0 * coef_fwd_[0]);
     return std::min(rpm_value, max_rpm_);
   }
 
+  // Reverse thrust has a separate calibration and a negative RPM limit.
   const double discriminant = coef_bwd_[1] * coef_bwd_[1] - 4.0 * coef_bwd_[0] * (coef_bwd_[2] - force);
   const double rpm_value = (-coef_bwd_[1] + std::sqrt(discriminant)) / (2.0 * coef_bwd_[0]);
   return std::max(rpm_value, min_rpm_);
@@ -91,6 +94,7 @@ double ThrusterRpmConverter::forceToRpmThrusterRudder(double force) const
       return 0.0;
     }
 
+    // Account for advance speed when solving the propeller thrust equation.
     const double a = rho_ * std::pow(diameter_, 4) * k_t_bp_;
     const double b = -rho_ * std::pow(diameter_, 4) * k_t_bp_ / prop_pitch_ * surge_;
     const double c = -force;

@@ -9,16 +9,30 @@
 #include "rclcpp/parameter.hpp"
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 
+/**
+ * @brief Build the matrix that maps configured thruster forces to a body wrench.
+ */
 Eigen::Matrix<double, 6, Eigen::Dynamic> getThrustAllocationMatrix(
   const std::vector<std::map<std::string, std::variant<std::string, std::vector<double>>>> thruster_configuration,
   const int nr_thrusters);
-Eigen::Matrix3d getRotationMatrixThruster2Body(double roll, double pitch, double yaw);
-std::variant<std::string, std::vector<double>> getFieldFromParameter(rclcpp::Parameter param, std::string key_name);
-std::vector<std::map<std::string, std::variant<std::string, std::vector<double>>>> getThrusterConfiguration(rclcpp::Node &node);
 
 /**
- * @brief Build thrust allocation matrix based on thruster configuration.
+ * @brief Build a thruster-to-body rotation from roll, pitch, and yaw angles.
  */
+Eigen::Matrix3d getRotationMatrixThruster2Body(double roll, double pitch, double yaw);
+
+/**
+ * @brief Decode one named field from a flattened thruster parameter.
+ */
+std::variant<std::string, std::vector<double>> getFieldFromParameter(
+  rclcpp::Parameter param, std::string key_name);
+
+/**
+ * @brief Reconstruct indexed thruster configurations from flattened ROS parameters.
+ */
+std::vector<std::map<std::string, std::variant<std::string, std::vector<double>>>>
+getThrusterConfiguration(rclcpp::Node & node);
+
 Eigen::Matrix<double, 6, Eigen::Dynamic> getThrustAllocationMatrix(
       std::vector<std::map<std::string, std::variant<std::string, std::vector<double>>>> thruster_configuration,
       int nr_thrusters) {
@@ -52,11 +66,6 @@ Eigen::Matrix<double, 6, Eigen::Dynamic> getThrustAllocationMatrix(
   return thrust_allocation_matrix;
 }
 
-/**
- * @brief Get rotation matrix from thruster frame to body frame, given the roll,
- * pitch and yaw angles, which are the angles of rotation from body to thruster,
- * in the following order: yaw first, then pitch, finally roll.
- */
 Eigen::Matrix3d getRotationMatrixThruster2Body(double roll, double pitch, double yaw) {
   return (Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ())
         * Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY())
@@ -64,7 +73,7 @@ Eigen::Matrix3d getRotationMatrixThruster2Body(double roll, double pitch, double
 }
 
 /**
- * @brief Get field from ROS parameter according to key name.
+ * @brief Decode one named field and warn through the owning ROS node if unknown.
  */
 std::variant<std::string, std::vector<double>> getFieldFromParameter(rclcpp::Node &node, const rclcpp::Parameter &param, const std::string &key_name) {
   /* According to key name, parse ros parameter properly */

@@ -187,10 +187,12 @@ void SampleAndHoldFilter::compute(double, const MeasurementSnapshot & m, State &
 
   if (m.control_surface_angle != nullptr) {
     mark_received("control_surface_angle");
+    s_.control_surface_angle = m.control_surface_angle->angle;
   }
 
   if (m.thruster_rpm != nullptr) {
     mark_received("thruster_rpm");
+    s_.thruster_rpm = m.thruster_rpm->rpm;
   }
 
   if (!initialized_ && all_initializer_measurements_received()) {

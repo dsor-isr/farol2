@@ -10,6 +10,7 @@ using namespace std::chrono_literals;
 
 AllocationNode::AllocationNode() : Node("allocation_node") {
 	clock_ = this->get_clock();
+	// Keep TF handling inside the node so allocation can wait for frame data asynchronously.
 	tf_buffer_ = std::make_unique<tf2_ros::Buffer>(clock_);
 	tf_listener_ = std::make_shared<tf2_ros::TransformListener>(
 		*tf_buffer_,
@@ -33,6 +34,7 @@ void AllocationNode::loadParams() {
 	allocation_type_ = parseAllocationType(allocation_type);
 
 	frame_prefix_ = declare_parameter<std::string>("frame_prefix", "");
+	// Prefix only unqualified frames, because launch files may already provide fully scoped names.
 	const auto apply_frame_prefix = [this](const std::string & frame) {
 		if (frame_prefix_.empty() || frame.rfind(frame_prefix_, 0) == 0) {
 			return frame;
@@ -63,26 +65,41 @@ void AllocationNode::loadParams() {
 		base_frame_,
 		thruster_frames_);
 
+	const auto coef_fwd =
+		declare_parameter<std::vector<double>>("rpm_conversion.coef_fwd");
+	const auto coef_bwd =
+		declare_parameter<std::vector<double>>("rpm_conversion.coef_bwd");
+	const auto max_rpm = declare_parameter<double>("rpm_conversion.max_rpm");
+	const auto min_rpm = declare_parameter<double>("rpm_conversion.min_rpm");
+
 	if (allocation_type_ == AllocationType::THRUST_RUDDER) {
+		// The rudder mode needs the propeller model because inflow depends on surge velocity.
+		const auto mode = declare_parameter<int>("rpm_conversion.mode");
+		const auto rho = declare_parameter<double>("rpm_conversion.rho");
+		const auto k_t_bp = declare_parameter<double>("rpm_conversion.K_T_BP");
+		const auto prop_pitch = declare_parameter<double>("rpm_conversion.prop_pitch");
+		const auto diameter = declare_parameter<double>("rpm_conversion.D");
+
 		rpm_converter_ = std::make_unique<ThrusterRpmConverter>(ThrusterRpmConverter::thrusterRudder(
-			0,
-			{0.00000177778, 0.0, 0.0},
-			{-0.00000177778, 0.0, 0.0},
-			1025.0,
-			0.061461915,
-			0.381,
-			0.4318,
-			2200.0,
-			-2200.0));
+			mode,
+			coef_fwd,
+			coef_bwd,
+			rho,
+			k_t_bp,
+			prop_pitch,
+			diameter,
+			max_rpm,
+			min_rpm));
 	} else {
 		rpm_converter_ = std::make_unique<ThrusterRpmConverter>(ThrusterRpmConverter::staticCurve(
-			{0.00000177778, 0.0, 0.0},
-			{-0.00000177778, 0.0, 0.0},
-			5000.0,
-			-5000.0));
+			coef_fwd,
+			coef_bwd,
+			max_rpm,
+			min_rpm));
 	}
 
 	if (allocation_type_ == AllocationType::THRUST_RUDDER) {
+		// Configuration angles are in degrees; the hydrodynamic model uses radians.
 		rudder_angle_min_ = declare_parameter<double>("allocation.rudder.limits.min") / 180.0 * M_PI;
 		rudder_angle_max_ = declare_parameter<double>("allocation.rudder.limits.max") / 180.0 * M_PI;
 		rudder_cm_distance_ = declare_parameter<double>("allocation.rudder.cm_distance");
@@ -208,6 +225,7 @@ void AllocationNode::initialiseAllocationFromTF() {
 		return;
 	}
 
+	// TF may not be populated at startup, so retry until every thruster frame is available.
 	if (!static_thruster_allocator_->initialize(*tf_buffer_, *clock_, get_logger())) {
 		return;
 	}
@@ -225,6 +243,7 @@ void AllocationNode::allocationTimerCallback() {
 	}
 
 	const auto now = clock_->now();
+	// Accept two timer periods of jitter before treating an independently received component as stale.
 	const double freshness_timeout = 2.0 / static_cast<double>(node_frequency_);
 
 	const bool thrust_x_recent = last_received_[0].has_value() && (now - *last_received_[0]).seconds() < freshness_timeout;
@@ -238,6 +257,7 @@ void AllocationNode::allocationTimerCallback() {
 		return;
 	}
 
+	// Zero stale axes so an old command cannot remain active when another axis is still updating.
 	geometry_msgs::msg::WrenchStamped body_wrench_request_msg;
 	body_wrench_request_msg.header.stamp = now;
 	body_wrench_request_msg.wrench.force.x = thrust_x_recent ? wrench_input_[0] : 0.0;
@@ -257,6 +277,7 @@ void AllocationNode::processBodyWrenchRequest(const geometry_msgs::msg::WrenchSt
 	}
 
 	if (allocation_type_ == AllocationType::THRUST_RUDDER && mission_status_ == 0) {
+		// Suppress actuator output while the mission controller is inactive.
 		return;
 	}
 
@@ -267,11 +288,13 @@ void AllocationNode::processBodyWrenchRequest(const geometry_msgs::msg::WrenchSt
 		const auto rudder_result = rudder_allocator_->compute(nav_state_, tau_[5]);
 		rudder_angle_ = rudder_result.rudder_angle_rad;
 		rudder_x_body_drag_ = rudder_result.rudder_x_body_drag;
+		// The rudder handles yaw, leaving only surge for the fixed thrusters.
 		tau_common_mode_ << tau_[0], 0.0, 0.0,
 												0.0, 0.0, 0.0;
 		forces_ = static_thruster_allocator_->allocate(tau_common_mode_);
 
 		if (!open_loop_) {
+			// Closed-loop operation publishes propeller RPM in addition to the rudder command.
 			const auto stamp = msg.header.stamp;
 			std::vector<double> forces_vec(forces_.data(), forces_.data() + forces_.size());
 

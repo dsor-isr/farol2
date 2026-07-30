@@ -71,9 +71,9 @@ def generate_launch_description():
 
   thruster_allocation_node = Node(
     package='farol2_allocation',
-    namespace=PathJoinSubstitution([vehicle_ns, 'allocation']),
+    namespace=PathJoinSubstitution([vehicle_ns]),
     executable='allocation_node',
-    name='thruster_allocation',
+    name='actuator_allocation',
     output='screen',
     parameters=params,
     remappings=[

@@ -23,6 +23,7 @@ bool StaticThrusterAllocator::initialize(
     return false;
   }
 
+  // The pseudo-inverse provides the least-squares force split for any thruster layout.
   thrust_allocation_matrix_pseudo_inv_ =
     thrust_allocation_matrix_.completeOrthogonalDecomposition().pseudoInverse();
 
@@ -48,6 +49,7 @@ size_t StaticThrusterAllocator::thrusterCount() const
 Eigen::VectorXd StaticThrusterAllocator::allocate(const Eigen::Vector<double, 6> & tau) const
 {
   if (!ready_) {
+    // Avoid using an uninitialised matrix while the node is still waiting for TF.
     return {};
   }
 

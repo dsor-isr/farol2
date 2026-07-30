@@ -67,7 +67,7 @@ def generate_launch_description():
   ###################
   path_following_node = Node(
     package='farol2_path_following',
-    namespace=PathJoinSubstitution([vehicle_ns, 'control']),
+    namespace=PathJoinSubstitution([vehicle_ns]),
     executable='path_following_node',
     name='path_following',
     output='screen',

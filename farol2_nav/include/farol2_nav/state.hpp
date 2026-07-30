@@ -3,6 +3,7 @@
 #include <Eigen/Dense>
 
 #include <cstdint>
+#include <vector>
 
 namespace farol2_nav
 {
@@ -38,6 +39,10 @@ struct State
   // Rotation from body frame to NED frame.
   Eigen::Matrix3d rotation_bn{Eigen::Matrix3d::Identity()};
   Eigen::Vector3d angular_velocity{Eigen::Vector3d::Zero()};
+
+  // Actuator states
+  std::vector<double> thruster_rpm{};
+  std::vector<double> control_surface_angle{};
 };
 
 }  // namespace filters

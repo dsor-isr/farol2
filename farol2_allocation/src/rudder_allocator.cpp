@@ -27,6 +27,7 @@ RudderAllocationResult RudderAllocator::compute(
   double tau_r) const
 {
   auto velocity_x = nav_state.velocity_through_water.x;
+  // Keep a small signed inflow so the angle calculation remains well-conditioned near rest.
   if (std::abs(velocity_x) < 0.05) {
     velocity_x = std::copysign(0.05, velocity_x == 0.0 ? 1.0 : velocity_x);
   }
@@ -48,10 +49,12 @@ RudderAllocationResult RudderAllocator::compute(
   const Eigen::Vector2d v_r_scaled =
     v_r * rudder_cm_distance_ * nav_state.angular_velocity.z;
 
+  // Combine translational flow and the local velocity caused by yaw at the rudder.
   const Eigen::Vector2d v_s = v_cm_scaled + v_r_scaled;
   const double gamma = farol2_utils::wrapToPi(std::atan2(v_s(1), v_s(0)) - nav_state.attitude.yaw);
 
   RudderAllocationResult result;
+  // Convert requested yaw torque to deflection, then enforce the mechanical stops.
   result.rudder_angle_rad = tau_r / (k_s_ * rudder_cm_distance_ * 1.75);
   result.rudder_angle_rad = (result.rudder_angle_rad > rudder_angle_max_)
     ? rudder_angle_max_
@@ -62,6 +65,7 @@ RudderAllocationResult RudderAllocator::compute(
   result.gamma = gamma;
 
   const double v_sq = v_s.dot(v_s);
+  // Project rudder lift and drag onto the body surge axis for compensation.
   const double lift = k_l_ * result.flow_to_rudder_angle * v_sq;
   const double drag = (k_d0_ + k_d1_ * std::pow(result.flow_to_rudder_angle, 2)) * v_sq;
   result.rudder_x_body_drag = drag * std::cos(result.flow_to_rudder_angle)
@@ -79,6 +83,7 @@ double RudderAllocator::solveDeltaFromTau(double tau_r, double gamma, double v_s
   const double c = k_d0_ * std::sin(gamma) - tau_r / (rudder_cm_distance_ * v_sq);
 
   if (std::abs(a) < eps) {
+    // Fall back to the linear equation when the quadratic term vanishes.
     if (std::abs(b) < eps) {
       return 0.0;
     }
@@ -97,6 +102,7 @@ double RudderAllocator::solveDeltaFromTau(double tau_r, double gamma, double v_s
   }
 
   const double sign_b = (b >= 0.0) ? 1.0 : -1.0;
+  // This quadratic form avoids cancellation when b and sqrt(discriminant) are close.
   const double q = -0.5 * (b + sign_b * std::sqrt(discriminant));
 
   double alpha1;

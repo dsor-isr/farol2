@@ -241,6 +241,9 @@ void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
   msg_.angular_velocity.x = state_.angular_velocity(0);
   msg_.angular_velocity.y = state_.angular_velocity(1);
   msg_.angular_velocity.z = state_.angular_velocity(2);
+
+  msg_.thruster_rpm = state_.thruster_rpm;
+  msg_.control_surface_angle = state_.control_surface_angle;
 }
 
 int main(int argc, char ** argv)

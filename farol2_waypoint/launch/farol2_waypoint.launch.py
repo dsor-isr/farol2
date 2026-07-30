@@ -68,7 +68,7 @@ def generate_launch_description():
   
   waypoint_node = Node(
     package='farol2_waypoint',
-    namespace=PathJoinSubstitution([vehicle_ns, 'control', 'waypoint']),
+    namespace=PathJoinSubstitution([vehicle_ns]),
     executable='waypoint_node',
     name='waypoint',
     output='screen',
