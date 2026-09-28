@@ -231,6 +231,14 @@ void InteractivePlannerNode::setGoalService(const std::shared_ptr<farol2_motion_
 void InteractivePlannerNode::setBoundsService(const std::shared_ptr<farol2_motion_planning::srv::SetBoundsAndGains::Request> req,
                                                std::shared_ptr<farol2_motion_planning::srv::SetBoundsAndGains::Response> res)
 {
+    RCLCPP_INFO_STREAM(this->get_logger(), "Received bounds and gains:");
+    RCLCPP_INFO_STREAM(this->get_logger(), "  vel_min: " << req->vel_min << ", vel_max: " << req->vel_max);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  acc_min: " << req->acc_min << ", acc_max: " << req->acc_max);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  ang_vel_min: " << req->ang_vel_min << ", ang_vel_max: "      << req->ang_vel_max);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  ang_acc_min: " << req->ang_acc_min << ", ang_acc_max: " << req->ang_acc_max);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  obs_min: " << req->obs_min << ", obs_max: " << req->obs_max);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  radius: " << req->radius);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  alpha: " << req->alpha << ", beta: " << req->beta << ", gamma: " << req->gamma); 
     bounds_.vel_min     = req->vel_min;
     bounds_.vel_max     = req->vel_max;
     bounds_.acc_min     = req->acc_min;
@@ -263,6 +271,17 @@ void InteractivePlannerNode::setBoundsService(const std::shared_ptr<farol2_motio
 void InteractivePlannerNode::setBezierParamsService(const std::shared_ptr<farol2_motion_planning::srv::SetBezierParams::Request> req,
                                                      std::shared_ptr<farol2_motion_planning::srv::SetBezierParams::Response> res)
 {
+    RCLCPP_INFO_STREAM(this->get_logger(), "Received bezier params:");
+    RCLCPP_INFO_STREAM(this->get_logger(), "  degree: " << req->bezier_degree);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  guess_degree: " << req->guess_degree);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  n_split: ");
+    for (const auto& v : req->n_split) {
+        RCLCPP_INFO_STREAM(this->get_logger(), "    " << v);
+    }
+    RCLCPP_INFO_STREAM(this->get_logger(), "  constr_flags: ");
+    for (const auto& v : req->constr_flags) {
+        RCLCPP_INFO_STREAM(this->get_logger(), "    " << (v ? "true" : "false"));
+    }
     if (req->constr_flags.size() != 4) {
         res->success = false;
         res->message = "constr_flags must have size 4";
@@ -283,18 +302,11 @@ void InteractivePlannerNode::setBezierParamsService(const std::shared_ptr<farol2
         RCLCPP_ERROR_STREAM(this->get_logger(), res->message);
         return;
     }
-    if (req->number_sample_pts < 20) {
-        res->success = false;
-        res->message = "Path must have at least 20 sample points";
-        RCLCPP_ERROR_STREAM(this->get_logger(), res->message);
-        return;
-    }
 
     bezier_degree_ = req->bezier_degree;
     guess_degree_ = req->guess_degree;
     nSplit_ = req->n_split;
     constr_flags_ = req->constr_flags;
-    number_sample_Pts_ = req->number_sample_pts;
 
     RCLCPP_INFO_STREAM(this->get_logger(), "Bezier params updated:");
     RCLCPP_INFO_STREAM(this->get_logger(), "  degree: " << bezier_degree_);
@@ -367,7 +379,29 @@ void InteractivePlannerNode::setObstaclesService(const std::shared_ptr<farol2_mo
         circ_obs_.resize(3, 0);
     }
     
-    
+    // --- Eliptical obstacles ---
+    size_t n_ellip = req->elip_obs.size() / 5;
+
+    if (n_ellip) {
+        elip_obs_.resize(5, n_ellip); // elip_obs  # [E1, N1, a1, b1, phi1, E2, N2, a2, b2, phi2, ...]
+
+        {
+            std::lock_guard<std::mutex> lock(state_mutex_);
+
+            for (size_t i = 0; i < n_ellip; ++i) {
+                elip_obs_(0, i) = req->elip_obs[i*5 + 1]; // Northing
+                elip_obs_(1, i) = req->elip_obs[i*5 + 0]; // Easting
+                elip_obs_(2, i) = req->elip_obs[i*5 + 2]; // a
+                elip_obs_(3, i) = req->elip_obs[i*5 + 3]; // b
+                elip_obs_(4, i) = req->elip_obs[i*5 + 4]; // phi
+            }
+        }
+
+        obstacles_updated_ = true;
+    }
+    else {
+        elip_obs_.resize(5, 0);
+    }
 
     // --- Line obstacles --- (TODO... - just a placeholder)
     size_t n_line = req->line_obs.size() / 3;
@@ -383,7 +417,7 @@ void InteractivePlannerNode::setObstaclesService(const std::shared_ptr<farol2_mo
         line_obs_.resize(3, 0);
     }
 
-    if (n_circ == 0 && n_line == 0) {
+    if (n_circ == 0 && n_line == 0 && n_ellip == 0) {
         obstacles_updated_ = false; // No obstacles provided
     }
     
@@ -397,6 +431,13 @@ void InteractivePlannerNode::setObstaclesService(const std::shared_ptr<farol2_mo
         msg << "No circular obstacles";
     }
 
+    msg << " | ";
+
+    if (n_ellip > 0) {
+        msg << n_ellip << " elliptical obstacle(s)";
+    } else {
+        msg << "No elliptical obstacles";
+    }
     msg << " | ";
 
     if (n_line > 0) {
@@ -499,7 +540,9 @@ void InteractivePlannerNode::runOptimizationService(const std::shared_ptr<farol2
     }
 
     // Initialize solver
-    MultipleVehiclePlanner solver_first(guess_degree_, 1, {1,1,1}, constr_flags_uint8);
+    std::vector<int> nSplit_int(nSplit_.begin(), nSplit_.end());
+
+    MultipleVehiclePlanner solver_first(guess_degree_, 1, nSplit_int, constr_flags_uint8);
 
     if(bounds_.is_set) {
         RCLCPP_INFO(this->get_logger(), "Bounds are no longer Default.");
@@ -520,8 +563,11 @@ void InteractivePlannerNode::runOptimizationService(const std::shared_ptr<farol2
     cancel_flag_ = false;
 
     for (int i = 0; i < NVehicles; ++i) {
+        RCLCPP_INFO_STREAM(this->get_logger(), "vehicle id: " << i);
         solver_first.setupSymbolic();
+        RCLCPP_INFO_STREAM(this->get_logger(), "Set up symbolic optimization problem for vehicle " << i);
         solver_first.computeCostFunction();
+        RCLCPP_INFO_STREAM(this->get_logger(), "Computed cost function for vehicle " << i);
         std::vector<vehicle_state> current_state_vec;
         std::vector<vehicle_state> goal_state_vec;
 
@@ -534,13 +580,17 @@ void InteractivePlannerNode::runOptimizationService(const std::shared_ptr<farol2
                 adjusted_circ_obs(0, k) = circ_obs_(0, k) - ref_state.x;  // Northing
                 adjusted_circ_obs(1, k) = circ_obs_(1, k) - ref_state.y;  // Easting
                 adjusted_circ_obs(2, k) = circ_obs_(2, k);                // radius stays the same
-                std::cout << "Obs " << k 
-                    << " | X: " << circ_obs_(0, k)
-                    << " Y: " << circ_obs_(1, k)
-                    << " R: " << circ_obs_(2, k)
-                    << "\n";
             }
-            solver_first.setOptimizationProblem(current_state_vec, goal_state_vec, adjusted_circ_obs, line_obs_);
+            Eigen::MatrixXd adjusted_elip_obs(5, elip_obs_.cols());
+            for (int k = 0; k < elip_obs_.cols(); ++k) {
+                adjusted_elip_obs(0, k) = elip_obs_(0, k) - ref_state.x;  // Northing
+                adjusted_elip_obs(1, k) = elip_obs_(1, k) - ref_state.y;  // Easting
+                adjusted_elip_obs(2, k) = elip_obs_(2, k);                // semi-major axis
+                adjusted_elip_obs(3, k) = elip_obs_(3, k);                // semi-minor axis
+                adjusted_elip_obs(4, k) = elip_obs_(4, k);                // orientation
+            }
+            RCLCPP_INFO(this->get_logger(), "Obstacle updates detected.");
+            solver_first.setOptimizationProblem(current_state_vec, goal_state_vec, adjusted_circ_obs, line_obs_, adjusted_elip_obs);
         } else {
             RCLCPP_INFO(this->get_logger(), "No obstacle updates detected.");
             solver_first.setOptimizationProblem(current_state_vec, goal_state_vec);
@@ -606,7 +656,7 @@ void InteractivePlannerNode::runOptimizationService(const std::shared_ptr<farol2
                 return scoreA > scoreB; // prioritize high Tf conflicts
             });
 
-        std::vector<int> to_remove = selectTrajectoriesToRemove(NVehicles, sorted_collisions, Tf_values);
+        std::vector<int> to_remove = BezierUtils::selectTrajectoriesToRemove(NVehicles, sorted_collisions, Tf_values);
         
         double Tf_min = 0.0;
         for (int i = 0; i < NVehicles; ++i) {
@@ -669,11 +719,21 @@ void InteractivePlannerNode::runOptimizationService(const std::shared_ptr<farol2
                             << adjusted_circ_obs(1, i) << ", Northing = " << adjusted_circ_obs(0, i) 
                             << ", r = " << adjusted_circ_obs(2, i) << " |");
                     }
-                    solver.setOptimizationProblem(current_states, goal_states, adjusted_circ_obs, line_obs_, control_points_guess, Tf_guess, false);
+                    
+                    Eigen::MatrixXd adjusted_elip_obs(5, elip_obs_.cols());
+                    for (int k = 0; k < elip_obs_.cols(); ++k) {
+                        adjusted_elip_obs(0, k) = elip_obs_(0, k) - ref_state.x;  // Northing
+                        adjusted_elip_obs(1, k) = elip_obs_(1, k) - ref_state.y;  // Easting
+                        adjusted_elip_obs(2, k) = elip_obs_(2, k);                // semi-major axis
+                        adjusted_elip_obs(3, k) = elip_obs_(3, k);                // semi-minor axis
+                        adjusted_elip_obs(4, k) = elip_obs_(4, k);                // orientation
+                    }
+                    solver.setOptimizationProblem(current_states, goal_states, adjusted_circ_obs, line_obs_, adjusted_elip_obs, control_points_guess, Tf_guess, false);
                 } else {
                     RCLCPP_INFO(this->get_logger(), "No obstacle updates detected.");
                     Eigen::Matrix<double, 3, Eigen::Dynamic> empty_obs(3, 0);
-                    solver.setOptimizationProblem(current_states, goal_states, empty_obs, empty_obs, control_points_guess, Tf_guess, false);
+                    Eigen::Matrix<double, 5, Eigen::Dynamic> empty_elip_obs(5, 0);
+                    solver.setOptimizationProblem(current_states, goal_states, empty_obs, empty_obs, empty_elip_obs, control_points_guess, Tf_guess, false);
                 }
 
                 solver.createConstraintVector(to_remove);
@@ -854,60 +914,6 @@ std::string InteractivePlannerNode::formatMissionString(const Eigen::Tensor<doub
     oss << Tf_opt;
 
     return oss.str();
-}
-
-std::vector<int> InteractivePlannerNode::selectTrajectoriesToRemove(int NVehicles, const std::vector<std::pair<int,int>>& collisions, const std::vector<double>& Tf_values)
-{
-    std::vector<bool> removed(NVehicles, false);
-    std::vector<bool> bestRemoved(NVehicles, false);
-
-    int bestCount = INT_MAX;
-    double bestTfSum = -1.0;
-
-    std::function<void()> dfs = [&]() {
-        int currentCount = 0;
-        double currentTfSum = 0.0;
-
-        for (int i = 0; i < NVehicles; ++i) {
-            if (removed[i]) {
-                currentCount++;
-                currentTfSum += Tf_values[i];
-            }
-        }
-
-        if (currentCount > bestCount) return;
-
-        for (const auto& [u, v] : collisions) {
-            if (!removed[u] && !removed[v]) {
-                removed[u] = true;
-                dfs();
-                removed[u] = false;
-
-                removed[v] = true;
-                dfs();
-                removed[v] = false;
-
-                return;
-            }
-        }
-
-        if (currentCount < bestCount ||
-           (currentCount == bestCount && currentTfSum > bestTfSum))
-        {
-            bestCount = currentCount;
-            bestTfSum = currentTfSum;
-            bestRemoved = removed;
-        }
-    };
-
-    dfs();
-
-    std::vector<int> result;
-    for (int i = 0; i < NVehicles; ++i) {
-        if (bestRemoved[i]) result.push_back(i);
-    }
-
-    return result;
 }
 
 void InteractivePlannerNode::publishControlPoints(const Eigen::Tensor<double, 3>& tensor, const std::vector<double>& tf_values, bool is_guess)

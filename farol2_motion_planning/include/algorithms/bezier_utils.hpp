@@ -36,9 +36,17 @@ namespace BezierUtils
         int nsplit,
         const std::vector<bool> &compute_constraints);
 
+    casadi::SX adaptive_dynamic_constraints(
+        const casadi::SX &P,
+        const casadi::SX &Tf,
+        int nsplit,
+        const std::vector<bool> &compute_constraints, 
+        const Eigen::MatrixXd &current_velocity_matrix);
+    
     casadi::SX adaptive_all_obstacle_constraints(
         const casadi::SX &P,
         const casadi::SX &circ_obs,
+        const casadi::SX &elip_obs,
         const casadi::SX &line_obs,
         int nsplit);
 
@@ -53,6 +61,10 @@ namespace BezierUtils
     bool check_vehicle_distances(const Eigen::MatrixXd &P1, const Eigen::MatrixXd &P2, double radius, int nsplit);
     
     Eigen::MatrixXd tensor_2_matrix(const Eigen::Tensor<double, 3> &tensor, int vehicleIndex);
+
+    std::vector<int> selectTrajectoriesToRemove(int NVehicles, const std::vector<std::pair<int,int>>& collisions, const std::vector<double>& Tf_values);
+    
+    casadi::SX multiply_Eigenmatrix_by_SX(const Eigen::MatrixXd &matrix, const casadi::SX &P);
 }
 
 #endif // BEZIER_UTILS_H

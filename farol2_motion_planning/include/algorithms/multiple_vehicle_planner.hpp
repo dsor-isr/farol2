@@ -1,5 +1,5 @@
-#ifndef SINGLE_VEHICLE_MOTION_PLAN_H
-#define SINGLE_VEHICLE_MOTION_PLAN_H
+#ifndef MULTIPLE_VEHICLE_PLANNER_H
+#define MULTIPLE_VEHICLE_PLANNER_H
 
 #include <casadi/casadi.hpp>
 #include <vector>
@@ -80,29 +80,38 @@ public:
                          double obs_min, double obs_max,
                          double radius, double alpha, double beta, double gamma);
 
+    void setFinalVelHeadMode(bool known_final_head, bool known_final_vel);
+
     void setupSymbolic();
+
+    void setupSymbolic(const Eigen::MatrixXd &current_velocity_matrix);
 
     void computeCostFunction();
 
     void setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& circ_obs,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& line_obs,
+                            const Eigen::Matrix<double, 5, Eigen::Dynamic>& elip_obs,
                             const Eigen::Tensor<double, 3>& ContP_guess, double Tf_guess, bool first_iter);
     void setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& circ_obs,
-                            const Eigen::Matrix<double, 3, Eigen::Dynamic>& line_obs);
+                            const Eigen::Matrix<double, 3, Eigen::Dynamic>& line_obs,
+                            const Eigen::Matrix<double, 5, Eigen::Dynamic>& elip_obs);
+                            
     void setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states);
 
 
     void createConstraintVector();
 
     void createDecisionVector();
-
+    
     void createConstraintVector(const std::vector<int>& active_vehicles);
 
     void createDecisionVector(const std::vector<int>& active_vehicles, double Tf_min);
-
+    
     void solveOptimizationProblem(std::atomic<bool>* cancel_flag);
+
+    void solveOptimizationProblem_qrqp(std::atomic<bool>* cancel_flag);
 
     Eigen::Tensor<double, 3>  getControlPoints() const;
 
@@ -118,6 +127,7 @@ private:
     std::vector<vehicle_state> current_states_;
     std::vector<vehicle_state> goal_states_;
     Eigen::Matrix<double, 3, Eigen::Dynamic> circ_obs_;
+    Eigen::Matrix<double, 5, Eigen::Dynamic> elip_obs_;
     Eigen::Matrix<double, 3, Eigen::Dynamic> line_obs_;
 
     Eigen::Tensor<double, 3> ContP_guess_;
@@ -126,6 +136,8 @@ private:
     std::vector<int> nSplit_;
     std::vector<uint8_t> constr_flag_;
     bool first_iter_;
+    bool known_final_vel_{true};
+    bool known_final_head_{true};
     
     // --- NLP entries ---
     Bounds problem_Bounds_;
@@ -138,12 +150,14 @@ private:
     casadi::SX sym_Tf_;                           // Final time (optimization variable)
     std::vector<casadi::SX> sym_P_all_;           // All control points N x (2 x (BezierDegree+1))
     casadi::SX sym_circ_obs_;                     // Circular obstacle parameters (3 x 1)
+    casadi::SX sym_elip_obs_;                     // Elliptical obstacle parameters (5 x 1)
     casadi::SX sym_line_obs_;                     // Linear obstacle parameters (3 x 1)
     std::vector<casadi::SX> sym_vel_constr_;      // Velocity constraints
     std::vector<casadi::SX> sym_ang_vel_constr_;  // Angular velocity constraints
     std::vector<casadi::SX> sym_acc_constr_;      // Linear acceleration constraints
     std::vector<casadi::SX> sym_ang_acc_constr_;  // Angular acceleration constraints
     std::vector<casadi::SX> sym_circ_constr_;     // Circular obstacle avoidance constraints
+    std::vector<casadi::SX> sym_elip_constr_;     // Elliptical obstacle avoidance constraints
     std::vector<casadi::SX> sym_line_constr_;     // Line obstacle avoidance constraints
     casadi::SX sym_inter_vehicle_constr_;         // Inter-Vehicle constraints
     casadi::SX sym_cost_;                         // Initial Fully symbolic cost
@@ -169,8 +183,8 @@ private:
     double OBS_MAX = std::numeric_limits<double>::infinity();
     double RADIUS = 1.5;
     double ALPHA = 1.0; // TF weight
-    double BETA = 5.0;  // Energy weight
-    double GAMMA = 1.0; // end point weight
+    double BETA = 0.0;  // Energy weight
+    double GAMMA = 0.0; // end point weight
 };
 
 #endif // SINGLE_VEHICLE_MOTION_PLAN_H

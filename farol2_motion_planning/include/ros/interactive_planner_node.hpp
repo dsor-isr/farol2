@@ -88,6 +88,7 @@ private:
 
     // Obstacles
     Eigen::Matrix<double, 3, Eigen::Dynamic> circ_obs_;
+    Eigen::Matrix<double, 5, Eigen::Dynamic> elip_obs_;
     Eigen::Matrix<double, 3, Eigen::Dynamic> line_obs_;
     bool obstacles_updated_;
 
@@ -144,7 +145,6 @@ private:
     // Helper methods
     void processState(const vehicle_state msg, const std::string& vehicle_name);
     void publishMissions();
-    std::vector<int> selectTrajectoriesToRemove(int NVehicles, const std::vector<std::pair<int,int>>& collisions, const std::vector<double>& Tf_values);
     std::string formatMissionString(const Eigen::Tensor<double, 3> &controlPoints, int vehicleIndex, double Tf_opt);
     void publishLog(const std::string& text);
     void publishControlPoints(const Eigen::Tensor<double, 3>& tensor, const std::vector<double>& tf_values, bool is_guess);

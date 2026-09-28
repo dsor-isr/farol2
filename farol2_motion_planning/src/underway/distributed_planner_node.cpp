@@ -114,23 +114,6 @@ void DistributedMotionPlanningNode::scanForVehicles(const std::vector<std::strin
     }
 }
 
-/*bool DistributedMotionPlanningNode::discoverVehicles(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res)
-{
-    scanForVehicles();
-    if(vehicle_names_.empty()) {
-        res.success = false;
-        res.message = "No vehicles found.";
-    } else {
-        res.success = true;
-        std::ostringstream oss;
-        for(const auto &name : vehicle_names_) oss << name << " ";
-        res.message = "Active vehicles: " + oss.str();
-    }
-    
-    return true;
-}
-*/
-
 void DistributedMotionPlanningNode::processState(const vehicle_State msg, const std::string& vehicle_name)
 {
     std::lock_guard<std::mutex> lock(state_mutex_);  // thread-safe
@@ -185,33 +168,6 @@ bool DistributedMotionPlanningNode::sampleStatesService(motion_planning_cpp::Set
 
     return true;
 }
-/*bool DistributedMotionPlanningNode::sampleStatesServiceold(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
-{
-    scanForVehiclesold();
-    vehicle_states_.clear();
-
-    for (const auto& vehicle_name : vehicle_names_) {
-
-        auto msg = ros::topic::waitForMessage<farol_msgs::mState>(
-            "/" + vehicle_name + "/State",
-            nh_,
-            ros::Duration(2.0));
-
-        if (!msg) {
-            res.success = false;
-            res.message = "Timeout waiting for " + vehicle_name;
-            return true;
-        }
-
-        processStateold(msg, vehicle_name);
-    }
-
-    res.success = true;
-    res.message = "Vehicle states sampled successfully";
-    publishLog("Vehicle states sampled successfully");
-    return true;
-}*/
-
 
 bool DistributedMotionPlanningNode::setGoalService(motion_planning_cpp::SetState::Request &req, motion_planning_cpp::SetState::Response &res)
 {

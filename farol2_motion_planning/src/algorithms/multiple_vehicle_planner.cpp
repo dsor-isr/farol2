@@ -55,6 +55,13 @@ void MultipleVehiclePlanner::setBoundsAndGains(double vel_min, double vel_max,
     GAMMA = gamma;
 }
 
+void MultipleVehiclePlanner::setFinalVelHeadMode(bool known_final_head, bool known_final_vel)
+{
+    known_final_head_ = known_final_head;
+    known_final_vel_ = known_final_vel;
+}
+
+
 void MultipleVehiclePlanner::setupSymbolic()
 {
     using namespace casadi;
@@ -63,31 +70,40 @@ void MultipleVehiclePlanner::setupSymbolic()
     sym_Tf_ = SX::sym("Tf");
     sym_circ_obs_ = SX::sym("circ_obs", 3, 1);
     sym_line_obs_ = SX::sym("line_obs", 3, 1);
+    sym_elip_obs_ = SX::sym("elip_obs", 5, 1);
 
     // Resize containers
     sym_P_all_.resize(NVehicles_);
     sym_circ_constr_.resize(NVehicles_);
+    sym_elip_constr_.resize(NVehicles_);
     sym_line_constr_.resize(NVehicles_);
     sym_vel_constr_.resize(NVehicles_);
     sym_ang_vel_constr_.resize(NVehicles_);
     sym_acc_constr_.resize(NVehicles_);
     sym_ang_acc_constr_.resize(NVehicles_);
 
+    
     for (int i = 0; i < NVehicles_; ++i)
     {
         sym_P_all_[i] = SX::sym("P_" + std::to_string(i), 2, BezierDegree_ + 1);
 
         // Obstacle constraints
-        sym_circ_constr_[i] = BezierUtils::adaptive_all_obstacle_constraints(sym_P_all_[i], sym_circ_obs_, SX::sym("empty_circ", 3, 0), nSplit_[1]);
-        sym_line_constr_[i] = BezierUtils::adaptive_all_obstacle_constraints(sym_P_all_[i], SX::sym("empty_circ", 3, 0), sym_line_obs_, nSplit_[1]);
+        sym_circ_constr_[i] = BezierUtils::adaptive_all_obstacle_constraints(sym_P_all_[i], sym_circ_obs_, SX::sym("empty_elip", 5, 0), SX::sym("empty_circ", 3, 0), nSplit_[1]);
+        sym_elip_constr_[i] = BezierUtils::adaptive_all_obstacle_constraints(sym_P_all_[i], SX::sym("empty_circ", 3, 0), sym_elip_obs_, SX::sym("empty_circ", 3, 0), nSplit_[1]);
+        sym_line_constr_[i] = BezierUtils::adaptive_all_obstacle_constraints(sym_P_all_[i], SX::sym("empty_circ", 3, 0), SX::sym("empty_elip", 5, 0), sym_line_obs_, nSplit_[1]);
 
         // Dynamic constraints (shared Tf)
         if (constr_flag_[0])
+        {
+            std::cout << "Setting up velocity constraints." << std::endl;
             sym_vel_constr_[i] = BezierUtils::adaptive_dynamic_constraints(sym_P_all_[i], sym_Tf_, nSplit_[0], {true, false, false, false});
-
+        }
         if (constr_flag_[1])
+        {
+            std::cout << "Setting up angular velocity constraints." << std::endl;
             sym_ang_vel_constr_[i] = BezierUtils::adaptive_dynamic_constraints(sym_P_all_[i], sym_Tf_, nSplit_[0], {false, true, false, false});
 
+        }
         if (constr_flag_[2])
         {
             std::cout << "Setting up acceleration constraints." << std::endl;
@@ -97,6 +113,69 @@ void MultipleVehiclePlanner::setupSymbolic()
         {
             std::cout << "Setting up angular acceleration constraints." << std::endl;
             sym_ang_acc_constr_[i] = BezierUtils::adaptive_dynamic_constraints(sym_P_all_[i], sym_Tf_, nSplit_[0], {false, false, false, true});
+        }
+    }
+    for(int i = 0; i < NVehicles_; ++i){
+        for (int j = i+1; j < NVehicles_; ++j)
+        {
+            casadi::SX inter_vehicle_constr = BezierUtils::adaptive_inter_vehicle_constraints(sym_P_all_[i], sym_P_all_[j], RADIUS, nSplit_[2]);
+            sym_inter_vehicle_constr_ = vertcat(sym_inter_vehicle_constr_, inter_vehicle_constr);
+        }
+    }
+}
+
+void MultipleVehiclePlanner::setupSymbolic(const Eigen::MatrixXd &current_velocity_matrix)
+{
+    using namespace casadi;
+
+    // Shared final time
+    sym_Tf_ = SX::sym("Tf");
+    sym_circ_obs_ = SX::sym("circ_obs", 3, 1);
+    sym_line_obs_ = SX::sym("line_obs", 3, 1);
+    sym_elip_obs_ = SX::sym("elip_obs", 5, 1);
+
+    // Resize containers
+    sym_P_all_.resize(NVehicles_);
+    sym_circ_constr_.resize(NVehicles_);
+    sym_elip_constr_.resize(NVehicles_);
+    sym_line_constr_.resize(NVehicles_);
+    sym_vel_constr_.resize(NVehicles_);
+    sym_ang_vel_constr_.resize(NVehicles_);
+    sym_acc_constr_.resize(NVehicles_);
+    sym_ang_acc_constr_.resize(NVehicles_);
+
+    
+    for (int i = 0; i < NVehicles_; ++i)
+    {
+        sym_P_all_[i] = SX::sym("P_" + std::to_string(i), 2, BezierDegree_ + 1);
+
+        // Obstacle constraints
+        sym_circ_constr_[i] = BezierUtils::adaptive_all_obstacle_constraints(sym_P_all_[i], sym_circ_obs_, SX::sym("empty_elip", 5, 0), SX::sym("empty_circ", 3, 0), nSplit_[1]);
+        sym_elip_constr_[i] = BezierUtils::adaptive_all_obstacle_constraints(sym_P_all_[i], SX::sym("empty_circ", 3, 0), sym_elip_obs_, SX::sym("empty_circ", 3, 0), nSplit_[1]);
+        sym_line_constr_[i] = BezierUtils::adaptive_all_obstacle_constraints(sym_P_all_[i], SX::sym("empty_circ", 3, 0), SX::sym("empty_elip", 5, 0), sym_line_obs_, nSplit_[1]);
+
+        // Dynamic constraints (shared Tf)
+        if (constr_flag_[0])
+        {
+            std::cout << "Setting up velocity constraints." << std::endl;
+            sym_vel_constr_[i] = BezierUtils::adaptive_dynamic_constraints(sym_P_all_[i], sym_Tf_, nSplit_[0], {true, false, false, false}, current_velocity_matrix);
+        }
+
+        if (constr_flag_[1])
+        {
+            std::cout << "Setting up angular velocity constraints." << std::endl;
+            sym_ang_vel_constr_[i] = BezierUtils::adaptive_dynamic_constraints(sym_P_all_[i], sym_Tf_, nSplit_[0], {false, true, false, false}, current_velocity_matrix);
+        }
+
+        if (constr_flag_[2])
+        {
+            std::cout << "Setting up acceleration constraints." << std::endl;
+            sym_acc_constr_[i] = BezierUtils::adaptive_dynamic_constraints(sym_P_all_[i], sym_Tf_, nSplit_[0], {false, false, true, false}, current_velocity_matrix);
+        }
+        if (constr_flag_[3])
+        {
+            std::cout << "Setting up angular acceleration constraints." << std::endl;
+            sym_ang_acc_constr_[i] = BezierUtils::adaptive_dynamic_constraints(sym_P_all_[i], sym_Tf_, nSplit_[0], {false, false, false, true}, current_velocity_matrix);
         }
     }
     for(int i = 0; i < NVehicles_; ++i){
@@ -146,6 +225,7 @@ void MultipleVehiclePlanner::computeCostFunction()
 void MultipleVehiclePlanner::setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& circ_obs,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& line_obs,
+                            const Eigen::Matrix<double, 5, Eigen::Dynamic>& elip_obs,
                             const Eigen::Tensor<double, 3>& ContP_guess, double Tf_guess, bool first_iter)
 {
     // Store states
@@ -153,6 +233,7 @@ void MultipleVehiclePlanner::setOptimizationProblem(const std::vector<vehicle_st
     goal_states_    = goal_states;
     circ_obs_ = circ_obs;
     line_obs_ = line_obs;
+    elip_obs_ = elip_obs;
     ContP_guess_ = ContP_guess;
     Tf_guess_ = Tf_guess;
     first_iter_  = first_iter;
@@ -181,16 +262,24 @@ void MultipleVehiclePlanner::setOptimizationProblem(const std::vector<vehicle_st
     if (nSplit_.empty()) {
         std::cerr << "[setOptimizationProblem] WARNING: nSplit_ is empty.\n";
     }
+    else if (nSplit_.size() < 3) {
+        std::cerr << "[setOptimizationProblem] WARNING: nSplit_ has less than 3 elements, some constraints may not be applied correctly.\n";
+    }
+    else {
+        std::cout << "[setOptimizationProblem] nSplit_: " << nSplit_[0] << ", " << nSplit_[1] << ", " << nSplit_[2] << std::endl;
+    }
 }
 
 void MultipleVehiclePlanner::setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& circ_obs,
-                            const Eigen::Matrix<double, 3, Eigen::Dynamic>& line_obs)
+                            const Eigen::Matrix<double, 3, Eigen::Dynamic>& line_obs,
+                            const Eigen::Matrix<double, 5, Eigen::Dynamic>& elip_obs)
 {
     // Store states
     current_states_ = current_states;
     goal_states_    = goal_states;
     circ_obs_ = circ_obs;
+    elip_obs_ = elip_obs;
     line_obs_ = line_obs;
     first_iter_  = true;
 
@@ -202,8 +291,18 @@ void MultipleVehiclePlanner::setOptimizationProblem(const std::vector<vehicle_st
         std::cerr << "[setOptimizationProblem] ERROR: line_obs_ must be 3×N.\n";
     }
 
+    if (elip_obs_.rows() != 5) {
+        std::cerr << "[setOptimizationProblem] ERROR: elip_obs_ must be 5×N.\n";
+    }
+
     if (nSplit_.empty()) {
         std::cerr << "[setOptimizationProblem] WARNING: nSplit_ is empty.\n";
+    }
+    else if (nSplit_.size() < 3) {
+        std::cerr << "[setOptimizationProblem] WARNING: nSplit_ has less than 3 elements, some constraints may not be applied correctly.\n";
+    }
+    else {
+        std::cout << "[setOptimizationProblem] nSplit_: " << nSplit_[0] << ", " << nSplit_[1] << ", " << nSplit_[2] << std::endl;
     }
 }
 
@@ -213,6 +312,17 @@ void MultipleVehiclePlanner::setOptimizationProblem(const std::vector<vehicle_st
     current_states_ = current_states;
     goal_states_    = goal_states;
     first_iter_  = true;
+    
+    if (nSplit_.empty()) {
+        std::cerr << "[setOptimizationProblem] WARNING: nSplit_ is empty.\n";
+    }
+    else if (nSplit_.size() < 3) {
+        std::cerr << "[setOptimizationProblem] WARNING: nSplit_ has less than 3 elements, some constraints may not be applied correctly.\n";
+    }
+    else {
+        std::cout << "[setOptimizationProblem] nSplit_: " << nSplit_[0] << ", " << nSplit_[1] << ", " << nSplit_[2] << std::endl;
+    }
+
 }
 
 void MultipleVehiclePlanner::createConstraintVector()
@@ -239,20 +349,23 @@ void MultipleVehiclePlanner::createConstraintVector()
         values_to_substitute.push_back(SX(goal_states_[i].x));
         values_to_substitute.push_back(SX(goal_states_[i].y));
 
-        SX P1x = current_states_[i].x + current_states_[i].v * cos(current_states_[i].theta) * sym_Tf_ / BezierDegree_;
-        SX P1y = current_states_[i].y + current_states_[i].v * sin(current_states_[i].theta) * sym_Tf_ / BezierDegree_;
-        SX PNx = goal_states_[i].x - goal_states_[i].v * cos(goal_states_[i].theta) * sym_Tf_ / BezierDegree_;
-        SX PNy = goal_states_[i].y - goal_states_[i].v * sin(goal_states_[i].theta) * sym_Tf_ / BezierDegree_;
+        if(known_final_head_ && known_final_vel_)
+        {
+            SX P1x = current_states_[i].x + current_states_[i].v * cos(current_states_[i].theta) * sym_Tf_ / BezierDegree_;
+            SX P1y = current_states_[i].y + current_states_[i].v * sin(current_states_[i].theta) * sym_Tf_ / BezierDegree_;
+            SX PNx = goal_states_[i].x - goal_states_[i].v * cos(goal_states_[i].theta) * sym_Tf_ / BezierDegree_;
+            SX PNy = goal_states_[i].y - goal_states_[i].v * sin(goal_states_[i].theta) * sym_Tf_ / BezierDegree_;
 
-        vars_to_substitute.push_back(sym_P_all_[i](0,1));
-        vars_to_substitute.push_back(sym_P_all_[i](1,1));
-        vars_to_substitute.push_back(sym_P_all_[i](0,BezierDegree_-1));
-        vars_to_substitute.push_back(sym_P_all_[i](1,BezierDegree_-1));
-        values_to_substitute.push_back(P1x);
-        values_to_substitute.push_back(P1y);
-        values_to_substitute.push_back(PNx);
-        values_to_substitute.push_back(PNy);
-
+            vars_to_substitute.push_back(sym_P_all_[i](0,1));
+            vars_to_substitute.push_back(sym_P_all_[i](1,1));
+            vars_to_substitute.push_back(sym_P_all_[i](0,BezierDegree_-1));
+            vars_to_substitute.push_back(sym_P_all_[i](1,BezierDegree_-1));
+            values_to_substitute.push_back(P1x);
+            values_to_substitute.push_back(P1y);
+            values_to_substitute.push_back(PNx);
+            values_to_substitute.push_back(PNy);
+        }
+        
 
         for (int k = 0; k < circ_obs_.cols(); ++k) {
             SX substituted_constraint = sym_circ_constr_[i];
@@ -263,13 +376,21 @@ void MultipleVehiclePlanner::createConstraintVector()
             }
             all_obs_constraints.push_back(substituted_constraint);
         }
-
-        for (int k = 0; k < line_obs_.cols(); ++k) {
-            SX substituted_constraint = sym_line_constr_[i];
-            SX line = SX::vertcat({SX(line_obs_(0,k)), SX(line_obs_(1,k)), SX(line_obs_(2,k))});
-            for (casadi_int j = 0; j < line.size1(); ++j)
+        for (int k = 0; k < circ_obs_.cols(); ++k) {
+            SX substituted_constraint = sym_circ_constr_[i];
+            SX obs = SX::vertcat({SX(circ_obs_(0,k)), SX(circ_obs_(1,k)), SX(circ_obs_(2,k))});
+            for (casadi_int j = 0; j < obs.size1(); ++j)
             {
-                substituted_constraint = SX::substitute(substituted_constraint, sym_line_obs_(j), line(j));
+                substituted_constraint = SX::substitute(substituted_constraint, sym_circ_obs_(j), obs(j));
+            }
+            all_obs_constraints.push_back(substituted_constraint);
+        }
+        for (int k = 0; k < elip_obs_.cols(); ++k) {
+            SX substituted_constraint = sym_elip_constr_[i];
+            SX elip = SX::vertcat({SX(elip_obs_(0,k)), SX(elip_obs_(1,k)), SX(elip_obs_(2,k)), SX(elip_obs_(3,k)), SX(elip_obs_(4,k))});
+            for (casadi_int j = 0; j < elip.size1(); ++j)
+            {
+                substituted_constraint = SX::substitute(substituted_constraint, sym_elip_obs_(j), elip(j));
             }
             all_obs_constraints.push_back(substituted_constraint);
         }
@@ -370,44 +491,80 @@ void MultipleVehiclePlanner::createDecisionVector()
     for (int k = 0; k < NVehicles_; ++k)
     {
         if (first_iter_) {
-            Function eval_endpoints = Function("eval_endpoints", {sym_Tf_}, {sym_P_all_[k](0,1), sym_P_all_[k](1,1), sym_P_all_[k](0, BezierDegree_-1), sym_P_all_[k](1, BezierDegree_-1)});
-            std::vector<DM> res = eval_endpoints({DM(Tf_guess)});
+            if (known_final_vel_ && known_final_head_) {
+                Function eval_endpoints = Function("eval_endpoints", {sym_Tf_}, {sym_P_all_[k](0,1), sym_P_all_[k](1,1), sym_P_all_[k](0, BezierDegree_-1), sym_P_all_[k](1, BezierDegree_-1)});
+                std::vector<DM> res = eval_endpoints({DM(Tf_guess)});
 
-            double x_init_val  = res[0].scalar();
-            double y_init_val  = res[1].scalar();
-            double x_final_val = res[2].scalar();
-            double y_final_val = res[3].scalar();
-            
-            if (BezierDegree_ >= 5)
-            {
-                x_init_val = 2*x_init_val-current_states_[k].x;
-                y_init_val = 2*y_init_val-current_states_[k].y;
-                x_final_val = 2*x_final_val-goal_states_[k].x;
-                y_final_val = 2*y_final_val-goal_states_[k].y;
-            } else {
-                x_init_val = x_init_val * (BezierDegree_ - 3) / (BezierDegree_ -2) + x_final_val / (BezierDegree_ -2);
-                y_init_val = y_init_val * (BezierDegree_ - 3) / (BezierDegree_ -2) + y_final_val / (BezierDegree_ -2);
-                x_final_val = x_final_val * (BezierDegree_ - 3) / (BezierDegree_ -2) + x_init_val / (BezierDegree_ -2);
-                y_final_val = y_final_val * (BezierDegree_ - 3) / (BezierDegree_ -2) + y_init_val / (BezierDegree_ -2);
-            }
-            for (int i = 2; i < sym_P_all_[k].size2() - 2; ++i) {
-                for (int j = 0; j < sym_P_all_[k].size1(); ++j) {
-                    vars.push_back(sym_P_all_[k](j,i));
+                double x_init_val  = res[0].scalar();
+                double y_init_val  = res[1].scalar();
+                double x_final_val = res[2].scalar();
+                double y_final_val = res[3].scalar();
+                
+                if (BezierDegree_ >= 5)
+                {
+                    x_init_val = 2*x_init_val-current_states_[k].x;
+                    y_init_val = 2*y_init_val-current_states_[k].y;
+                    x_final_val = 2*x_final_val-goal_states_[k].x;
+                    y_final_val = 2*y_final_val-goal_states_[k].y;
+                } else {
+                    x_init_val = x_init_val * (BezierDegree_ - 3) / (BezierDegree_ -2) + x_final_val / (BezierDegree_ -2);
+                    y_init_val = y_init_val * (BezierDegree_ - 3) / (BezierDegree_ -2) + y_final_val / (BezierDegree_ -2);
+                    x_final_val = x_final_val * (BezierDegree_ - 3) / (BezierDegree_ -2) + x_init_val / (BezierDegree_ -2);
+                    y_final_val = y_final_val * (BezierDegree_ - 3) / (BezierDegree_ -2) + y_init_val / (BezierDegree_ -2);
                 }
-                double aux = (i-2)/double((sym_P_all_[k].size2() - 5));
-                double val_x = aux * x_final_val + (1 - aux) * x_init_val;
-                double val_y = aux * y_final_val + (1 - aux) * y_init_val;
-                guess.push_back(DM(val_x));
-                guess.push_back(DM(val_y));
+                for (int i = 2; i < sym_P_all_[k].size2() - 2; ++i) {
+                    for (int j = 0; j < sym_P_all_[k].size1(); ++j) {
+                        vars.push_back(sym_P_all_[k](j,i));
+                    }
+                    double aux = (i-2)/double((sym_P_all_[k].size2() - 5));
+                    double val_x = aux * x_final_val + (1 - aux) * x_init_val;
+                    double val_y = aux * y_final_val + (1 - aux) * y_init_val;
+                    guess.push_back(DM(val_x));
+                    guess.push_back(DM(val_y));
+                }
+            } else if (!known_final_vel_ && !known_final_head_) {
+                // Second and second-to-last control points are decision variables.
+                for (int i = 1; i < sym_P_all_[k].size2() - 1; ++i) {
+                    for (int j = 0; j < sym_P_all_[k].size1(); ++j) {
+                        vars.push_back(sym_P_all_[k](j,i));
+                    }
+
+                    double aux = (i-1) / double(sym_P_all_[k].size2() - 3);
+                    double val_x = aux * goal_states_[k].x + (1 - aux) * current_states_[k].x;
+                    double val_y = aux * goal_states_[k].y + (1 - aux) * current_states_[k].y;
+
+                    guess.push_back(DM(val_x));
+                    guess.push_back(DM(val_y));
+                }
+            } else {
+                throw std::runtime_error(
+                    "Unsupported combination of known_final_vel_ and known_final_head_. "
+                    "Only (true,true) and (false,false) are currently implemented."
+                );
             }
         } else {
-            for (int i = 2; i < sym_P_all_[k].size2() - 2; ++i) {
-                for (int j = 0; j < sym_P_all_[k].size1(); ++j) {
-                    vars.push_back(sym_P_all_[k](j,i));
-                    guess.push_back(DM(ContP_guess_(k,j,i)));
+            if (known_final_vel_ && known_final_head_) {
+                for (int i = 2; i < sym_P_all_[k].size2() - 2; ++i) {
+                    for (int j = 0; j < sym_P_all_[k].size1(); ++j) {
+                        vars.push_back(sym_P_all_[k](j,i));
+                        guess.push_back(DM(ContP_guess_(k,j,i)));
+                    }
                 }
+                Tf_guess = Tf_guess_;
+            } else if (!known_final_vel_ && !known_final_head_) {
+                for (int i = 1; i < sym_P_all_[k].size2() - 1; ++i) {
+                    for (int j = 0; j < sym_P_all_[k].size1(); ++j) {
+                        vars.push_back(sym_P_all_[k](j,i));
+                        guess.push_back(DM(ContP_guess_(k,j,i)));
+                    }
+                }
+                Tf_guess = Tf_guess_;
+            } else {
+                throw std::runtime_error(
+                    "Unsupported combination of known_final_vel_ and known_final_head_. "
+                    "Only (true,true) and (false,false) are currently implemented."
+                );
             }
-            Tf_guess = Tf_guess_;
         }
     }
     
@@ -415,14 +572,11 @@ void MultipleVehiclePlanner::createDecisionVector()
     vars.push_back(sym_Tf_);
     guess.push_back(Tf_guess);
 
-   
-    std::cout << "Initial guess Tf = " << static_cast<double>(guess.back().scalar()) << std::endl;
-
     decision_vec_ = SX::vertcat(vars);
     initial_guess_ = DM::vertcat(guess);
     problem_Bounds_.lbx = DM::ones(initial_guess_.size1()) * (-std::numeric_limits<double>::infinity());
     problem_Bounds_.ubx = DM::ones(initial_guess_.size1()) * (std::numeric_limits<double>::infinity());
-    problem_Bounds_.lbx(initial_guess_.size1() - 1) = DM(0.0);
+    problem_Bounds_.lbx(initial_guess_.size1() - 1) = DM(1.0);
 
 }
 
@@ -461,19 +615,22 @@ void MultipleVehiclePlanner::createConstraintVector(const std::vector<int>& acti
             values_to_substitute.push_back(SX(goal_states_[i].x));
             values_to_substitute.push_back(SX(goal_states_[i].y));
 
-            SX P1x = current_states_[i].x + current_states_[i].v * cos(current_states_[i].theta) * sym_Tf_ / BezierDegree_;
-            SX P1y = current_states_[i].y + current_states_[i].v * sin(current_states_[i].theta) * sym_Tf_ / BezierDegree_;
-            SX PNx = goal_states_[i].x - goal_states_[i].v * cos(goal_states_[i].theta) * sym_Tf_ / BezierDegree_;
-            SX PNy = goal_states_[i].y - goal_states_[i].v * sin(goal_states_[i].theta) * sym_Tf_ / BezierDegree_;
+            if(known_final_head_ && known_final_vel_)
+            {
+                SX P1x = current_states_[i].x + current_states_[i].v * cos(current_states_[i].theta) * sym_Tf_ / BezierDegree_;
+                SX P1y = current_states_[i].y + current_states_[i].v * sin(current_states_[i].theta) * sym_Tf_ / BezierDegree_;
+                SX PNx = goal_states_[i].x - goal_states_[i].v * cos(goal_states_[i].theta) * sym_Tf_ / BezierDegree_;
+                SX PNy = goal_states_[i].y - goal_states_[i].v * sin(goal_states_[i].theta) * sym_Tf_ / BezierDegree_;
 
-            vars_to_substitute.push_back(sym_P_all_[i](0,1));
-            vars_to_substitute.push_back(sym_P_all_[i](1,1));
-            vars_to_substitute.push_back(sym_P_all_[i](0,BezierDegree_-1));
-            vars_to_substitute.push_back(sym_P_all_[i](1,BezierDegree_-1));
-            values_to_substitute.push_back(P1x);
-            values_to_substitute.push_back(P1y);
-            values_to_substitute.push_back(PNx);
-            values_to_substitute.push_back(PNy);
+                vars_to_substitute.push_back(sym_P_all_[i](0,1));
+                vars_to_substitute.push_back(sym_P_all_[i](1,1));
+                vars_to_substitute.push_back(sym_P_all_[i](0,BezierDegree_-1));
+                vars_to_substitute.push_back(sym_P_all_[i](1,BezierDegree_-1));
+                values_to_substitute.push_back(P1x);
+                values_to_substitute.push_back(P1y);
+                values_to_substitute.push_back(PNx);
+                values_to_substitute.push_back(PNy);
+            }
 
 
             for (int k = 0; k < circ_obs_.cols(); ++k) {
@@ -593,11 +750,26 @@ void MultipleVehiclePlanner::createDecisionVector(const std::vector<int>& active
         }
         else {
             std::cout << "[DecisionVector] Processing vehicle " << k << std::endl;
-            for (int i = 2; i < sym_P_all_[k].size2() - 2; ++i) {
-                for (int j = 0; j < sym_P_all_[k].size1(); ++j) {
-                    vars.push_back(sym_P_all_[k](j,i));
-                    guess.push_back(DM(ContP_guess_(k,j,i)));
+            if (known_final_vel_ && known_final_head_) {
+                for (int i = 2; i < sym_P_all_[k].size2() - 2; ++i) {
+                    for (int j = 0; j < sym_P_all_[k].size1(); ++j) {
+                        vars.push_back(sym_P_all_[k](j,i));
+                        guess.push_back(DM(ContP_guess_(k,j,i)));
+                    }
                 }
+            } else if (!known_final_vel_ && !known_final_head_) {
+                for (int i = 1; i < sym_P_all_[k].size2() - 1; ++i) {
+                    for (int j = 0; j < sym_P_all_[k].size1(); ++j) {
+                        vars.push_back(sym_P_all_[k](j,i));
+                        guess.push_back(DM(ContP_guess_(k,j,i)));
+                    }
+                }
+            }  else {
+                throw std::runtime_error(
+                    "Unsupported combination of known_final_vel_ and "
+                    "known_final_head_. Only (true,true) and (false,false) "
+                    "are currently implemented."
+                );
             }
         }
     }
@@ -605,15 +777,8 @@ void MultipleVehiclePlanner::createDecisionVector(const std::vector<int>& active
 
     vars.push_back(sym_Tf_);
     guess.push_back(DM(Tf_guess_));
-
-    std::cout << "Initial guess Tf = " << static_cast<double>(guess.back().scalar()) << std::endl;
-
     decision_vec_ = SX::vertcat(vars);
     initial_guess_ = DM::vertcat(guess);
-
-    std::cout << "initial_guess shape: "
-          << initial_guess_.size1() << " x "
-          << initial_guess_.size2() << std::endl;
     problem_Bounds_.lbx = DM::ones(initial_guess_.size1()) * (-std::numeric_limits<double>::infinity());
     problem_Bounds_.ubx = DM::ones(initial_guess_.size1()) * (std::numeric_limits<double>::infinity());
     problem_Bounds_.lbx(initial_guess_.size1() - 1) = DM(Tf_min);
@@ -646,7 +811,9 @@ void MultipleVehiclePlanner::solveOptimizationProblem(std::atomic<bool>* cancel_
     Dict opts;
     opts["ipopt.print_level"] = 3;
     opts["ipopt.tol"] = 1e-6;
-    opts["ipopt.max_iter"] = 5000;
+    opts["ipopt.max_iter"] = 20000;
+    opts["ipopt.linear_solver"] = "ma57";
+    // opts["ipopt.hsllib"] = "/usr/local/lib/libhsl.so";
 
     // Assign the callback
     opts["iteration_callback"] = cancel_cb;
@@ -655,6 +822,104 @@ void MultipleVehiclePlanner::solveOptimizationProblem(std::atomic<bool>* cancel_
     std::cout << "Callback n_in: " << cancel_cb.n_in() << std::endl;
     std::cout << "Callback n_out: " << cancel_cb.n_out() << std::endl;
     Function solver = nlpsol("solver", "ipopt", nlp, opts);
+   
+    DMDict solver_inputs = {
+        {"x0", DM(initial_guess_)},
+        {"lbx", DM(problem_Bounds_.lbx)},
+        {"ubx", DM(problem_Bounds_.ubx)},
+        {"lbg", DM(problem_Bounds_.g_lbx)},
+        {"ubg", DM(problem_Bounds_.g_ubx)}};
+
+    try {
+        auto sol = solver(solver_inputs);
+
+        // Extract the solution
+        DM opt_sol = sol["x"];
+        return_status_ = solver.stats().at("return_status").to_string();
+        // Extract the final time (Tf)
+        Tf_opt_ = opt_sol(opt_sol.size1() - 1, 0).scalar();
+
+        std::vector<SX> vars;
+        for (int i = 0; i < decision_vec_.size1(); ++i) {
+            vars.push_back(decision_vec_(i));
+        }
+        std::vector<DM> vals;
+        for (int i = 0; i < opt_sol.size1(); ++i) {
+            vals.push_back(opt_sol(i));
+        }
+        
+
+        // Assume all vehicles have the same number of control points
+        int rows = sym_P_all_[0].size1();
+        int cols = sym_P_all_[0].size2();
+
+        // Resize tensor: [vehicle][row][col]
+        optimal_ContP_.resize(NVehicles_, rows, cols);
+        for (int k = 0; k < NVehicles_; ++k)
+        {
+            SX P_all_numeric_sx = sym_P_all_[k];
+            for (size_t i = 0; i < vars.size(); ++i)
+            {
+                P_all_numeric_sx = SX::substitute(P_all_numeric_sx , vars[i], vals[i]);
+            }
+            DM P_all_numeric = DM(P_all_numeric_sx);
+            for (int i = 0; i < rows; ++i) {
+                for (int j = 0; j < cols; ++j) {
+                    optimal_ContP_(k, i, j) = static_cast<double>(P_all_numeric(i, j));
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cout << "[Solver] Aborted: " << e.what() << "\n";
+    }
+}
+
+void MultipleVehiclePlanner::solveOptimizationProblem_qrqp(std::atomic<bool>* cancel_flag)
+{
+    using namespace casadi;
+    SXDict nlp;
+    nlp["x"] = decision_vec_;
+    nlp["f"] = cost_func_;
+    nlp["g"] = constraints_;
+
+    std::cout << "Decision vec size: " << decision_vec_.size1() << "x" << decision_vec_.size2() << std::endl;
+
+    
+
+    // Set solver options for sqpmethod
+    Dict opts;
+    opts["qpsol"] = "qrqp";           // dense-friendly QP subsolver, built into CasADi core
+
+    Dict qpsol_opts;
+    qpsol_opts["print_iter"] = true;
+    qpsol_opts["error_on_fail"] = false;
+    opts["qpsol_options"] = qpsol_opts;
+
+    opts["max_iter"] = 100;           // SQP outer iterations (not QP sub-iterations)
+    opts["tol_du"] = 1e-6;            // dual infeasibility tolerance
+    opts["tol_pr"] = 1e-6;            // primal infeasibility tolerance
+    opts["print_iteration"] = true;
+    opts["convexify_strategy"] = "regularize"; // or "regularize"
+    opts["convexify_margin"] = 1e-7;              // min eigenvalue enforced
+    
+    // First create temporary solver to inspect outputs (unchanged)
+    Function tmp_solver = nlpsol("tmp_solver", "sqpmethod", nlp, opts);
+    int solver_outputs = tmp_solver.n_out();
+    std::vector<casadi::Sparsity> sparsities;
+    for (int i = 0; i < solver_outputs; ++i) {
+        sparsities.push_back(tmp_solver.sparsity_out(i));
+    }
+
+    CancelCallback cancel_cb("cancel_cb", cancel_flag, sparsities);
+
+    // Assign the cancel callback
+    opts["iteration_callback"] = cancel_cb;
+    opts["iteration_callback_step"] = 1;
+
+    std::cout << "Callback n_in: " << cancel_cb.n_in() << std::endl;
+    std::cout << "Callback n_out: " << cancel_cb.n_out() << std::endl;
+
+    Function solver = nlpsol("solver", "sqpmethod", nlp, opts);
    
     DMDict solver_inputs = {
         {"x0", DM(initial_guess_)},
@@ -745,4 +1010,3 @@ double MultipleVehiclePlanner::getTf() const
 {
     return Tf_opt_;
 }
-

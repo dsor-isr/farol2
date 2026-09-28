@@ -343,9 +343,165 @@ casadi::SX BezierUtils::adaptive_dynamic_constraints(
     return SX::vertcat(all_constraints);
 }
 
+casadi::SX BezierUtils::adaptive_dynamic_constraints(
+    const casadi::SX &P,
+    const casadi::SX &Tf,
+    int nsplit,
+    const std::vector<bool> &compute_constraints,
+    const Eigen::MatrixXd &current_velocity_matrix)
+{
+    using namespace casadi;
+    
+    struct Segment
+    {
+        SX curve;
+        SX Tf_seg;
+        int depth;
+    };
+
+    
+    std::vector<Segment> queue;
+    queue.push_back({P, Tf, nsplit});
+    std::vector<SX> all_constraints;
+
+    while (!queue.empty())
+    {
+        Segment seg = queue.back();
+        queue.pop_back();
+
+        if (seg.depth == 0)
+        {
+            SX segment_constraints;
+
+            SX deriv_p, sec_deriv_p, third_deriv_p;
+
+
+
+            // Compute derivatives as needed
+            if (compute_constraints[0] || compute_constraints[1] || compute_constraints[2] || compute_constraints[3]) {
+                deriv_p = BezierUtils::bezier_derivative_Casadi(seg.curve) / seg.Tf_seg;
+            }
+            if (compute_constraints[1] || compute_constraints[2] || compute_constraints[3]) {
+                sec_deriv_p = BezierUtils::bezier_derivative_Casadi(deriv_p) / seg.Tf_seg;
+            }
+            if (compute_constraints[3]) {
+                third_deriv_p = BezierUtils::bezier_derivative_Casadi(sec_deriv_p) / seg.Tf_seg;
+            }
+
+            // Velocity constraints
+            if (compute_constraints[0])
+            {
+                std::cout << "seg.curve: "
+                        << seg.curve.size1() << " x "
+                        << seg.curve.size2() << std::endl;
+
+                std::cout << "deriv_p: "
+                        << deriv_p.size1() << " x "
+                        << deriv_p.size2() << std::endl;
+
+                std::cout << "current_velocity_matrix: "
+                        << current_velocity_matrix.rows() << " x "
+                        << current_velocity_matrix.cols() << std::endl;
+
+                SX elevated = BezierUtils::elevate_degree_Casadi(deriv_p, 1);
+
+                std::cout << "elevated: "
+                        << elevated.size1() << " x "
+                        << elevated.size2() << std::endl;
+
+                SX current_velocity = BezierUtils::multiply_Eigenmatrix_by_SX(current_velocity_matrix, seg.curve);
+
+                std::cout << "current_velocity: "
+                        << current_velocity.size1() << " x "
+                        << current_velocity.size2() << std::endl;
+
+                SX deriv_plus_current = elevated + current_velocity;
+                SX vel_sq = BezierUtils::multiply_bezier_Casadi(deriv_plus_current, deriv_plus_current);
+                vel_sq = vel_sq(0, Slice()) + vel_sq(1, Slice());
+                segment_constraints = vel_sq.T();
+            }
+
+            // Angular velocity constraints
+            if (compute_constraints[1])
+            {
+                SX num_ang = BezierUtils::multiply_bezier_Casadi(deriv_p(0, Slice()), sec_deriv_p(1, Slice()))
+                            - BezierUtils::multiply_bezier_Casadi(deriv_p(1, Slice()), sec_deriv_p(0, Slice()));
+                num_ang = BezierUtils::elevate_degree_Casadi(num_ang, 1);
+                SX vel_sq = BezierUtils::multiply_bezier_Casadi(deriv_p, deriv_p);
+                vel_sq = vel_sq(0, Slice()) + vel_sq(1, Slice());
+                SX ang_vel_constr = num_ang / vel_sq;
+                
+                if (segment_constraints.size1() == 0) {
+                    segment_constraints = ang_vel_constr.T();
+                } else {
+                    segment_constraints = vertcat(segment_constraints, ang_vel_constr.T());
+                }
+            }
+
+            // Acceleration constraints
+            if (compute_constraints[2])
+            {
+                SX num_acc_sqrt = BezierUtils::multiply_bezier_Casadi(deriv_p(0, Slice()), sec_deriv_p(0, Slice()))
+                                + BezierUtils::multiply_bezier_Casadi(deriv_p(1, Slice()), sec_deriv_p(1, Slice()));
+                SX num_acc = BezierUtils::multiply_bezier_Casadi(num_acc_sqrt, num_acc_sqrt);
+                SX vel_sq = BezierUtils::multiply_bezier_Casadi(deriv_p, deriv_p);
+                vel_sq = vel_sq(0, Slice()) + vel_sq(1, Slice());
+                SX den = BezierUtils::elevate_degree_Casadi(vel_sq, num_acc.size2() - vel_sq.size2());
+                SX acc_constr = num_acc / den;
+                
+                if (segment_constraints.size1() == 0) {
+                    segment_constraints = acc_constr.T();
+                } else {
+                    segment_constraints = vertcat(segment_constraints, acc_constr.T());
+                }
+            }
+
+            // Angular acceleration constraints
+            if (compute_constraints[3])
+            {
+                SX vel_sq = BezierUtils::multiply_bezier_Casadi(deriv_p, deriv_p);
+                vel_sq = vel_sq(0, Slice()) + vel_sq(1, Slice());
+
+                SX num_ang = BezierUtils::multiply_bezier_Casadi(deriv_p(0, Slice()), sec_deriv_p(1, Slice()))
+                            - BezierUtils::multiply_bezier_Casadi(deriv_p(1, Slice()), sec_deriv_p(0, Slice()));
+
+                SX num_acc_sqrt = BezierUtils::multiply_bezier_Casadi(deriv_p(0, Slice()), sec_deriv_p(0, Slice()))
+                                + BezierUtils::multiply_bezier_Casadi(deriv_p(1, Slice()), sec_deriv_p(1, Slice()));
+
+                SX term_a = BezierUtils::multiply_bezier_Casadi(third_deriv_p(1, Slice()), deriv_p(0, Slice()))
+                          - BezierUtils::multiply_bezier_Casadi(third_deriv_p(0, Slice()), deriv_p(1, Slice()));
+                term_a = BezierUtils::multiply_bezier_Casadi(term_a, vel_sq);
+
+                SX term_b = 3 * BezierUtils::multiply_bezier_Casadi(num_acc_sqrt, num_ang);
+                SX num_ang_acc = term_a - term_b;
+                SX den_ang_acc = BezierUtils::multiply_bezier_Casadi(vel_sq, vel_sq);
+                num_ang_acc = BezierUtils::elevate_degree_Casadi(num_ang_acc, den_ang_acc.size2() - num_ang_acc.size2());
+                SX ang_acc_constr = num_ang_acc / den_ang_acc;
+
+                if (segment_constraints.size1() == 0) {
+                    segment_constraints = ang_acc_constr.T();
+                } else {
+                    segment_constraints = vertcat(segment_constraints, ang_acc_constr.T());
+                }
+            }
+
+            all_constraints.push_back(segment_constraints);
+        }
+        else
+        {
+            auto divided = BezierUtils::divide_bezier_Casadi(seg.curve, 0.5);
+            queue.push_back({divided.first, seg.Tf_seg / 2, seg.depth - 1});
+            queue.push_back({divided.second, seg.Tf_seg / 2, seg.depth - 1});
+        }
+    }
+
+    return SX::vertcat(all_constraints);
+}
+
 casadi::SX BezierUtils::adaptive_all_obstacle_constraints(
     const casadi::SX &P,
     const casadi::SX &circ_obs,
+    const casadi::SX &elip_obs,
     const casadi::SX &line_obs,
     int nsplit)
 {
@@ -382,6 +538,31 @@ casadi::SX BezierUtils::adaptive_all_obstacle_constraints(
                 SX P_obs = BezierUtils::multiply_bezier_Casadi(P_new, P_new);
                 SX radii = obs_r * obs_r * SX::ones(1, P_obs.size2());
                 SX constraint = (P_obs(0, Slice()) + P_obs(1, Slice()) - radii).T();
+                all_constraints.push_back(constraint);
+            }
+
+            // Elliptical obstacles constraints
+            int num_elip_obs = elip_obs.size2();  // Number of elliptical obstacles
+            for (int i = 0; i < num_elip_obs; ++i)
+            {
+                // Extract obstacle parameters: [x, y, a, b, phi] for each column
+                SX obs_x   = elip_obs(0, i);
+                SX obs_y   = elip_obs(1, i);
+                SX obs_a   = elip_obs(2, i);   // semi-major axis
+                SX obs_b   = elip_obs(3, i);   // semi-minor axis
+                SX obs_phi = elip_obs(4, i);   // rotation angle (rad)
+
+                SX first_term = (seg.curve(0, Slice()) - obs_x) * cos(obs_phi) + (seg.curve(1, Slice()) - obs_y) * sin(obs_phi);
+
+                SX second_term = -(seg.curve(0, Slice()) - obs_x) * sin(obs_phi) + (seg.curve(1, Slice()) - obs_y) * cos(obs_phi);
+
+                first_term = BezierUtils::multiply_bezier_Casadi(first_term, first_term) * (obs_a * obs_a);
+                second_term = BezierUtils::multiply_bezier_Casadi(second_term, second_term) * (obs_b * obs_b);
+                
+                SX P_obs = first_term + second_term;
+                SX ones_row = SX::ones(1, P_obs.size2()) * (obs_a * obs_a) * (obs_b * obs_b);  // target radius = 1 in transformed frame
+
+                SX constraint = (P_obs - ones_row).T();
                 all_constraints.push_back(constraint);
             }
 
@@ -562,6 +743,72 @@ Eigen::Tensor<double, 3> BezierUtils::elevateTensorDegree(const Eigen::Tensor<do
         for (int j = 0; j < new_dim1; ++j)
             for (int k = 0; k < new_dim2; ++k)
                 result(i, j, k) = elevated_slice(j, k);
+    }
+
+    return result;
+}
+
+std::vector<int> BezierUtils::selectTrajectoriesToRemove(int NVehicles, const std::vector<std::pair<int,int>>& collisions, const std::vector<double>& Tf_values)
+{
+    std::vector<bool> removed(NVehicles, false);
+    std::vector<bool> bestRemoved(NVehicles, false);
+
+    int bestCount = INT_MAX;
+    double bestTfSum = -1.0;
+
+    std::function<void()> dfs = [&]() {
+        int currentCount = 0;
+        double currentTfSum = 0.0;
+
+        for (int i = 0; i < NVehicles; ++i) {
+            if (removed[i]) {
+                currentCount++;
+                currentTfSum += Tf_values[i];
+            }
+        }
+
+        if (currentCount > bestCount) return;
+
+        for (const auto& [u, v] : collisions) {
+            if (!removed[u] && !removed[v]) {
+                removed[u] = true;
+                dfs();
+                removed[u] = false;
+
+                removed[v] = true;
+                dfs();
+                removed[v] = false;
+
+                return;
+            }
+        }
+
+        if (currentCount < bestCount ||
+           (currentCount == bestCount && currentTfSum > bestTfSum))
+        {
+            bestCount = currentCount;
+            bestTfSum = currentTfSum;
+            bestRemoved = removed;
+        }
+    };
+
+    dfs();
+
+    std::vector<int> result;
+    for (int i = 0; i < NVehicles; ++i) {
+        if (bestRemoved[i]) result.push_back(i);
+    }
+
+    return result;
+}
+
+casadi::SX BezierUtils::multiply_Eigenmatrix_by_SX(const Eigen::MatrixXd& matrix, const casadi::SX& P)
+{
+    casadi::SX result = casadi::SX::zeros(2, P.size2());
+
+    for (int i = 0; i < P.size2(); ++i) {
+        result(0, i) = matrix(0, 0) * P(0, i) + matrix(0, 1) * P(1, i);
+        result(1, i) = matrix(1, 0) * P(0, i) + matrix(1, 1) * P(1, i);
     }
 
     return result;

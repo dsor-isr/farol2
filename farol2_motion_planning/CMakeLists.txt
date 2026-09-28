@@ -120,6 +120,30 @@ install(DIRECTORY config
   DESTINATION share/${PROJECT_NAME}
 )
 
+
+# --- benchmark executable (no ROS deps needed) ---
+add_executable(benchmark_planner
+  src/algorithms/multiple_vehicle_planner.cpp
+  src/algorithms/bezier_utils.cpp
+  test/benchmark_planner.cpp
+)
+
+target_include_directories(benchmark_planner PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  ${CASADI_INCLUDE_DIR}
+)
+
+target_compile_features(benchmark_planner PUBLIC c_std_99 cxx_std_17)
+
+target_link_libraries(benchmark_planner
+  Eigen3::Eigen
+  ${CASADI_LIBRARIES}
+)
+
+install(TARGETS benchmark_planner
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # --------------------
 # Testing
 # --------------------
