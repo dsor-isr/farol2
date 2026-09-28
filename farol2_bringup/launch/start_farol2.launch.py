@@ -45,7 +45,7 @@ def generate_launch_description():
             'vehicle_id': LaunchConfiguration('vehicle_id'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'config_to_use': LaunchConfiguration('config_to_use'),
-            'sample_and_hold': 'false',
+            'sample_and_hold': 'true',
             'filter_node': 'true',
         }.items()
     )
@@ -135,6 +135,20 @@ def generate_launch_description():
         }.items()
     )
 
+    cpf_controller = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('farol2_cpf_controller'), 'launch', 'farol2_cpf_controller.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'vehicle_name': LaunchConfiguration('vehicle_name'),
+            'vehicle_id': LaunchConfiguration('vehicle_id'),
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'config_to_use': LaunchConfiguration('config_to_use'),
+        }.items()
+    )
+
     console = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -165,5 +179,6 @@ def generate_launch_description():
         waypoint,
         path_following,
         planning,
+        cpf_controller,
         console,
     ])
