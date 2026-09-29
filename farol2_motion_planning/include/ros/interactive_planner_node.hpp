@@ -99,6 +99,7 @@ private:
     std::vector<bool> constr_flags_;
     int number_sample_Pts_;
     BoundsAndGains bounds_;
+    bool use_collision_method_{false};
 
     // Optimization thread management
     std::thread opt_thread_;
