@@ -1,139 +1,173 @@
-#include "DistributedMotionPlanningNode.hpp"
+#include "underway/distributed_planner_node.hpp"
+#include <iomanip>
 
-
-// @.@ Constructor
-DistributedMotionPlanningNode::DistributedMotionPlanningNode(ros::NodeHandle *nodehandle, ros::NodeHandle *nodehandle_private)
-    : nh_(*nodehandle), nh_private_(*nodehandle_private)
+DistributedPlannerNode::DistributedPlannerNode(const rclcpp::NodeOptions &options)
+    : rclcpp::Node("distributed_motion_planning_node", options)
 {
-    ROS_INFO("Initializing Interactive Motion Planning Node...");
+    RCLCPP_INFO(this->get_logger(), "Initializing Distributed Motion Planning Node...");
 
-    loadParams();
-    // scanForVehicles();
-    planning_alive_pub_ = nh_.advertise<std_msgs::Bool>("/motion_planning_cpp/node_alive", 1);
-    mission_log_pub_ = nh_.advertise<std_msgs::String>("/mission_log", 10);
+    LoadParameters();
 
-    alive_timer_ = nh_.createTimer(
-    ros::Duration(1.0), [this](const ros::TimerEvent&) {std_msgs::Bool msg; msg.data = true; planning_alive_pub_.publish(msg);});
+    initialisePublishers();
+    initialiseServices();
 
-    // vehicle_discovery_srv_   = nh_.advertiseService("/motion_planning_cpp/discover_vehicles", &DistributedMotionPlanningNode::discoverVehicles, this);
-    set_goal_srv_            = nh_.advertiseService("/motion_planning_cpp/set_goal", &DistributedMotionPlanningNode::setGoalService, this);
-    sample_state_srv_        = nh_.advertiseService("/motion_planning_cpp/sample_states", &DistributedMotionPlanningNode::sampleStatesService, this);
-    set_bounds_srv_          = nh_.advertiseService("/motion_planning_cpp/set_bounds", &DistributedMotionPlanningNode::setBoundsService, this);
-    set_bezier_params_srv_   = nh_.advertiseService("/motion_planning_cpp/set_bezier_params", &DistributedMotionPlanningNode::setBezierParamsService, this);
-    set_obstacles_srv_       = nh_.advertiseService("/motion_planning_cpp/set_obstacles", &DistributedMotionPlanningNode::setObstaclesService, this);
-    get_planner_config_srv_  = nh_.advertiseService("/motion_planning_cpp/get_planner_config", &DistributedMotionPlanningNode::getPlannerConfigService, this);
-    run_optimization_srv_    = nh_.advertiseService("/motion_planning_cpp/run_optimization", &DistributedMotionPlanningNode::runOptimizationService, this);
-    deploy_mission_srv_      = nh_.advertiseService("/motion_planning_cpp/deploy_mission", &DistributedMotionPlanningNode::deployMissionService, this);
-    cancel_optimization_srv_ = nh_.advertiseService("/motion_planning_cpp/cancel_optimization", &DistributedMotionPlanningNode::cancelOptimizationService, this);
+    // Create timer for alive status (1 second interval)
+    alive_timer_ = this->create_wall_timer(std::chrono::milliseconds(1000), std::bind(&DistributedPlannerNode::publishAliveStatus, this));
 
-
-
-    bezier_degree_ = 9;
-    guess_degree_ =7;
-    nSplit_ = {1, 1, 1};
-    constr_flags_ = {1, 0, 0, 0};
-    obstacles_updated_ = false;
-    number_sample_Pts_ = 100;
-
-    ROS_INFO("Interactive Motion Planning Node initialized successfully.");
+    RCLCPP_INFO(this->get_logger(), "Distributed Motion Planning Node initialized successfully.");
 }
 
-// @.@ Destructor
-DistributedMotionPlanningNode::~DistributedMotionPlanningNode() {
-    nh_.shutdown();
-    nh_private_.shutdown();
-}
-
-void DistributedMotionPlanningNode::publishLog(const std::string& text)
+DistributedPlannerNode::~DistributedPlannerNode()
 {
-    std_msgs::String msg;
-    msg.data = text;
-    mission_log_pub_.publish(msg);
+    if (opt_thread_.joinable())
+    {
+        opt_thread_.join();
+    }
 }
 
-// @.@ Load parameters
-void DistributedMotionPlanningNode::loadParams() {
-    //p_node_frequency_ = FarolGimmicks::getParameters<double>(nh_private_, "node_frequency", 5);
+void DistributedPlannerNode::LoadParameters()
+{
+    // Load Bezier parameters
+    bezier_degree_ = this->declare_parameter<int>("bezier_degree", 9);
+    guess_degree_ = this->declare_parameter<int>("guess_degree", 7);
+    number_sample_Pts_ = this->declare_parameter<int>("number_sample_points", 100);
+
+    // Load constraint flags
+    constr_flags_ = this->declare_parameter<std::vector<bool>>("constraint_flags", std::vector<bool>{true, false, false, false});
+
+    // Load nSplit
+    nSplit_ = this->declare_parameter<std::vector<int64_t>>("n_split", std::vector<int64_t>{1, 1, 1});
+
+    // Load velocity bounds
+    bounds_.vel_min = this->declare_parameter<double>("vel_min", 0.001);
+    bounds_.vel_max = this->declare_parameter<double>("vel_max", 0.3);
+
+    // Load acceleration bounds
+    bounds_.acc_min = this->declare_parameter<double>("acc_min", -0.03);
+    bounds_.acc_max = this->declare_parameter<double>("acc_max", 0.03);
+
+    // Load angular velocity bounds
+    bounds_.ang_vel_min = this->declare_parameter<double>("ang_vel_min", -0.15);
+    bounds_.ang_vel_max = this->declare_parameter<double>("ang_vel_max", 0.15);
+
+    // Load angular acceleration bounds
+    bounds_.ang_acc_min = this->declare_parameter<double>("ang_acc_min", -0.005);
+    bounds_.ang_acc_max = this->declare_parameter<double>("ang_acc_max", 0.005);
+
+    // Load obstacle bounds
+    bounds_.obs_min = this->declare_parameter<double>("obs_min", 2.0);
+    double obs_max_param = this->declare_parameter<double>("obs_max", 1000.0);
+    bounds_.obs_max = (obs_max_param > 999) ? std::numeric_limits<double>::infinity() : obs_max_param;
+
+    // Load multi-vehicle parameters
+    bounds_.radius = this->declare_parameter<double>("radius", 1.5);
+    RADIUS = bounds_.radius;
+
+    // Load cost function weights
+    bounds_.alpha = this->declare_parameter<double>("alpha", 1.0);
+    bounds_.beta = this->declare_parameter<double>("beta", 5.0);
+    bounds_.gamma = this->declare_parameter<double>("gamma", 1.0);
+
+    bounds_.is_set = true;
+
+    // Log loaded parameters
+    RCLCPP_INFO(this->get_logger(), "=== Motion Planning Parameters Loaded ===");
+    RCLCPP_INFO_STREAM(this->get_logger(), "Bezier degree: " << bezier_degree_);
+    RCLCPP_INFO_STREAM(this->get_logger(), "Guess degree: " << guess_degree_);
+    RCLCPP_INFO_STREAM(this->get_logger(), "Sample points: " << number_sample_Pts_);
+    RCLCPP_INFO_STREAM(this->get_logger(), "Velocity bounds: [" << bounds_.vel_min << ", " << bounds_.vel_max << "]");
+    RCLCPP_INFO_STREAM(this->get_logger(), "Radius: " << bounds_.radius);
+    RCLCPP_INFO_STREAM(this->get_logger(), "Cost weights - alpha: " << bounds_.alpha
+                                                                    << ", beta: " << bounds_.beta << ", gamma: " << bounds_.gamma);
 }
 
-// @.@ Initialize subscribers
-void DistributedMotionPlanningNode::scanForVehiclesold() {
-    
+void DistributedPlannerNode::initialisePublishers()
+{
+    // This function can be used to initialize any additional publishers if needed
+    // Create publishers
+    planning_alive_pub_ = this->create_publisher<std_msgs::msg::Bool>(TOPIC_PUB_ALIVE, rclcpp::QoS(1).transient_local());
+    mission_log_pub_ = this->create_publisher<std_msgs::msg::String>(TOPIC_PUB_LOG, rclcpp::QoS(10));
+}
+
+void DistributedPlannerNode::initialiseServices()
+{
+    // This function can be used to initialize any subscribers if needed
+    set_goal_srv_ = this->create_service<farol2_motion_planning::srv::SetState>(
+        TOPIC_SRV_SET_GOAL,
+        std::bind(&DistributedPlannerNode::setGoalService, this, std::placeholders::_1, std::placeholders::_2));
+
+    set_states_srv_ = this->create_service<farol2_motion_planning::srv::SetState>(
+        TOPIC_SRV_SET_STATES,
+        std::bind(&DistributedPlannerNode::setStatesService, this, std::placeholders::_1, std::placeholders::_2));
+
+    set_bounds_srv_ = this->create_service<farol2_motion_planning::srv::SetBoundsAndGains>(
+        TOPIC_SRV_SET_BOUNDS,
+        std::bind(&DistributedPlannerNode::setBoundsService, this, std::placeholders::_1, std::placeholders::_2));
+
+    set_bezier_params_srv_ = this->create_service<farol2_motion_planning::srv::SetBezierParams>(
+        TOPIC_SRV_SET_BEZIER_PARAMS,
+        std::bind(&DistributedPlannerNode::setBezierParamsService, this, std::placeholders::_1, std::placeholders::_2));
+
+    set_obstacles_srv_ = this->create_service<farol2_motion_planning::srv::SetObstacles>(
+        TOPIC_SRV_SET_OBSTACLES,
+        std::bind(&DistributedPlannerNode::setObstaclesService, this, std::placeholders::_1, std::placeholders::_2));
+
+    get_planner_config_srv_ = this->create_service<farol2_motion_planning::srv::GetPlannerConfig>(
+        TOPIC_SRV_GET_PLANNER_CONFIG,
+        std::bind(&DistributedPlannerNode::getPlannerConfigService, this, std::placeholders::_1, std::placeholders::_2));
+
+    run_optimization_srv_ = this->create_service<farol2_motion_planning::srv::RunOptimization>(
+        TOPIC_SRV_RUN_OPTIMIZATION,
+        std::bind(&DistributedPlannerNode::runOptimizationService, this, std::placeholders::_1, std::placeholders::_2));
+
+    cancel_optimization_srv_ = this->create_service<std_srvs::srv::Trigger>(
+        TOPIC_SRV_CANCEL_OPTIMIZATION,
+        std::bind(&DistributedPlannerNode::cancelOptimizationService, this, std::placeholders::_1, std::placeholders::_2));
+}
+
+void DistributedPlannerNode::publishAliveStatus()
+{
+    auto msg = std::make_shared<std_msgs::msg::Bool>();
+    msg->data = true;
+    planning_alive_pub_->publish(*msg);
+}
+
+void DistributedPlannerNode::publishLog(const std::string &text)
+{
+    auto msg = std::make_shared<std_msgs::msg::String>();
+    msg->data = text;
+    mission_log_pub_->publish(*msg);
+}
+
+void DistributedPlannerNode::processState(const vehicle_state msg, const std::string &vehicle_name)
+{
     std::lock_guard<std::mutex> lock(state_mutex_);
-    ros::master::V_TopicInfo master_topics;
-    ros::master::getTopics(master_topics);
-
-    std::regex pattern("^/(m(red|black|yellow|vector)[0-9]+)/State$");
-
-    for (const auto& topic : master_topics) {
-        std::smatch match;
-        if (std::regex_match(topic.name, match, pattern)) {
-            std::string vehicle_name = match[1];
-
-             if (vehicle_names_set_.insert(vehicle_name).second) {
-
-                ROS_INFO_STREAM("New vehicle discovered: " << vehicle_name);
-                vehicle_names_.push_back(vehicle_name);
-
-                std::string mission_topic =
-                    "/" + vehicle_name + "/addons/Mission_String";
-
-                publishers_[vehicle_name] =
-                    nh_.advertise<std_msgs::String>(mission_topic, 10);
-            }
-        }
-    }
-
-    if (!vehicle_names_.empty() && reference_vehicle_.empty()) {
-        reference_vehicle_ = vehicle_names_.front();
-        ROS_INFO_STREAM("Reference vehicle set to: " << reference_vehicle_);
-    }
-
-    for (const auto& name : vehicle_names_) {
-        traj_pubs_[name] = nh_.advertise<nav_msgs::Path>("/" + name + "/planned_path", 1, true);
-    }
-}
-
-void DistributedMotionPlanningNode::scanForVehicles(const std::vector<std::string>& discovered_vehicles) {
-    std::lock_guard<std::mutex> lock(state_mutex_);
-
-    for (const auto& vehicle_name : discovered_vehicles) {
-        if (vehicle_names_set_.insert(vehicle_name).second) {
-            ROS_INFO_STREAM("New vehicle discovered: " << vehicle_name);
-            vehicle_names_.push_back(vehicle_name);
-
-            std::string mission_topic = "/" + vehicle_name + "/addons/Mission_String";
-            publishers_[vehicle_name] = nh_.advertise<std_msgs::String>(mission_topic, 10);
-            traj_pubs_[vehicle_name] = nh_.advertise<nav_msgs::Path>("/" + vehicle_name + "/planned_path", 1, true);
-        }
-    }
-
-    if (!vehicle_names_.empty() && reference_vehicle_.empty()) {
-        reference_vehicle_ = vehicle_names_.front();
-        ROS_INFO_STREAM("Reference vehicle set to: " << reference_vehicle_);
-    }
-}
-
-void DistributedMotionPlanningNode::processState(const vehicle_State msg, const std::string& vehicle_name)
-{
-    std::lock_guard<std::mutex> lock(state_mutex_);  // thread-safe
 
     // Check if this vehicle is already known
-    if (std::find(vehicle_names_.begin(), vehicle_names_.end(), vehicle_name) == vehicle_names_.end()) {
+    if (std::find(vehicle_names_.begin(), vehicle_names_.end(), vehicle_name) == vehicle_names_.end())
+    {
         // New vehicle → register it
         vehicle_names_.push_back(vehicle_name);
-        ROS_INFO_STREAM("New vehicle registered: " << vehicle_name);
+        RCLCPP_INFO_STREAM(this->get_logger(), "New vehicle registered: " << vehicle_name);
 
         // Create its trajectory publisher
-        traj_pubs_[vehicle_name] = nh_.advertise<nav_msgs::Path>("/" + vehicle_name + "/planned_path", 1, true);
+        traj_pubs_[vehicle_name] = this->create_publisher<nav_msgs::msg::Path>(
+            "/" + vehicle_name + "/planned_path", rclcpp::QoS(1).transient_local());
 
         // Also create mission publisher
         std::string mission_topic = "/" + vehicle_name + "/planning_console/Mission_String";
-        publishers_[vehicle_name] = nh_.advertise<std_msgs::String>(mission_topic, 10);
+        mission_pubs_[vehicle_name] = this->create_publisher<std_msgs::msg::String>(
+            mission_topic, rclcpp::QoS(1).transient_local());
+        // Note: Publishers map not used in ROS2 version, but keeping for compatibility
+
+        // Control points topic
+        std::string cp_topic = "/" + vehicle_name + "/Stamped_controlPoints";
+        control_points_pubs_[vehicle_name] = this->create_publisher<farol2_motion_planning::msg::StampedMatrix>(
+            cp_topic, rclcpp::QoS(1).transient_local());
     }
 
     // Store/update its state
-    vehicle_State rel_state = {
+    vehicle_state rel_state = {
         msg.y,                // Northing
         msg.x,                // Easting
         msg.theta,            // Yaw
@@ -142,620 +176,1136 @@ void DistributedMotionPlanningNode::processState(const vehicle_State msg, const 
 
     vehicle_states_[vehicle_name] = rel_state;
 
-    ROS_INFO_STREAM("Received state for " << vehicle_name
-                    << ": X(E)=" << msg.x
-                    << ", Y(N)=" << msg.y
-                    << ", Yaw=" << msg.theta
-                    << ", u=" << msg.v);
+    RCLCPP_INFO_STREAM(this->get_logger(), "Received state for " << vehicle_name
+                                                                 << ": X(E)=" << msg.x
+                                                                 << ", Y(N)=" << msg.y
+                                                                 << ", Yaw=" << msg.theta
+                                                                 << ", u=" << msg.v);
 }
 
-bool DistributedMotionPlanningNode::sampleStatesService(motion_planning_cpp::SetState::Request &req, motion_planning_cpp::SetState::Response &res)
+void DistributedPlannerNode::setStatesService(const std::shared_ptr<farol2_motion_planning::srv::SetState::Request> req,
+                                              std::shared_ptr<farol2_motion_planning::srv::SetState::Response> res)
 {
-
-    // Build a temporary farol_msgs::mState message
-    vehicle_State msg;
-    msg.x   = req.E;     // Easting
-    msg.y   = req.N;     // Northing
-    msg.theta = req.theta;
-    msg.v   = req.v;
+    // Build a temporary vehicle_state message
+    vehicle_state msg;
+    msg.x = req->e; // Easting
+    msg.y = req->n; // Northing
+    msg.theta = req->theta;
+    msg.v = req->v;
 
     // Store it in vehicle_states_ map
-    processState(msg, req.vehicle_name);
+    processState(msg, req->vehicle_name);
 
-    res.success = true;
-    res.message = "Vehicle state stored for " + req.vehicle_name;
-    publishLog(res.message);
-
-    return true;
+    res->success = true;
+    res->message = "Vehicle state stored for " + req->vehicle_name;
+    // publishLog(res->message);
 }
 
-bool DistributedMotionPlanningNode::setGoalService(motion_planning_cpp::SetState::Request &req, motion_planning_cpp::SetState::Response &res)
+void DistributedPlannerNode::setGoalService(const std::shared_ptr<farol2_motion_planning::srv::SetState::Request> req,
+                                            std::shared_ptr<farol2_motion_planning::srv::SetState::Response> res)
 {
-    if(std::find(vehicle_names_.begin(), vehicle_names_.end(), req.vehicle_name) == vehicle_names_.end()) {
-        res.success = false;
-        res.message = "Vehicle not found!";
-        return true;
+    if (std::find(vehicle_names_.begin(), vehicle_names_.end(), req->vehicle_name) == vehicle_names_.end())
+    {
+        res->success = false;
+        res->message = "Vehicle not found!";
+        return;
     }
-    if(req.v <= 0) {
-        res.success = false;
-        res.message = "Invalid velocity!";
-        return true;
+    if (req->v <= 0)
+    {
+        res->success = false;
+        res->message = "Invalid velocity!";
+        return;
     }
 
-    vehicle_State abs_goal;
-    abs_goal.x     = req.N; // Northing
-    abs_goal.y     = req.E; // Easting
-    abs_goal.theta = req.theta;
-    abs_goal.v     = req.v;
+    vehicle_state abs_goal;
+    abs_goal.x = req->n; // Northing
+    abs_goal.y = req->e; // Easting
+    abs_goal.theta = req->theta;
+    abs_goal.v = req->v;
 
     {
         std::lock_guard<std::mutex> lock(state_mutex_);
-        goal_states_map_[req.vehicle_name] = abs_goal;
+        goal_states_map_[req->vehicle_name] = abs_goal;
     }
-    ROS_INFO_STREAM("Received state for " << req.vehicle_name
-                    << ": X(E)=" << abs_goal.x
-                    << ", Y(N)=" << abs_goal.y
-                    << ", Yaw=" << abs_goal.theta
-                    << ", u=" << abs_goal.v);
+    RCLCPP_INFO_STREAM(this->get_logger(), "Received goal for " << req->vehicle_name
+                                                                << ": X(E)=" << abs_goal.x
+                                                                << ", Y(N)=" << abs_goal.y
+                                                                << ", Yaw=" << abs_goal.theta
+                                                                << ", u=" << abs_goal.v);
 
-    res.success = true;
-    res.message = "Goal set for " + req.vehicle_name;
-    publishLog("Goal set for " + req.vehicle_name);
-    return true;
+    res->success = true;
+    res->message = "Goal set for " + req->vehicle_name;
+    // publishLog("Goal set for " + req->vehicle_name);
 }
 
-bool DistributedMotionPlanningNode::setBoundsService(motion_planning_cpp::SetBoundsandGains::Request &req, motion_planning_cpp::SetBoundsandGains::Response &res) {
-    bounds_.vel_min     = req.vel_min;
-    bounds_.vel_max     = req.vel_max;
-    bounds_.acc_min     = req.acc_min;
-    bounds_.acc_max     = req.acc_max;
-    bounds_.ang_vel_min = req.ang_vel_min;
-    bounds_.ang_vel_max = req.ang_vel_max;
-    bounds_.ang_acc_min = req.ang_acc_min;
-    bounds_.ang_acc_max = req.ang_acc_max;
-    bounds_.obs_min     = req.obs_min;
-    if (req.obs_max < 10000) {
-        bounds_.obs_max = req.obs_max;
+void DistributedPlannerNode::setBoundsService(const std::shared_ptr<farol2_motion_planning::srv::SetBoundsAndGains::Request> req,
+                                              std::shared_ptr<farol2_motion_planning::srv::SetBoundsAndGains::Response> res)
+{
+    RCLCPP_INFO_STREAM(this->get_logger(), "Received bounds and gains:");
+    RCLCPP_INFO_STREAM(this->get_logger(), "  vel_min: " << req->vel_min << ", vel_max: " << req->vel_max);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  acc_min: " << req->acc_min << ", acc_max: " << req->acc_max);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  ang_vel_min: " << req->ang_vel_min << ", ang_vel_max: " << req->ang_vel_max);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  ang_acc_min: " << req->ang_acc_min << ", ang_acc_max: " << req->ang_acc_max);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  obs_min: " << req->obs_min << ", obs_max: " << req->obs_max);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  radius: " << req->radius);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  alpha: " << req->alpha << ", beta: " << req->beta << ", gamma: " << req->gamma);
+    bounds_.vel_min = req->vel_min;
+    bounds_.vel_max = req->vel_max;
+    bounds_.acc_min = req->acc_min;
+    bounds_.acc_max = req->acc_max;
+    bounds_.ang_vel_min = req->ang_vel_min;
+    bounds_.ang_vel_max = req->ang_vel_max;
+    bounds_.ang_acc_min = req->ang_acc_min;
+    bounds_.ang_acc_max = req->ang_acc_max;
+    bounds_.obs_min = req->obs_min;
+    if (req->obs_max < 10000)
+    {
+        bounds_.obs_max = req->obs_max;
     }
-    else {
+    else
+    {
         bounds_.obs_max = std::numeric_limits<double>::infinity();
     }
-    bounds_.radius      = req.radius;
-    bounds_.alpha       = req.alpha;
-    bounds_.beta        = req.beta;
-    bounds_.gamma       = req.gamma;
+    bounds_.radius = req->radius;
+    bounds_.alpha = req->alpha;
+    bounds_.beta = req->beta;
+    bounds_.gamma = req->gamma;
 
     bounds_.is_set = true;
 
-    res.success = true;
-    res.message = "Bounds and gains set.";
-    publishLog(res.message);
-    ROS_INFO_STREAM(res.message);
-    return true;
+    RADIUS = req->radius;
+    res->success = true;
+    res->message = "Bounds and gains set.";
+    publishLog(res->message);
+    RCLCPP_INFO_STREAM(this->get_logger(), res->message);
 }
 
-bool DistributedMotionPlanningNode::setBezierParamsService(motion_planning_cpp::SetBezierParams::Request &req, motion_planning_cpp::SetBezierParams::Response &res)
+void DistributedPlannerNode::setBezierParamsService(const std::shared_ptr<farol2_motion_planning::srv::SetBezierParams::Request> req,
+                                                    std::shared_ptr<farol2_motion_planning::srv::SetBezierParams::Response> res)
 {
-    if (req.constr_flags.size() != 4) {
-        res.success = false;
-        res.message = "constr_flags must have size 4";
-        ROS_ERROR_STREAM(res.message);
-        return true;
+    RCLCPP_INFO_STREAM(this->get_logger(), "Received bezier params:");
+    RCLCPP_INFO_STREAM(this->get_logger(), "  degree: " << req->bezier_degree);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  guess_degree: " << req->guess_degree);
+    RCLCPP_INFO_STREAM(this->get_logger(), "  n_split: ");
+    for (const auto &v : req->n_split)
+    {
+        RCLCPP_INFO_STREAM(this->get_logger(), "    " << v);
+    }
+    RCLCPP_INFO_STREAM(this->get_logger(), "  constr_flags: ");
+    for (const auto &v : req->constr_flags)
+    {
+        RCLCPP_INFO_STREAM(this->get_logger(), "    " << (v ? "true" : "false"));
+    }
+    if (req->constr_flags.size() != 4)
+    {
+        res->success = false;
+        res->message = "constr_flags must have size 4";
+        RCLCPP_ERROR_STREAM(this->get_logger(), res->message);
+        return;
     }
 
-    if (req.nSplit.empty()) {
-        res.success = false;
-        res.message = "nSplit cannot be empty";
-        ROS_ERROR_STREAM(res.message);
-        return true;
+    if (req->n_split.empty())
+    {
+        res->success = false;
+        res->message = "nSplit cannot be empty";
+        RCLCPP_ERROR_STREAM(this->get_logger(), res->message);
+        return;
     }
 
-    if (req.bezier_degree < 4) {
-        res.success = false;
-        res.message = "bezier_degree must be at least 4";
-        ROS_ERROR_STREAM(res.message);
-        return true;
-    }
-    if (req.number_sample_Pts < 20) {
-        res.success = false;
-        res.message = "Path must have at least 20 sample points";
-        ROS_ERROR_STREAM(res.message);
-        return true;
+    if (req->bezier_degree < 4)
+    {
+        res->success = false;
+        res->message = "bezier_degree must be at least 4";
+        RCLCPP_ERROR_STREAM(this->get_logger(), res->message);
+        return;
     }
 
-    bezier_degree_ = req.bezier_degree;
-    guess_degree_ = req.guess_degree;
-    nSplit_        = req.nSplit;
-    constr_flags_  = req.constr_flags;
-    number_sample_Pts_ = req.number_sample_Pts;
+    bezier_degree_ = req->bezier_degree;
+    guess_degree_ = req->guess_degree;
+    nSplit_ = req->n_split;
+    constr_flags_ = req->constr_flags;
 
-    ROS_INFO_STREAM("Bezier params updated:");
-    ROS_INFO_STREAM("  degree: " << bezier_degree_);
+    RCLCPP_INFO_STREAM(this->get_logger(), "Bezier params updated:");
+    RCLCPP_INFO_STREAM(this->get_logger(), "  degree: " << bezier_degree_);
 
     std::ostringstream ns;
     ns << "  nSplit: ";
-    for (auto v : nSplit_) ns << v << " ";
-    ROS_INFO_STREAM(ns.str());
+    for (auto v : nSplit_)
+        ns << v << " ";
+    RCLCPP_INFO_STREAM(this->get_logger(), ns.str());
 
     std::ostringstream cf;
     cf << "  constr_flags: ";
-    for (auto v : constr_flags_) cf << (v ? "true " : "false ");
-    ROS_INFO_STREAM(cf.str());
+    for (auto v : constr_flags_)
+        cf << (v ? "true " : "false ");
+    RCLCPP_INFO_STREAM(this->get_logger(), cf.str());
 
-    res.success = true;
-    res.message = "Bezier parameters updated successfully";
-    publishLog(res.message);
-    return true;
+    res->success = true;
+    res->message = "Bezier parameters updated successfully";
+    publishLog(res->message);
 }
 
-bool DistributedMotionPlanningNode::getPlannerConfigService(motion_planning_cpp::GetPlannerConfig::Request &req, motion_planning_cpp::GetPlannerConfig::Response &res)
+void DistributedPlannerNode::getPlannerConfigService(const std::shared_ptr<farol2_motion_planning::srv::GetPlannerConfig::Request> req,
+                                                     std::shared_ptr<farol2_motion_planning::srv::GetPlannerConfig::Response> res)
 {
     // Bounds
-    res.vel_min = bounds_.vel_min;
-    res.vel_max = bounds_.vel_max;
-    res.acc_min = bounds_.acc_min;
-    res.acc_max = bounds_.acc_max;
-    res.ang_vel_min = bounds_.ang_vel_min;
-    res.ang_vel_max = bounds_.ang_vel_max;
-    res.ang_acc_min = bounds_.ang_acc_min;
-    res.ang_acc_max = bounds_.ang_acc_max;
-    res.obs_min = bounds_.obs_min;
-    res.obs_max = bounds_.obs_max;
-    res.radius  = bounds_.radius;
+    res->vel_min = bounds_.vel_min;
+    res->vel_max = bounds_.vel_max;
+    res->acc_min = bounds_.acc_min;
+    res->acc_max = bounds_.acc_max;
+    res->ang_vel_min = bounds_.ang_vel_min;
+    res->ang_vel_max = bounds_.ang_vel_max;
+    res->ang_acc_min = bounds_.ang_acc_min;
+    res->ang_acc_max = bounds_.ang_acc_max;
+    res->obs_min = bounds_.obs_min;
+    res->obs_max = bounds_.obs_max;
+    res->radius = bounds_.radius;
 
-    res.alpha = bounds_.alpha;
-    res.beta  = bounds_.beta;
-    res.gamma = bounds_.gamma;
+    res->alpha = bounds_.alpha;
+    res->beta = bounds_.beta;
+    res->gamma = bounds_.gamma;
 
     // Bezier
-    res.bezier_degree = bezier_degree_;
-    res.guess_degree  = guess_degree_;
-    res.nSplit        = nSplit_;
-    res.constr_flags  = constr_flags_;
-    res.number_sample_Pts = number_sample_Pts_;
-
-    return true;
+    res->bezier_degree = bezier_degree_;
+    res->guess_degree = guess_degree_;
+    res->n_split = nSplit_;
+    res->constr_flags = constr_flags_;
+    res->number_sample_pts = number_sample_Pts_;
 }
 
-bool DistributedMotionPlanningNode::setObstaclesService(motion_planning_cpp::SetObstacles::Request &req, motion_planning_cpp::SetObstacles::Response &res)
+void DistributedPlannerNode::setObstaclesService(const std::shared_ptr<farol2_motion_planning::srv::SetObstacles::Request> req,
+                                                 std::shared_ptr<farol2_motion_planning::srv::SetObstacles::Response> res)
 {
     // --- Circular obstacles ---
-    size_t n_circ = req.circ_obs.size() / 3;
-    
-    if (n_circ) {
+    size_t n_circ = req->circ_obs.size() / 3;
+
+    if (n_circ)
+    {
         circ_obs_.resize(3, n_circ); // circ_obs  # [E1, N1, r1, E2, N2, r2, ...]
 
         {
             std::lock_guard<std::mutex> lock(state_mutex_);
 
-            for (size_t i = 0; i < n_circ; ++i) {
-                circ_obs_(0, i) = req.circ_obs[i*3 + 1]; // Northing
-                circ_obs_(1, i) = req.circ_obs[i*3 + 0]; // Easting
-                circ_obs_(2, i) = req.circ_obs[i*3 + 2];
-
+            for (size_t i = 0; i < n_circ; ++i)
+            {
+                circ_obs_(0, i) = req->circ_obs[i * 3 + 1]; // Northing
+                circ_obs_(1, i) = req->circ_obs[i * 3 + 0]; // Easting
+                circ_obs_(2, i) = req->circ_obs[i * 3 + 2];
             }
         }
 
         obstacles_updated_ = true;
     }
-    else {
-        circ_obs_.resize(3, 0); // No circular obstacles
+    else
+    {
+        circ_obs_.resize(3, 0);
     }
-    
-    
+
+    // --- Eliptical obstacles ---
+    size_t n_ellip = req->elip_obs.size() / 5;
+
+    if (n_ellip)
+    {
+        elip_obs_.resize(5, n_ellip); // elip_obs  # [E1, N1, a1, b1, phi1, E2, N2, a2, b2, phi2, ...]
+
+        {
+            std::lock_guard<std::mutex> lock(state_mutex_);
+
+            for (size_t i = 0; i < n_ellip; ++i)
+            {
+                elip_obs_(0, i) = req->elip_obs[i * 5 + 1]; // Northing
+                elip_obs_(1, i) = req->elip_obs[i * 5 + 0]; // Easting
+                elip_obs_(2, i) = req->elip_obs[i * 5 + 2]; // a
+                elip_obs_(3, i) = req->elip_obs[i * 5 + 3]; // b
+                elip_obs_(4, i) = req->elip_obs[i * 5 + 4]; // phi
+            }
+        }
+
+        obstacles_updated_ = true;
+    }
+    else
+    {
+        elip_obs_.resize(5, 0);
+    }
 
     // --- Line obstacles --- (TODO... - just a placeholder)
-    size_t n_line = req.line_obs.size() / 3;
-    if (n_line) {
+    size_t n_line = req->line_obs.size() / 3;
+    if (n_line)
+    {
         line_obs_.resize(3, n_line);
-        for (size_t i = 0; i < n_line; ++i) {
-            line_obs_(1, i) = req.line_obs[i*3 + 0]; // x1
-            line_obs_(0, i) = req.line_obs[i*3 + 1]; // y1
-            line_obs_(2, i) = req.line_obs[i*3 + 2]; // x2 or other line info
+        for (size_t i = 0; i < n_line; ++i)
+        {
+            line_obs_(1, i) = req->line_obs[i * 3 + 0]; // x1
+            line_obs_(0, i) = req->line_obs[i * 3 + 1]; // y1
+            line_obs_(2, i) = req->line_obs[i * 3 + 2]; // x2 or other line info
         }
     }
-    else {
-        line_obs_.resize(3, 0); // No line obstacles
+    else
+    {
+        line_obs_.resize(3, 0);
     }
 
-    if (n_circ == 0 && n_line == 0) {
+    if (n_circ == 0 && n_line == 0 && n_ellip == 0)
+    {
         obstacles_updated_ = false; // No obstacles provided
     }
-    
+
     // --- Build response + logs ---
     std::ostringstream msg;
     msg << "Obstacles updated: ";
 
-    if (n_circ > 0) {
+    if (n_circ > 0)
+    {
         msg << n_circ << " circular obstacle(s)";
-    } else {
+    }
+    else
+    {
         msg << "No circular obstacles";
     }
 
     msg << " | ";
 
-    if (n_line > 0) {
+    if (n_ellip > 0)
+    {
+        msg << n_ellip << " elliptical obstacle(s)";
+    }
+    else
+    {
+        msg << "No elliptical obstacles";
+    }
+    msg << " | ";
+
+    if (n_line > 0)
+    {
         msg << n_line << " line obstacle(s)";
-    } else {
+    }
+    else
+    {
         msg << "No line obstacles";
     }
 
-    res.success = true;
-    res.message = msg.str();
+    res->success = true;
+    res->message = msg.str();
 
-    // --- ROS output ---
-    ROS_INFO_STREAM(res.message);
-    publishLog(res.message);
-
-    return true;
+    RCLCPP_INFO_STREAM(this->get_logger(), res->message);
+    // publishLog(res->message);
 }
 
-bool DistributedMotionPlanningNode::runOptimizationService(motion_planning_cpp::RunOptimization::Request &req, motion_planning_cpp::RunOptimization::Response &res) {
-        // ================= DEBUG PRINT =================
-    ROS_INFO_STREAM("========== DEBUG STATE ==========");
+void DistributedPlannerNode::runDistributedScheme()
+{
+    
+}
 
-    // Vehicle names
-    std::ostringstream names_ss;
-    names_ss << "vehicle_names_: ";
-    for (const auto& name : vehicle_names_) {
-        names_ss << "[" << name << "] ";
-    }
-    ROS_INFO_STREAM(names_ss.str());
-
-    // Vehicle states
-    std::ostringstream states_ss;
-    states_ss << "vehicle_states_: ";
-    for (const auto& [name, state] : vehicle_states_) {
-        states_ss << "\n  [" << name << "] "
-                << "E=" << state.y
-                << ", N=" << state.x
-                << ", yaw=" << state.theta
-                << ", v=" << state.v;
-    }
-    ROS_INFO_STREAM(states_ss.str());
-
-    // Goal states
-    std::ostringstream goals_ss;
-    goals_ss << "goal_states_map_: ";
-    for (const auto& [name, goal] : goal_states_map_) {
-        goals_ss << "\n  [" << name << "] "
-                << "E=" << goal.y
-                << ", N=" << goal.x
-                << ", yaw=" << goal.theta
-                << ", v=" << goal.v;
-    }
-    ROS_INFO_STREAM(goals_ss.str());
-
-    ROS_INFO_STREAM("=================================");
-    // =================================================
-        
+/**
+ * @brief Runs the multi-vehicle trajectory optimization service.
+ */
+void DistributedPlannerNode::runOptimizationService(const std::shared_ptr<farol2_motion_planning::srv::RunOptimization::Request> req,
+                                                    std::shared_ptr<farol2_motion_planning::srv::RunOptimization::Response> res)
+{
     // Basic checks
-    if(vehicle_names_.empty()) {
-        res.success = false;
-        res.message = "No vehicles discovered!";
-        publishLog(res.message);
-        return true;
+    if (vehicle_names_.empty())
+    {
+        res->success = false;
+        res->message = "No vehicles discovered!";
+        publishLog(res->message);
+        return;
     }
 
-    if(vehicle_states_.empty()) {
-        res.success = false;
-        res.message = "Cannot run optimization: no vehicle states sampled yet.";
-        publishLog(res.message);
-        return true;
+    if (vehicle_states_.empty())
+    {
+        res->success = false;
+        res->message = "Cannot run optimization: no vehicle states sampled yet.";
+        publishLog(res->message);
+        return;
     }
 
     // Check goals
-    for(const auto &name : vehicle_names_) {
-        if(goal_states_map_.count(name) == 0) {
-            res.success = false;
-            res.message = "Cannot run optimization: goal not defined for vehicle " + name;
-            ROS_WARN_STREAM(res.message);
-            publishLog(res.message);
-            return true;
+    for (const auto &name : vehicle_names_)
+    {
+        if (goal_states_map_.count(name) == 0)
+        {
+            res->success = false;
+            res->message = "Cannot run optimization: goal not defined for vehicle " + name;
+            RCLCPP_WARN_STREAM(this->get_logger(), res->message);
+            publishLog(res->message);
+            return;
         }
     }
+
     publishLog("Setting up optimization problem");
-    std::vector<vehicle_State> current_states;
-    std::vector<vehicle_State> goal_states;
+    std::vector<vehicle_state> current_states;
+    std::vector<vehicle_state> goal_states;
     std::vector<std::string> vehicles;
     vehicles.clear();
     current_states.clear();
     goal_states.clear();
 
     int NVehicles;
-    
+
     // Copy shared data
     // If request empty → default to all vehicles
-    if (req.vehicle_names.empty()) {
+    if (req->vehicle_names.empty())
+    {
         vehicles = vehicle_names_;
-    } else {
-        for (const auto& name : req.vehicle_names) {
-
-            // Check if vehicle exists
+    }
+    else
+    {
+        for (const auto &name : req->vehicle_names)
+        {
             if (std::find(vehicle_names_.begin(),
-                        vehicle_names_.end(),
-                        name) == vehicle_names_.end()) {
-
-                res.success = false;
-                res.message = "Vehicle not found: " + name;
-                return true;
+                          vehicle_names_.end(),
+                          name) == vehicle_names_.end())
+            {
+                res->success = false;
+                res->message = "Vehicle not found: " + name;
+                return;
             }
-
             vehicles.push_back(name);
         }
     }
     selected_vehicle_names_ = vehicles;
     NVehicles = vehicles.size();
     std::string local_reference = vehicles.front();
-    vehicle_State ref_state = vehicle_states_[local_reference];
+    vehicle_state ref_state = vehicle_states_[local_reference];
 
-    for(const auto &name : vehicles) {
-        vehicle_State current_state;
-        current_state.x = vehicle_states_[name].x-ref_state.x; // Northing
-        current_state.y = vehicle_states_[name].y-ref_state.y; // Easting
+    for (const auto &name : vehicles)
+    {
+        vehicle_state current_state;
+        current_state.x = vehicle_states_[name].x - ref_state.x; // Northing
+        current_state.y = vehicle_states_[name].y - ref_state.y; // Easting
         current_state.theta = vehicle_states_[name].theta;
         current_state.v = vehicle_states_[name].v;
         current_states.push_back(current_state);
 
-        vehicle_State goal_state;
-        goal_state.x = goal_states_map_[name].x- ref_state.x; // Northing
-        goal_state.y = goal_states_map_[name].y- ref_state.y; // Easting
+        vehicle_state goal_state;
+        goal_state.x = goal_states_map_[name].x - ref_state.x; // Northing
+        goal_state.y = goal_states_map_[name].y - ref_state.y; // Easting
         goal_state.theta = goal_states_map_[name].theta;
         goal_state.v = goal_states_map_[name].v;
-        
-        goal_states.push_back(goal_state);
 
-        ROS_INFO_STREAM("Vehicle: " << name << "\n | Current State: Easting = " << current_state.y << ", Northing = " << current_state.x << ", Yaw = " << current_state.theta << ", u = " << current_state.v << " |"
-                                            << "\n | Goal State:    Easting = " << goal_state.y << ", Northing = " << goal_state.x << ", Yaw = " << goal_state.theta << ", u = " << goal_state.v << " |");
+        goal_states.push_back(goal_state);
+    }
+
+    // Convert constraint flags from bool to uint8_t for MultipleVehiclePlanner
+    std::vector<uint8_t> constr_flags_uint8;
+    for (bool flag : constr_flags_)
+    {
+        constr_flags_uint8.push_back(static_cast<uint8_t>(flag ? 1 : 0));
     }
 
     // Initialize solver
-    // Initialize solver
-    MultipleVehicleMotionPlan solver_first(guess_degree_, NVehicles, {1,1,1}, constr_flags_);
-    MultipleVehicleMotionPlan solver(bezier_degree_, NVehicles, nSplit_, constr_flags_);
+    std::vector<int> nSplit_int(nSplit_.begin(), nSplit_.end());
 
-    if(bounds_.is_set) {
-        ROS_INFO("Bounds are no longer Default.");
-        solver.setBoundsAndGains(
+    MultipleVehiclePlanner solver_first(guess_degree_, 1, nSplit_int, constr_flags_uint8);
+
+    if (bounds_.is_set)
+    {
+        RCLCPP_INFO(this->get_logger(), "Bounds are no longer Default.");
+        solver_first.setBoundsAndGains(
             bounds_.vel_min, bounds_.vel_max,
             bounds_.acc_min, bounds_.acc_max,
             bounds_.ang_vel_min, bounds_.ang_vel_max,
             bounds_.ang_acc_min, bounds_.ang_acc_max,
             bounds_.obs_min, bounds_.obs_max,
             bounds_.radius,
-            bounds_.alpha, bounds_.beta, bounds_.gamma
-        );
-    }
-    solver.setupSymbolic();
-    solver.computeCostFunction();
-    solver_first.setupSymbolic();
-    solver_first.computeCostFunction();
-
-    if(obstacles_updated_) {
-        Eigen::MatrixXd adjusted_circ_obs(3, circ_obs_.cols());
-        for (int i = 0; i < circ_obs_.cols(); ++i) {
-            adjusted_circ_obs(0, i) = circ_obs_(0, i) + ref_state.x;  // Northing
-            adjusted_circ_obs(1, i) = circ_obs_(1, i) + ref_state.y;  // Easting
-            adjusted_circ_obs(2, i) = circ_obs_(2, i);                // radius stays the same
-        }
-        solver_first.setOptimizationProblem(current_states, goal_states, adjusted_circ_obs, line_obs_);
-    } else {
-        ROS_INFO("No obstacle updates detected.");
-        solver_first.setOptimizationProblem(current_states, goal_states);
+            bounds_.alpha, bounds_.beta, bounds_.gamma);
     }
 
+    double Tf_guess = -std::numeric_limits<double>::infinity();
+    Eigen::Tensor<double, 3> all_control_points;
+    std::vector<double> Tf_values(NVehicles, 0.0);
+    cancel_flag_ = false;
+    std::vector<bool> guess_success(NVehicles, false);
+    bool overall_success = true;
 
-    solver_first.createConstraintVector();
-    solver_first.createDecisionVector();
-    
-    cancel_flag_ = false; // reset before starting
-    opt_running_ = true;
-    opt_thread_ = std::thread([this, res, vehicles, ref_state, current_states, goal_states, solver = std::move(solver), solver_first = std::move(solver_first)]() mutable {
-        try {
+    for (int i = 0; i < NVehicles; ++i)
+    {
+        RCLCPP_INFO_STREAM(this->get_logger(), "vehicle id: " << i);
+        solver_first.setupSymbolic();
+        RCLCPP_INFO_STREAM(this->get_logger(), "Set up symbolic optimization problem for vehicle " << i);
+        solver_first.computeCostFunction();
+        RCLCPP_INFO_STREAM(this->get_logger(), "Computed cost function for vehicle " << i);
+        std::vector<vehicle_state> current_state_vec;
+        std::vector<vehicle_state> goal_state_vec;
 
-            publishLog("Starting Geuess calculation");
-            solver_first.solveOptimizationProblem(&cancel_flag_);
-            // solver.solveOptimizationProblem();
+        current_state_vec.push_back(current_states[i]);
+        goal_state_vec.push_back(goal_states[i]);
 
-            Eigen::Tensor<double, 3> control_points_guess = BezierUtils::elevateTensorDegree(solver_first.getControlPoints(), bezier_degree_-guess_degree_);
-            double Tf_guess = solver_first.getTf();
-            // assume control_points_guess is Eigen::Tensor<double, 3>
-            int dim0 = control_points_guess.dimension(0);
-            int dim1 = control_points_guess.dimension(1);
-            int dim2 = control_points_guess.dimension(2);
+        if (obstacles_updated_)
+        {
+            Eigen::MatrixXd adjusted_circ_obs(3, circ_obs_.cols());
+            for (int k = 0; k < circ_obs_.cols(); ++k)
+            {
+                adjusted_circ_obs(0, k) = circ_obs_(0, k) - ref_state.x; // Northing
+                adjusted_circ_obs(1, k) = circ_obs_(1, k) - ref_state.y; // Easting
+                adjusted_circ_obs(2, k) = circ_obs_(2, k);               // radius stays the same
+            }
+            Eigen::MatrixXd adjusted_elip_obs(5, elip_obs_.cols());
+            for (int k = 0; k < elip_obs_.cols(); ++k)
+            {
+                adjusted_elip_obs(0, k) = elip_obs_(0, k) - ref_state.x; // Northing
+                adjusted_elip_obs(1, k) = elip_obs_(1, k) - ref_state.y; // Easting
+                adjusted_elip_obs(2, k) = elip_obs_(2, k);               // semi-major axis
+                adjusted_elip_obs(3, k) = elip_obs_(3, k);               // semi-minor axis
+                adjusted_elip_obs(4, k) = elip_obs_(4, k);               // orientation
+            }
+            RCLCPP_INFO(this->get_logger(), "Obstacle updates detected.");
+            solver_first.setOptimizationProblem(current_state_vec, goal_state_vec, adjusted_circ_obs, line_obs_, adjusted_elip_obs);
+        }
+        else
+        {
+            RCLCPP_INFO(this->get_logger(), "No obstacle updates detected.");
+            solver_first.setOptimizationProblem(current_state_vec, goal_state_vec);
+        }
 
-            for (int i = 0; i < dim0; ++i) {
-                std::cout << "Tensor slice " << i << ":\n";
-                for (int j = 0; j < dim1; ++j) {
-                    std::cout << "  [";
-                    for (int k = 0; k < dim2; ++k) {
-                        std::cout << control_points_guess(i,j,k);
-                        if (k != dim2-1) std::cout << ", ";
+        solver_first.createConstraintVector();
+        solver_first.createDecisionVector();
+        publishLog("Starting Guess calculation");
+        solver_first.solveOptimizationProblem(&cancel_flag_);
+
+        Eigen::Tensor<double, 3> cp_raw = solver_first.getControlPoints();
+
+        int dim1 = cp_raw.dimension(1); // should be 2
+        int dim2 = cp_raw.dimension(2); // N control points
+
+        if (i == 0)
+        {
+            all_control_points = Eigen::Tensor<double, 3>(NVehicles, dim1, dim2);
+        }
+
+        std::cout << "Vehicle " << i << " Optimal control points:\n";
+
+        for (int d = 0; d < dim1; ++d)
+        {
+            for (int n = 0; n < dim2; ++n)
+            {
+                all_control_points(i, d, n) = cp_raw(0, d, n);
+                std::cout << all_control_points(i, d, n) << " ";
+            }
+            std::cout << "\n";
+        }
+
+        std::string status = solver_first.getOptimizationstatus();
+        publishLog(status);
+        std::string s = status;
+        std::transform(s.begin(), s.end(), s.begin(),
+                       [](unsigned char c)
+                       { return std::tolower(c); });
+        guess_success[i] = s.find("succe") != std::string::npos;
+
+        Tf_values[i] = solver_first.getTf();
+        Tf_guess = std::max(Tf_guess, Tf_values[i]);
+        std::cout << "Obtained Tf for vehicle " << i << ":\n"
+                  << solver_first.getTf() << "\n";
+    }
+
+    Eigen::Tensor<double, 3> control_points_guess = BezierUtils::elevateTensorDegree(all_control_points, bezier_degree_ - guess_degree_);
+
+    publishControlPoints(all_control_points, Tf_values, true);
+
+    if (use_collision_method_)
+    {
+        std::vector<std::pair<int, int>> collisions;
+        bool collision_detected = false;
+
+        for (int i = 0; i < NVehicles; ++i)
+        {
+            for (int j = i + 1; j < NVehicles; ++j)
+            {
+                Eigen::MatrixXd P1 = BezierUtils::tensor_2_matrix(control_points_guess, i);
+                Eigen::MatrixXd P2 = BezierUtils::tensor_2_matrix(control_points_guess, j);
+
+                if (!BezierUtils::check_vehicle_distances(P1, P2, RADIUS, nSplit_[2]))
+                {
+                    collisions.emplace_back(i, j);
+                    collision_detected = true;
+
+                    RCLCPP_WARN_STREAM(this->get_logger(), "Collision detected between Vehicle "
+                                                               << i << " and Vehicle " << j << "!");
+                }
+            }
+        }
+
+        if (collision_detected)
+        {
+            std::vector<std::pair<int, int>> sorted_collisions = collisions;
+
+            std::sort(sorted_collisions.begin(), sorted_collisions.end(),
+                      [&](auto &a, auto &b)
+                      {
+                          double scoreA = Tf_values[a.first] + Tf_values[a.second];
+                          double scoreB = Tf_values[b.first] + Tf_values[b.second];
+                          return scoreA > scoreB; // prioritize high Tf conflicts
+                      });
+
+            std::vector<int> to_remove = BezierUtils::selectTrajectoriesToRemove(NVehicles, sorted_collisions, Tf_values);
+
+            double Tf_min = 0.0;
+            for (int i = 0; i < NVehicles; ++i)
+            {
+                if (std::find(to_remove.begin(), to_remove.end(), i) == to_remove.end())
+                {
+                    Tf_min = std::max(Tf_min, Tf_values[i]);
+                }
+            }
+
+            RCLCPP_WARN_STREAM(this->get_logger(), "Trajectories to remove:");
+            for (int idx : to_remove)
+            {
+                RCLCPP_WARN_STREAM(this->get_logger(), " - Vehicle " << idx
+                                                                     << " (Tf = " << Tf_values[idx] << ")");
+            }
+            RCLCPP_WARN_STREAM(this->get_logger(), "Minimum Tf among kept trajectories: " << Tf_min);
+
+            // Convert constraint flags from bool to uint8_t for MultipleVehiclePlanner
+            std::vector<uint8_t> constr_flags_uint8;
+            for (bool flag : constr_flags_)
+            {
+                constr_flags_uint8.push_back(static_cast<uint8_t>(flag ? 1 : 0));
+            }
+
+            // Convert nSplit_ from int64_t to int
+            std::vector<int> nSplit_int(nSplit_.begin(), nSplit_.end());
+
+            MultipleVehiclePlanner solver(bezier_degree_, NVehicles, nSplit_int, constr_flags_uint8);
+            if (bounds_.is_set)
+            {
+                RCLCPP_INFO(this->get_logger(), "Bounds are no longer Default.");
+                solver.setBoundsAndGains(
+                    bounds_.vel_min, bounds_.vel_max,
+                    bounds_.acc_min, bounds_.acc_max,
+                    bounds_.ang_vel_min, bounds_.ang_vel_max,
+                    bounds_.ang_acc_min, bounds_.ang_acc_max,
+                    bounds_.obs_min, bounds_.obs_max,
+                    bounds_.radius,
+                    bounds_.alpha, bounds_.beta, bounds_.gamma);
+            }
+
+            solver.setupSymbolic();
+            solver.computeCostFunction();
+
+            cancel_flag_ = false;
+            opt_running_ = true;
+
+            // Lambda capturing necessary data for the optimization thread
+            auto optimization_task = [this, req, vehicles, ref_state, current_states, goal_states,
+                                      Tf_guess, control_points_guess, to_remove, Tf_min, overall_success,
+                                      solver = std::move(solver)]() mutable
+            {
+                try
+                {
+                    printControlPoints(control_points_guess);
+
+                    if (obstacles_updated_)
+                    {
+                        Eigen::MatrixXd adjusted_circ_obs(3, circ_obs_.cols());
+                        for (int i = 0; i < circ_obs_.cols(); ++i)
+                        {
+                            adjusted_circ_obs(0, i) = circ_obs_(0, i) - ref_state.x;
+                            adjusted_circ_obs(1, i) = circ_obs_(1, i) - ref_state.y;
+                            adjusted_circ_obs(2, i) = circ_obs_(2, i);
+                            RCLCPP_INFO_STREAM(this->get_logger(), "| Obstacle " << i << ":    Easting =  "
+                                                                                 << adjusted_circ_obs(1, i) << ", Northing = " << adjusted_circ_obs(0, i)
+                                                                                 << ", r = " << adjusted_circ_obs(2, i) << " |");
+                        }
+
+                        Eigen::MatrixXd adjusted_elip_obs(5, elip_obs_.cols());
+                        for (int k = 0; k < elip_obs_.cols(); ++k)
+                        {
+                            adjusted_elip_obs(0, k) = elip_obs_(0, k) - ref_state.x; // Northing
+                            adjusted_elip_obs(1, k) = elip_obs_(1, k) - ref_state.y; // Easting
+                            adjusted_elip_obs(2, k) = elip_obs_(2, k);               // semi-major axis
+                            adjusted_elip_obs(3, k) = elip_obs_(3, k);               // semi-minor axis
+                            adjusted_elip_obs(4, k) = elip_obs_(4, k);               // orientation
+                        }
+                        solver.setOptimizationProblem(current_states, goal_states, adjusted_circ_obs, line_obs_, adjusted_elip_obs, control_points_guess, Tf_guess, false);
                     }
-                    std::cout << "]\n";
-                }
-                std::cout << "\n";
-            }
-
-            if(obstacles_updated_) {
-                for (int i = 0; i < circ_obs_.cols(); ++i) {
-                    ROS_INFO_STREAM("| Obstacle " << i << ":    Easting =  " << circ_obs_(1, i) << ", Northing = " << circ_obs_(0, i) << ", r = " << circ_obs_(2, i) << " |");
-                }
-                Eigen::MatrixXd adjusted_circ_obs(3, circ_obs_.cols());
-                for (int i = 0; i < circ_obs_.cols(); ++i) {
-                    adjusted_circ_obs(0, i) = circ_obs_(0, i) + ref_state.x;  // Northing
-                    adjusted_circ_obs(1, i) = circ_obs_(1, i) + ref_state.y;  // Easting
-                    adjusted_circ_obs(2, i) = circ_obs_(2, i);                // radius stays the same
-                }
-                solver.setOptimizationProblem(current_states, goal_states, adjusted_circ_obs, line_obs_, control_points_guess, Tf_guess, false);
-            } else {
-                ROS_INFO("No obstacle updates detected.");
-                Eigen::Matrix<double, 3, Eigen::Dynamic> empty_obs(3, 0);
-                solver.setOptimizationProblem(current_states, goal_states, empty_obs, empty_obs, control_points_guess, Tf_guess, false);
-            }
-
-            solver.createConstraintVector();
-            solver.createDecisionVector();
-            publishLog("Starting Optimization");
-            solver.solveOptimizationProblem(&cancel_flag_);
-            // solver.solveOptimizationProblem();
-
-            last_control_points_ = solver.getControlPoints();
-            last_Tf_ = solver.getTf();
-
-            ROS_INFO_STREAM("=== Optimization Results ===");
-            ROS_INFO_STREAM("Final time Tf = " << last_Tf_);
-
-            int num_vehicles = last_control_points_.dimension(0);
-            int num_points   = last_control_points_.dimension(2);
-
-            for(int v = 0; v < num_vehicles; ++v) {
-                std::ostringstream oss;
-                oss << "Vehicle " << vehicle_names_[v] << " control points:\n";
-
-                for(int d = 0; d < 2; ++d) { // 0 = X, 1 = Y
-                    oss << (d == 0 ? "  X: " : "  Y: ");
-                    for(int p = 0; p < num_points; ++p) {
-                        oss << last_control_points_(v, d, p) << " ";
+                    else
+                    {
+                        RCLCPP_INFO(this->get_logger(), "No obstacle updates detected.");
+                        Eigen::Matrix<double, 3, Eigen::Dynamic> empty_obs(3, 0);
+                        Eigen::Matrix<double, 5, Eigen::Dynamic> empty_elip_obs(5, 0);
+                        solver.setOptimizationProblem(current_states, goal_states, empty_obs, empty_obs, empty_elip_obs, control_points_guess, Tf_guess, false);
                     }
-                    oss << "\n";
+
+                    solver.createConstraintVector(to_remove);
+                    solver.createDecisionVector(to_remove, Tf_min);
+                    publishLog("Starting Optimization");
+                    solver.solveOptimizationProblem(&cancel_flag_);
+
+                    last_control_points_ = solver.getControlPoints();
+                    last_Tf_ = solver.getTf();
+                    std::vector<double> Tf_equal(vehicle_names_.size(), last_Tf_);
+
+                    publishControlPoints(last_control_points_, Tf_equal, false);
+
+                    RCLCPP_INFO_STREAM(this->get_logger(), "=== Optimization Results ===");
+                    RCLCPP_INFO_STREAM(this->get_logger(), "Final time Tf = " << last_Tf_);
+
+                    int num_vehicles = last_control_points_.dimension(0);
+                    int num_points = last_control_points_.dimension(2);
+
+                    for (int v = 0; v < num_vehicles; ++v)
+                    {
+                        std::ostringstream oss;
+                        oss << "Vehicle " << vehicle_names_[v] << " control points:\n";
+
+                        for (int d = 0; d < 2; ++d)
+                        {
+                            oss << (d == 0 ? "  X: " : "  Y: ");
+                            for (int p = 0; p < num_points; ++p)
+                            {
+                                oss << last_control_points_(v, d, p) << " ";
+                            }
+                            oss << "\n";
+                        }
+
+                        RCLCPP_INFO_STREAM(this->get_logger(), oss.str());
+                    }
+
+                    std::string status = solver.getOptimizationstatus();
+                    publishLog(status);
+                    std::string s = status;
+                    std::transform(s.begin(), s.end(), s.begin(),
+                                   [](unsigned char c)
+                                   { return std::tolower(c); });
+                    overall_success = s.find("succe") != std::string::npos;
+
+                    if (overall_success)
+                    {
+                        Eigen::Tensor<double, 3> trajs = solver.getOptimalTrajectories(number_sample_Pts_);
+                        for (size_t i = 0; i < vehicles.size(); ++i)
+                        {
+                            auto path = std::make_shared<nav_msgs::msg::Path>();
+                            path->header.stamp = this->now();
+                            path->header.frame_id = "map";
+
+                            for (size_t j = 0; j < trajs.dimension(2); ++j)
+                            {
+                                geometry_msgs::msg::PoseStamped p;
+                                p.header = path->header;
+
+                                p.pose.position.x = trajs(i, 0, j) + ref_state.x;
+                                p.pose.position.y = trajs(i, 1, j) + ref_state.y;
+                                p.pose.position.z = 0.0;
+
+                                path->poses.push_back(p);
+                            }
+
+                            traj_pubs_[vehicles[i]]->publish(*path);
+                        }
+
+                        publishMissions();
+                    }
+
+                    opt_running_ = false;
+                }
+                catch (const std::exception &e)
+                {
+                    RCLCPP_WARN_STREAM(this->get_logger(), "Optimization thread stopped: " << e.what());
+                    publishLog(std::string("Optimization thread stopped: ") + e.what());
+                    opt_running_ = false;
+                }
+            };
+
+            // Detach thread for async optimization
+            if (opt_thread_.joinable())
+            {
+                opt_thread_.join();
+            }
+            opt_thread_ = std::thread(optimization_task);
+            opt_thread_.detach();
+        }
+        else
+        {
+            std::string failed_vehicles;
+
+            for (size_t i = 0; i < NVehicles; ++i)
+            {
+                if (!guess_success[i])
+                {
+                    overall_success = false;
+                    failed_vehicles += (failed_vehicles.empty() ? "" : " ") + std::to_string(i);
+                }
+            }
+
+            std::string failure_message;
+            if (!overall_success)
+            {
+                failure_message = "Vehicle " + failed_vehicles + " have come to a failure solution. \n Check for limits on actuation and distance between vehicles.";
+            }
+            else
+            {
+                failure_message = "Optimization succeded without collision on first try";
+                // No collisions and valid paths - publish paths directly
+                int numPoints = 100;
+                Eigen::Tensor<double, 3> trajs(control_points_guess.dimension(0), control_points_guess.dimension(1), numPoints);
+                const auto &CP = control_points_guess;
+
+                for (int i = 0; i < control_points_guess.dimension(0); ++i)
+                {
+                    Eigen::MatrixXd pts(2, control_points_guess.dimension(2));
+                    for (int k = 0; k <= control_points_guess.dimension(2) - 1; ++k)
+                    {
+                        pts(0, k) = CP(i, 0, k);
+                        pts(1, k) = CP(i, 1, k);
+                    }
+                    for (int j = 0; j < numPoints; ++j)
+                    {
+                        double u = static_cast<double>(j) / (numPoints - 1);
+                        Eigen::VectorXd point = BezierUtils::deCasteljau(u, pts);
+                        trajs(i, 0, j) = point(0);
+                        trajs(i, 1, j) = point(1);
+                    }
                 }
 
-                ROS_INFO_STREAM(oss.str());
-            }
-            res.success = true;
-            res.message = solver.getOptimizationstatus();
-            publishLog(res.message);
-            // --- Publish planned paths ---
-            Eigen::Tensor<double, 3> trajs = solver.getOptimalTrajectories(number_sample_Pts_);
-            for (size_t i = 0; i < vehicles.size(); ++i) {
+                for (size_t i = 0; i < vehicles.size(); ++i)
+                {
+                    auto path = std::make_shared<nav_msgs::msg::Path>();
+                    path->header.stamp = this->now();
+                    path->header.frame_id = "map";
 
-                nav_msgs::Path path;
-                path.header.stamp = ros::Time::now();
-                path.header.frame_id = "map";  // or "local", just be consistent
+                    for (size_t j = 0; j < trajs.dimension(2); ++j)
+                    {
+                        geometry_msgs::msg::PoseStamped p;
+                        p.header = path->header;
 
-                for (size_t j = 0; j < trajs.dimension(2); ++j) {
-                    geometry_msgs::PoseStamped p;
-                    p.header = path.header;
+                        p.pose.position.x = trajs(i, 0, j) + ref_state.x;
+                        p.pose.position.y = trajs(i, 1, j) + ref_state.y;
+                        p.pose.position.z = 0.0;
 
-                    p.pose.position.x = trajs(i, 0, j) + ref_state.x; // Northing
-                    p.pose.position.y = trajs(i, 1, j) + ref_state.y; // Easting
-                    p.pose.position.z = 0.0;
+                        path->poses.push_back(p);
+                    }
 
-                    // Optional: orientation
-                    p.pose.orientation.w = 1.0;
-
-                    path.poses.push_back(p);
+                    traj_pubs_[vehicles[i]]->publish(*path);
                 }
 
-                traj_pubs_[vehicles[i]].publish(path);
+                last_control_points_ = control_points_guess;
+                last_Tf_ = Tf_guess;
+                std::vector<double> Tf_equal(vehicle_names_.size(), last_Tf_);
+
+                publishControlPoints(last_control_points_, Tf_equal, false);
+                publishMissions();
             }
-            publishMissions();
-            opt_running_ = false;
-        } catch (const std::exception& e) {
-            ROS_WARN_STREAM("Optimization thread stopped: " << e.what());
-            publishLog(std::string("Optimization thread stopped: ") + e.what());
+            publishLog(failure_message);
             opt_running_ = false;
         }
-    });
-    opt_thread_.detach();
+    }
+    else
+    {
+        // Convert constraint flags from bool to uint8_t for MultipleVehiclePlanner
+        std::vector<uint8_t> constr_flags_uint8;
+        for (bool flag : constr_flags_)
+        {
+            constr_flags_uint8.push_back(static_cast<uint8_t>(flag ? 1 : 0));
+        }
 
-    return true;
+        // Convert nSplit_ from int64_t to int
+        std::vector<int> nSplit_int(nSplit_.begin(), nSplit_.end());
+
+        MultipleVehiclePlanner solver(bezier_degree_, NVehicles, nSplit_int, constr_flags_uint8);
+        if (bounds_.is_set)
+        {
+            RCLCPP_INFO(this->get_logger(), "Bounds are no longer Default.");
+            solver.setBoundsAndGains(
+                bounds_.vel_min, bounds_.vel_max,
+                bounds_.acc_min, bounds_.acc_max,
+                bounds_.ang_vel_min, bounds_.ang_vel_max,
+                bounds_.ang_acc_min, bounds_.ang_acc_max,
+                bounds_.obs_min, bounds_.obs_max,
+                bounds_.radius,
+                bounds_.alpha, bounds_.beta, bounds_.gamma);
+        }
+
+        solver.setupSymbolic();
+        solver.computeCostFunction();
+
+        cancel_flag_ = false;
+        opt_running_ = true;
+
+        // Lambda capturing necessary data for the optimization thread
+        auto optimization_task = [this, req, vehicles, ref_state, current_states, goal_states,
+                                    Tf_guess, control_points_guess, overall_success,
+                                    solver = std::move(solver)]() mutable
+        {   
+            try
+            {
+                printControlPoints(control_points_guess);
+
+                if (obstacles_updated_)
+                {
+                    Eigen::MatrixXd adjusted_circ_obs(3, circ_obs_.cols());
+                    for (int i = 0; i < circ_obs_.cols(); ++i)
+                    {
+                        adjusted_circ_obs(0, i) = circ_obs_(0, i) - ref_state.x;
+                        adjusted_circ_obs(1, i) = circ_obs_(1, i) - ref_state.y;
+                        adjusted_circ_obs(2, i) = circ_obs_(2, i);
+                        RCLCPP_INFO_STREAM(this->get_logger(), "| Obstacle " << i << ":    Easting =  "
+                                                                                << adjusted_circ_obs(1, i) << ", Northing = " << adjusted_circ_obs(0, i)
+                                                                                << ", r = " << adjusted_circ_obs(2, i) << " |");
+                    }
+
+                    Eigen::MatrixXd adjusted_elip_obs(5, elip_obs_.cols());
+                    for (int k = 0; k < elip_obs_.cols(); ++k)
+                    {
+                        adjusted_elip_obs(0, k) = elip_obs_(0, k) - ref_state.x; // Northing
+                        adjusted_elip_obs(1, k) = elip_obs_(1, k) - ref_state.y; // Easting
+                        adjusted_elip_obs(2, k) = elip_obs_(2, k);               // semi-major axis
+                        adjusted_elip_obs(3, k) = elip_obs_(3, k);               // semi-minor axis
+                        adjusted_elip_obs(4, k) = elip_obs_(4, k);               // orientation
+                    }
+                    solver.setOptimizationProblem(current_states, goal_states, adjusted_circ_obs, line_obs_, adjusted_elip_obs, control_points_guess, Tf_guess, false);
+                }
+                else
+                {
+                    RCLCPP_INFO(this->get_logger(), "No obstacle updates detected.");
+                    Eigen::Matrix<double, 3, Eigen::Dynamic> empty_obs(3, 0);
+                    Eigen::Matrix<double, 5, Eigen::Dynamic> empty_elip_obs(5, 0);
+                    solver.setOptimizationProblem(current_states, goal_states, empty_obs, empty_obs, empty_elip_obs, control_points_guess, Tf_guess, false);
+                }
+
+                solver.createConstraintVector();
+                solver.createDecisionVector();
+                publishLog("Starting Optimization");
+                solver.solveOptimizationProblem(&cancel_flag_);
+
+                last_control_points_ = solver.getControlPoints();
+                last_Tf_ = solver.getTf();
+                std::vector<double> Tf_equal(vehicle_names_.size(), last_Tf_);
+
+                publishControlPoints(last_control_points_, Tf_equal, false);
+
+                RCLCPP_INFO_STREAM(this->get_logger(), "=== Optimization Results ===");
+                RCLCPP_INFO_STREAM(this->get_logger(), "Final time Tf = " << last_Tf_);
+
+                int num_vehicles = last_control_points_.dimension(0);
+                int num_points = last_control_points_.dimension(2);
+
+                for (int v = 0; v < num_vehicles; ++v)
+                {
+                    std::ostringstream oss;
+                    oss << "Vehicle " << vehicle_names_[v] << " control points:\n";
+
+                    for (int d = 0; d < 2; ++d)
+                    {
+                        oss << (d == 0 ? "  X: " : "  Y: ");
+                        for (int p = 0; p < num_points; ++p)
+                        {
+                            oss << last_control_points_(v, d, p) << " ";
+                        }
+                        oss << "\n";
+                    }
+
+                    RCLCPP_INFO_STREAM(this->get_logger(), oss.str());
+                }
+
+                std::string status = solver.getOptimizationstatus();
+                publishLog(status);
+                std::string s = status;
+                std::transform(s.begin(), s.end(), s.begin(),
+                                [](unsigned char c)
+                                { return std::tolower(c); });
+                overall_success = s.find("succe") != std::string::npos;
+
+                if (overall_success)
+                {
+                    Eigen::Tensor<double, 3> trajs = solver.getOptimalTrajectories(number_sample_Pts_);
+                    for (size_t i = 0; i < vehicles.size(); ++i)
+                    {
+                        auto path = std::make_shared<nav_msgs::msg::Path>();
+                        path->header.stamp = this->now();
+                        path->header.frame_id = "map";
+
+                        for (size_t j = 0; j < trajs.dimension(2); ++j)
+                        {
+                            geometry_msgs::msg::PoseStamped p;
+                            p.header = path->header;
+
+                            p.pose.position.x = trajs(i, 0, j) + ref_state.x;
+                            p.pose.position.y = trajs(i, 1, j) + ref_state.y;
+                            p.pose.position.z = 0.0;
+
+                            path->poses.push_back(p);
+                        }
+
+                        traj_pubs_[vehicles[i]]->publish(*path);
+                    }
+
+                    publishMissions();
+                }
+
+                opt_running_ = false;
+            }
+            catch (const std::exception &e)
+            {
+                RCLCPP_WARN_STREAM(this->get_logger(), "Optimization thread stopped: " << e.what());
+                publishLog(std::string("Optimization thread stopped: ") + e.what());
+                opt_running_ = false;
+            }
+        };
+
+            // Detach thread for async optimization
+            if (opt_thread_.joinable())
+            {
+                opt_thread_.join();
+            }
+            opt_thread_ = std::thread(optimization_task);
+            opt_thread_.detach();
+        }
+
+    res->success = overall_success;
+    res->message = "Optimization finished";
 }
 
-bool DistributedMotionPlanningNode::cancelOptimizationService(std_srvs::Trigger::Request &req,std_srvs::Trigger::Response &res)
+void DistributedPlannerNode::cancelOptimizationService(const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+                                                       std::shared_ptr<std_srvs::srv::Trigger::Response> res)
 {
-    if (!opt_running_) {
-        res.success = false;
-        res.message = "No optimization running";
-        return true;
+    if (!opt_running_)
+    {
+        res->success = false;
+        res->message = "No optimization running";
+        return;
     }
 
-    cancel_flag_ = true;  // thread will ignore results
-    res.success = true;
-    res.message = "Optimization abort requested";
+    cancel_flag_ = true;
+    res->success = true;
+    res->message = "Optimization abort requested";
 
-    ROS_WARN("Optimization abort requested by user");
-    return true;
+    RCLCPP_WARN(this->get_logger(), "Optimization abort requested by user");
 }
 
-void DistributedMotionPlanningNode::publishMissions()
+void DistributedPlannerNode::publishMissions()
 {
-    if(last_control_points_.size() == 0) {
-        ROS_WARN("No optimized trajectory available!");
+    if (last_control_points_.size() == 0)
+    {
+        RCLCPP_WARN(this->get_logger(), "No optimized trajectory available!");
         return;
     }
 
     int i = 0;
-    for(const auto &name : selected_vehicle_names_) {
-
-        std_msgs::String msg;
-
-        msg.data = formatMissionString(last_control_points_, i, last_Tf_);
-        publishers_[name].publish(msg);
-
-        ROS_INFO_STREAM("Mission prepared for " << name);
+    for (const auto &name : selected_vehicle_names_)
+    {
+        auto msg = std::make_shared<std_msgs::msg::String>();
+        msg->data = formatMissionString(last_control_points_, i, last_Tf_);
+        // Note: Publishing via control_points_pubs_ would be better
+        if (mission_pubs_.find(name) != mission_pubs_.end())
+        {
+            mission_pubs_[name]->publish(*msg);
+        }
+        RCLCPP_INFO_STREAM(this->get_logger(), "Mission prepared for " << name);
         i++;
     }
 }
 
-bool DistributedMotionPlanningNode::deployMissionService(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res)
+std::string DistributedPlannerNode::formatMissionString(const Eigen::Tensor<double, 3> &controlPoints, int vehicleIndex, double Tf_opt)
 {
-    if(last_control_points_.size() == 0) {
-        res.success = false;
-        res.message = "No optimized trajectory available!";
-        return true;
-    }
-
-    int i = 0;
-    for(const auto &name : selected_vehicle_names_) {
-        std_msgs::String msg;
-        msg.data = formatMissionString(last_control_points_, i, last_Tf_);
-        publishers_[name].publish(msg);
-        ROS_INFO_STREAM("Mission deployed for " << name << ": " << msg.data);
-        i++;
-    }
-
-    res.success = true;
-    res.message = "Missions deployed to all vehicles.";
-    return true;
-}
-
-// @.@ Format the mission string for a vehicle
-std::string DistributedMotionPlanningNode::formatMissionString(const Eigen::Tensor<double, 3> &controlPoints, int vehicleIndex, double Tf_opt) {
     std::ostringstream oss;
     std::string local_reference = selected_vehicle_names_.front();
-    vehicle_State ref_state = vehicle_states_[local_reference];
+    vehicle_state ref_state = vehicle_states_[local_reference];
     oss << std::fixed << std::setprecision(3);
 
-    // oss << "3\n491883.797 4290843.566 29S\nBEZIER " << controlPoints.dimension(2) << " ";
-    oss << "3\n" << std::fixed << std::setprecision(3)  << ref_state.x << " " << ref_state.y << " 29S\nBEZIER " << controlPoints.dimension(2) << " ";
+    oss << "3\n"
+        << std::fixed << std::setprecision(3) << ref_state.x << " " << ref_state.y << " 29S\nBEZIER " << controlPoints.dimension(2) << " ";
 
-    for (int j = 0; j < controlPoints.dimension(2); ++j) {
-        oss << controlPoints(vehicleIndex, 0, j) << " ";  // X values
+    for (int j = 0; j < controlPoints.dimension(2); ++j)
+    {
+        oss << controlPoints(vehicleIndex, 0, j) << " "; // X values
     }
-    for (int j = 0; j < controlPoints.dimension(2); ++j) {
-        oss << controlPoints(vehicleIndex, 1, j) << " ";  // Y values
+    for (int j = 0; j < controlPoints.dimension(2); ++j)
+    {
+        oss << controlPoints(vehicleIndex, 1, j) << " "; // Y values
     }
 
-    oss << Tf_opt; // Example time value
+    oss << Tf_opt;
 
     return oss.str();
 }
 
-// @.@ Main function
-int main(int argc, char** argv)
+void DistributedPlannerNode::publishControlPoints(const Eigen::Tensor<double, 3> &tensor, const std::vector<double> &tf_values, bool is_guess)
 {
-    ros::init(argc, argv, "interactive_motion_planning_node");
-    ros::NodeHandle nh;
-    ros::NodeHandle nh_private("~");
+    std::lock_guard<std::mutex> lock(state_mutex_);
 
-    // Instantiate node
-    DistributedMotionPlanningNode node(&nh, &nh_private);
+    int n_vehicles = tensor.dimension(0);
+    int dim1 = tensor.dimension(1);
+    int dim2 = tensor.dimension(2);
 
-    ROS_INFO("Interactive Motion Planning Node started. Waiting for service calls...");
+    for (int i = 0; i < n_vehicles; ++i)
+    {
+        if (i >= vehicle_names_.size())
+            continue;
 
-    ros::spin(); 
+        const std::string &vehicle_name = vehicle_names_[i];
+
+        auto it = control_points_pubs_.find(vehicle_name);
+        if (it == control_points_pubs_.end())
+            continue;
+
+        auto msg = std::make_shared<farol2_motion_planning::msg::StampedMatrix>();
+
+        msg->header.stamp = this->now();
+        msg->header.frame_id = "map";
+
+        msg->n_vehicles = 1;
+        msg->dim1 = dim1;
+        msg->dim2 = dim2;
+
+        msg->data.reserve(dim1 * dim2);
+
+        for (int d = 0; d < dim1; ++d)
+        {
+            for (int n = 0; n < dim2; ++n)
+            {
+                msg->data.push_back(tensor(i, d, n));
+            }
+        }
+
+        msg->tf_values = {tf_values[i]};
+        msg->is_guess = is_guess;
+
+        it->second->publish(*msg);
+    }
+}
+
+void printControlPoints(const Eigen::Tensor<double, 3> &cp)
+{
+    const int num_vehicles = cp.dimension(0);
+    const int dim2 = cp.dimension(1);
+    const int num_points = cp.dimension(2);
+
+    for (int v = 0; v < num_vehicles; ++v)
+    {
+        std::cout << "Vehicle " << v << " control points:\n";
+
+        for (int d = 0; d < dim2; ++d)
+        {
+            if (d == 0)
+                std::cout << "  X: ";
+            else if (d == 1)
+                std::cout << "  Y: ";
+            else
+                std::cout << "  dim" << d << ": ";
+
+            for (int p = 0; p < num_points; ++p)
+            {
+                std::cout << cp(v, d, p) << " ";
+            }
+            std::cout << "\n";
+        }
+
+        std::cout << std::endl;
+    }
+}
+
+// Main function for ROS2
+int main(int argc, char **argv)
+{
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<DistributedPlannerNode>();
+
+    RCLCPP_INFO(node->get_logger(), "Distributed Motion Planning Node started. Waiting for service calls...");
+
+    rclcpp::spin(node);
+    rclcpp::shutdown();
 
     return 0;
 }

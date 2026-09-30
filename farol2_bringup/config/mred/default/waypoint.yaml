@@ -5,7 +5,7 @@
   waypoint:
     ros__parameters:
       node_frequency: 10.0
-      cdist: 1.5
+      cdist: 3.0
       delta_t: 5.0
       type1:
         gains:

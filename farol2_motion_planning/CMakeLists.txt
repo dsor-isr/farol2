@@ -70,6 +70,7 @@ add_executable(${PROJECT_NAME}_node
   src/algorithms/multiple_vehicle_planner.cpp
   src/algorithms/bezier_utils.cpp
   src/ros/interactive_planner_node.cpp
+  src/underway/distributed_planner_node.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}_node

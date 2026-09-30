@@ -1,33 +1,43 @@
-#ifndef DISTRIBUTED_MOTION_PLANNING_NODE_H
-#define DISTRIBUTED_MOTION_PLANNING_NODE_H
+#ifndef DISTRIBUTED_PLANNER_NODE_HPP
+#define DISTRIBUTED_PLANNER_NODE_HPP
 
-#include <ros/ros.h>
-#include <nav_msgs/Path.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <std_msgs/String.h>
-#include <std_msgs/Bool.h>
-#include <farol_msgs/mState.h>
-#include <tf/tf.h>
-#include "MultipleVehicleMotionPlan.h"
-// #include <farol_gimmicks_library/FarolGimmicks.h>
-#include <ros/master.h>
-#include <regex>
-#include <std_srvs/Trigger.h>
-#include <motion_planning_cpp/SetState.h>
-#include <motion_planning_cpp/SetBoundsandGains.h>
-#include <motion_planning_cpp/SetBezierParams.h>
-#include <motion_planning_cpp/SetObstacles.h>
-#include <motion_planning_cpp/RunOptimization.h>
-#include <motion_planning_cpp/GetPlannerConfig.h>
+#include <rclcpp/rclcpp.hpp>
+#include <nav_msgs/msg/path.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <std_msgs/msg/string.hpp>
+#include <std_msgs/msg/bool.hpp>
+#include <std_srvs/srv/trigger.hpp>
 
-
+#include "algorithms/multiple_vehicle_planner.hpp"
 #include <memory>
 #include <mutex>
 #include <atomic>
 #include <thread>
+#include <regex>
 
+// Custom message headers
+#include <farol2_motion_planning/msg/stamped_matrix.hpp>
+#include <farol2_motion_planning/srv/set_state.hpp>
+#include <farol2_motion_planning/srv/set_bounds_and_gains.hpp>
+#include <farol2_motion_planning/srv/set_bezier_params.hpp>
+#include <farol2_motion_planning/srv/set_obstacles.hpp>
+#include <farol2_motion_planning/srv/run_optimization.hpp>
+#include <farol2_motion_planning/srv/get_planner_config.hpp>
 
+constexpr char TOPIC_PUB_ALIVE[] = "node_alive";
+constexpr char TOPIC_PUB_LOG[] = "mission_log";
+constexpr char TOPIC_PUB_STATE[] = "current_state";
 
+constexpr char TOPIC_SUB_STATE[] = "neighbor_state";
+
+constexpr char TOPIC_SRV_SET_GOAL[] = "set_goal";
+constexpr char TOPIC_SRV_SET_STATES[] = "set_states";
+constexpr char TOPIC_SRV_SET_BOUNDS[] = "set_bounds";
+constexpr char TOPIC_SRV_SET_BEZIER_PARAMS[] = "set_bezier_params";
+constexpr char TOPIC_SRV_SET_OBSTACLES[] = "set_obstacles";
+constexpr char TOPIC_SRV_RUN_OPTIMIZATION[] = "run_optimization";
+constexpr char TOPIC_SRV_CANCEL_OPTIMIZATION[] = "cancel_optimization";
+constexpr char TOPIC_SRV_GET_PLANNER_CONFIG[] = "get_planner_config";
 
 struct BoundsAndGains
 {
@@ -42,92 +52,110 @@ struct BoundsAndGains
     bool is_set = false;
 };
 
+void printControlPoints(const Eigen::Tensor<double, 3>& cp);
 
-class DistributedMotionPlanningNode {
+/**
+ * @brief ROS2 interface node for the motion planning framework.
+ *
+ * This class manages communication between the motion planner and other
+ * ROS2 nodes. It handles vehicle state subscriptions, trajectory publishing,
+ * and service interfaces for configuring goals, bounds, and other planning
+ * parameters.
+ */
+class DistributedPlannerNode : public rclcpp::Node {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    DistributedMotionPlanningNode(ros::NodeHandle *nodehandle, ros::NodeHandle *nodehandle_private);
-    ~DistributedMotionPlanningNode();
+    DistributedPlannerNode(const rclcpp::NodeOptions& options = rclcpp::NodeOptions());
+    ~DistributedPlannerNode();
 
 private:
-    ros::NodeHandle nh_, nh_private_;
-    std::unordered_map<std::string, ros::Publisher> traj_pubs_;
-    ros::Publisher planning_alive_pub_;
-    ros::Publisher mission_log_pub_;
+    // Publishers
+    std::unordered_map<std::string, rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr> traj_pubs_;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr planning_alive_pub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr mission_log_pub_;
+    std::unordered_map<std::string, rclcpp::Publisher<farol2_motion_planning::msg::StampedMatrix>::SharedPtr> control_points_pubs_;
+    std::unordered_map<std::string, rclcpp::Publisher<std_msgs::msg::String>::SharedPtr> mission_pubs_;
+    // Timer for alive status
+    rclcpp::TimerBase::SharedPtr alive_timer_;
 
-    ros::Timer alive_timer_;
-
+    // Synchronization
     std::atomic<bool> cancel_flag_{false};
     std::mutex state_mutex_;
 
+    // Vehicle tracking
     std::vector<std::string> vehicle_names_;
     std::vector<std::string> selected_vehicle_names_;
-    std::map<std::string, ros::Subscriber> subscribers_;
-    std::map<std::string, ros::Publisher> publishers_;
-    std::map<std::string, vehicle_State> vehicle_states_;
-    std::map<std::string, bool> received_flags_;
-    std::string reference_vehicle_;
-    Eigen::Matrix<double, 3, Eigen::Dynamic> circ_obs_;
-    Eigen::Matrix<double, 3, Eigen::Dynamic> line_obs_;
-    bool obstacles_updated_;
-    int number_sample_Pts_;
-
+    std::map<std::string, vehicle_state> vehicle_states_;
+    std::map<std::string, vehicle_state> goal_states_map_;
     std::set<std::string> vehicle_names_set_;
 
-    double p_node_frequency_;
+    // Obstacles
+    Eigen::Matrix<double, 3, Eigen::Dynamic> circ_obs_;
+    Eigen::Matrix<double, 5, Eigen::Dynamic> elip_obs_;
+    Eigen::Matrix<double, 3, Eigen::Dynamic> line_obs_;
+    bool obstacles_updated_;
 
+    // Planning parameters
     int bezier_degree_;
     int guess_degree_;
-    std::vector<int> nSplit_;
-    std::vector<uint8_t> constr_flags_;
-
+    std::vector<int64_t> nSplit_;
+    std::vector<bool> constr_flags_;
+    int number_sample_Pts_;
     BoundsAndGains bounds_;
+    bool use_collision_method_{false};
 
+    // Optimization thread management
     std::thread opt_thread_;
     std::atomic<bool> opt_running_{false};
-    //std::atomic<bool> opt_abort_{false};
 
-    // Goal states
-    std::map<std::string, vehicle_State> goal_states_map_;
-
-    // Last optimization results
+    // Results
     Eigen::Tensor<double, 3> last_control_points_;
     double last_Tf_;
+    double RADIUS = 1.5;
 
-    // ROS services
-    ros::ServiceServer vehicle_discovery_srv_;
-    ros::ServiceServer set_goal_srv_;
-    ros::ServiceServer sample_state_srv_;
-    ros::ServiceServer run_optimization_srv_;
-    ros::ServiceServer cancel_optimization_srv_;
-    ros::ServiceServer deploy_mission_srv_;
-    ros::ServiceServer set_bounds_srv_;
-    ros::ServiceServer set_bezier_params_srv_;
-    ros::ServiceServer get_planner_config_srv_;
-    ros::ServiceServer set_obstacles_srv_;
+    // ROS2 Services
+    rclcpp::Service<farol2_motion_planning::srv::SetState>::SharedPtr set_goal_srv_;
+    rclcpp::Service<farol2_motion_planning::srv::SetState>::SharedPtr set_states_srv_;
+    rclcpp::Service<farol2_motion_planning::srv::RunOptimization>::SharedPtr run_optimization_srv_;
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr cancel_optimization_srv_;
+    rclcpp::Service<farol2_motion_planning::srv::SetBoundsAndGains>::SharedPtr set_bounds_srv_;
+    rclcpp::Service<farol2_motion_planning::srv::SetBezierParams>::SharedPtr set_bezier_params_srv_;
+    rclcpp::Service<farol2_motion_planning::srv::GetPlannerConfig>::SharedPtr get_planner_config_srv_;
+    rclcpp::Service<farol2_motion_planning::srv::SetObstacles>::SharedPtr set_obstacles_srv_;
 
-    void loadParams();
-    void scanForVehiclesold();
-    void scanForVehicles(const std::vector<std::string>& discovered_vehicles);
-
-    bool sampleStatesServiceold(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
-    bool sampleStatesService(motion_planning_cpp::SetState::Request &req, motion_planning_cpp::SetState::Response &res);
-    void processState(const vehicle_State msg, const std::string& vehicle_name);
-    void publishMissions();
-    // Mission string formatting
-    std::string formatMissionString(const Eigen::Tensor<double, 3> &controlPoints, int vehicleIndex, double Tf_opt);
+    // Load parameters from config file
+    void LoadParameters();
+    void initialisePublishers();
+    void initialiseServices();
 
     // Service callbacks
-    bool discoverVehicles(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
-    bool setGoalService(motion_planning_cpp::SetState::Request &req, motion_planning_cpp::SetState::Response &res);
-    bool setBoundsService(motion_planning_cpp::SetBoundsandGains::Request &req, motion_planning_cpp::SetBoundsandGains::Response &res);
-    bool setBezierParamsService(motion_planning_cpp::SetBezierParams::Request &req, motion_planning_cpp::SetBezierParams::Response &res);
-    bool getPlannerConfigService(motion_planning_cpp::GetPlannerConfig::Request &req, motion_planning_cpp::GetPlannerConfig::Response &res);
-    bool setObstaclesService(motion_planning_cpp::SetObstacles::Request &req, motion_planning_cpp::SetObstacles::Response &res);
-    bool runOptimizationService(motion_planning_cpp::RunOptimization::Request &req, motion_planning_cpp::RunOptimization::Response &res);
-    bool deployMissionService(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
-    bool cancelOptimizationService(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
+    void setGoalService(const std::shared_ptr<farol2_motion_planning::srv::SetState::Request> req,
+                       std::shared_ptr<farol2_motion_planning::srv::SetState::Response> res);
+    void setStatesService(const std::shared_ptr<farol2_motion_planning::srv::SetState::Request> req,
+                          std::shared_ptr<farol2_motion_planning::srv::SetState::Response> res);
+    void runOptimizationService(const std::shared_ptr<farol2_motion_planning::srv::RunOptimization::Request> req,
+                                std::shared_ptr<farol2_motion_planning::srv::RunOptimization::Response> res);
+    void setObstaclesService(const std::shared_ptr<farol2_motion_planning::srv::SetObstacles::Request> req,
+                             std::shared_ptr<farol2_motion_planning::srv::SetObstacles::Response> res);
+    void cancelOptimizationService(const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+                                   std::shared_ptr<std_srvs::srv::Trigger::Response> res);
+    void setBoundsService(const std::shared_ptr<farol2_motion_planning::srv::SetBoundsAndGains::Request> req,
+                          std::shared_ptr<farol2_motion_planning::srv::SetBoundsAndGains::Response> res);
+    void setBezierParamsService(const std::shared_ptr<farol2_motion_planning::srv::SetBezierParams::Request> req,
+                                std::shared_ptr<farol2_motion_planning::srv::SetBezierParams::Response> res);
+    void getPlannerConfigService(const std::shared_ptr<farol2_motion_planning::srv::GetPlannerConfig::Request> req,
+                                 std::shared_ptr<farol2_motion_planning::srv::GetPlannerConfig::Response> res);
+
+    
+    void runDistributedScheme();
+    
+    // Helper methods
+    void processState(const vehicle_state msg, const std::string& vehicle_name);
+    void publishMissions();
+    std::string formatMissionString(const Eigen::Tensor<double, 3> &controlPoints, int vehicleIndex, double Tf_opt);
     void publishLog(const std::string& text);
+    void publishControlPoints(const Eigen::Tensor<double, 3>& tensor, const std::vector<double>& tf_values, bool is_guess);
+    void publishAliveStatus();
 };
 
 #endif
