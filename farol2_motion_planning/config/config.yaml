@@ -1,9 +1,10 @@
-farol2_motion_planning:
+farol2_motion_planning/interactive_planner_node:
   ros__parameters:
     # Bezier curve parameters
     bezier_degree: 9
     guess_degree: 7
     number_sample_points: 100
+    use_initial_guess: false
     
     # Constraint flags: [velocity, angular_velocity, acceleration, angular_acceleration]
     constraint_flags: [true, false, false, false]
@@ -16,23 +17,23 @@ farol2_motion_planning:
     # ============================================
     
     # Velocity bounds (m/s)
-    vel_min: 0.001
-    vel_max: 0.3
+    vel_min: 0.01
+    vel_max: 1.0
     
     # Linear acceleration bounds (m/s²)
-    acc_min: -0.03
-    acc_max: 0.03
+    acc_min: -0.2
+    acc_max: 0.2
     
     # Angular velocity bounds (rad/s)
-    ang_vel_min: -0.15
-    ang_vel_max: 0.15
+    ang_vel_min: -0.4
+    ang_vel_max: 0.4
     
     # Angular acceleration bounds (rad/s²)
-    ang_acc_min: -0.005
-    ang_acc_max: 0.005
+    ang_acc_min: -0.1
+    ang_acc_max: 0.1
     
     # Obstacle bounds (m)
-    obs_min: 2.0
+    obs_min: 5.0
     obs_max: 1000.0  # Use large number instead of infinity
     
     # ============================================
@@ -40,7 +41,7 @@ farol2_motion_planning:
     # ============================================
     
     # Minimum distance between vehicles (m)
-    radius: 1.5
+    radius: 3.0
     
     # ============================================
     # Cost Function Weights
@@ -50,7 +51,7 @@ farol2_motion_planning:
     alpha: 1.0
     
     # Energy cost weight (acceleration penalties)
-    beta: 5.0
+    beta: 1.0
     
     # End-point cost weight
     gamma: 1.0

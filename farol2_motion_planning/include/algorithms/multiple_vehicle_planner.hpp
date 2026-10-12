@@ -121,6 +121,8 @@ public:
 
     double getTf() const;
 
+    double getTcomput() const;
+
 private:
     int BezierDegree_;
     int NVehicles_;
@@ -167,6 +169,7 @@ private:
 
     // Time of arrival
     double Tf_opt_;
+    double t_comput_;
 
     std::string return_status_;
 

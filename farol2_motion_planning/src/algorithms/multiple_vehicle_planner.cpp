@@ -811,8 +811,9 @@ void MultipleVehiclePlanner::solveOptimizationProblem(std::atomic<bool>* cancel_
     Dict opts;
     opts["ipopt.print_level"] = 3;
     opts["ipopt.tol"] = 1e-6;
-    opts["ipopt.max_iter"] = 20000;
+    opts["ipopt.max_iter"] = 10000;
     opts["ipopt.linear_solver"] = "ma57";
+    opts["record_time"] = true;   // keep this even if you set print_time = false
     // opts["ipopt.hsllib"] = "/usr/local/lib/libhsl.so";
 
     // Assign the callback
@@ -838,6 +839,9 @@ void MultipleVehiclePlanner::solveOptimizationProblem(std::atomic<bool>* cancel_
         return_status_ = solver.stats().at("return_status").to_string();
         // Extract the final time (Tf)
         Tf_opt_ = opt_sol(opt_sol.size1() - 1, 0).scalar();
+        double t_wall_s = solver.stats().at("t_wall_total").to_double();  // seconds
+        double t_proc_s = solver.stats().at("t_proc_total").to_double();  // seconds
+        t_comput_ = 1e3 * t_wall_s;
 
         std::vector<SX> vars;
         for (int i = 0; i < decision_vec_.size1(); ++i) {
@@ -1009,4 +1013,9 @@ std::string MultipleVehiclePlanner::getOptimizationstatus() const
 double MultipleVehiclePlanner::getTf() const
 {
     return Tf_opt_;
+}
+
+double MultipleVehiclePlanner::getTcomput() const
+{
+    return t_comput_;
 }

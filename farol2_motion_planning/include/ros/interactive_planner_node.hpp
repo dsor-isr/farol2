@@ -49,6 +49,22 @@ struct BoundsAndGains
     bool is_set = false;
 };
 
+struct PlanningProblem
+{
+    std::vector<std::string> vehicles;
+    vehicle_state ref_state;
+    std::vector<vehicle_state> current_states;
+    std::vector<vehicle_state> goal_states;
+};
+
+struct GuessResult
+{
+    Eigen::Tensor<double, 3> control_points; // [vehicle, dim, point], degree guess_degree_
+    std::vector<double> Tf_values;
+    double Tf_guess;                         // max of Tf_values
+    std::vector<bool> success;
+};
+
 void printControlPoints(const Eigen::Tensor<double, 3>& cp);
 
 /**
@@ -95,6 +111,7 @@ private:
     // Planning parameters
     int bezier_degree_;
     int guess_degree_;
+    bool use_initial_guess_;
     std::vector<int64_t> nSplit_;
     std::vector<bool> constr_flags_;
     int number_sample_Pts_;
@@ -146,10 +163,35 @@ private:
     // Helper methods
     void processState(const vehicle_state msg, const std::string& vehicle_name);
     void publishMissions();
+    std::vector<uint8_t> constraintFlagsUint8() const;
+    std::vector<int> nSplitInt() const;
     std::string formatMissionString(const Eigen::Tensor<double, 3> &controlPoints, int vehicleIndex, double Tf_opt);
     void publishLog(const std::string& text);
     void publishControlPoints(const Eigen::Tensor<double, 3>& tensor, const std::vector<double>& tf_values, bool is_guess);
     void publishAliveStatus();
+
+    bool buildPlanningProblem(const std::vector<std::string> &requested, PlanningProblem &problem, std::string &error);
+    GuessResult calculateGuessUnconflicted(const vehicle_state &ref_state, const std::vector<vehicle_state> &current_states, const std::vector<vehicle_state> &goal_states);
+    bool runCollisionMethod(std::vector<std::string> vehicles,
+                            const vehicle_state &ref_state,
+                            std::vector<vehicle_state> current_states,
+                            std::vector<vehicle_state> goal_states,
+                            double Tf_guess,
+                            const std::vector<double> &Tf_values,
+                            const std::vector<bool> &guess_success,
+                            Eigen::Tensor<double, 3> control_points_guess);
+
+    bool runGuessedOptimization(std::vector<std::string> vehicles,
+                                const vehicle_state &ref_state,
+                                std::vector<vehicle_state> current_states,
+                                std::vector<vehicle_state> goal_states,
+                                double Tf_guess,
+                                Eigen::Tensor<double, 3> control_points_guess);
+
+    bool runOptimization(std::vector<std::string> vehicles,
+                         const vehicle_state &ref_state,
+                         std::vector<vehicle_state> current_states,
+                         std::vector<vehicle_state> goal_states);
 };
 
 #endif
