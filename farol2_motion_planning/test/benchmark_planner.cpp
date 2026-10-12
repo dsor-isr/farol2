@@ -44,15 +44,15 @@
 // ---------------------------------------------------------------------------
 struct ScenarioParams {
     std::string label;                 // human-readable tag, e.g. "N=4"
-    int bezier_degree      = 7;
+    int bezier_degree      = 6;
     int n_vehicles          = 2;
-    std::vector<int> nSplit = {0, 0, 0};   // as used by createConstraintVector etc.
-    std::vector<uint8_t> constr_flags = {true, false, false, false}; // vel/acc/ang_vel/ang_acc on/off
+    std::vector<int> nSplit = {2, 1, 2};   // as used by createConstraintVector etc.
+    std::vector<uint8_t> constr_flags = {true, true, true, false}; // vel/acc/ang_vel/ang_acc on/off
     int n_circ_obs          = 0;
     int n_elip_obs          = 0;
     int n_line_obs          = 0;
     double conservativeness = 0.5;     // 0 = loose bounds, 1 = tight bounds
-    double area_size        = 50.0;    // spatial extent for random state/obstacle placement
+    double area_size        = 150.0;    // spatial extent for random state/obstacle placement
 };
 
 struct TrialResult {
@@ -69,6 +69,14 @@ struct TrialResult {
     std::string status_strategy;
 };
 
+struct BoxStats {
+    double q1     = std::nan("");
+    double median = std::nan("");
+    double q3     = std::nan("");
+    double whisker_low  = std::nan("");   // smallest value >= Q1 - 1.5*IQR
+    double whisker_high = std::nan("");   // largest value  <= Q3 + 1.5*IQR
+    std::vector<double> outliers;
+};
 struct AggregateResult {
     ScenarioParams params;
 
@@ -83,6 +91,9 @@ struct AggregateResult {
     std::vector<Eigen::Tensor<double, 3>> opt_traj;
     std::vector<int> ControlPts_trial;
     
+    BoxStats box_time_success;
+    BoxStats box_time_success_strategy;
+    BoxStats box_percentage_strategy;
 
     int n_success_strategy = 0;
     double failure_pct_strategy = 0.0;
@@ -155,6 +166,7 @@ struct RandomProblemGenerator {
         return states;
     }
 
+    
     Eigen::Matrix<double, 3, Eigen::Dynamic> randomCircObs(int n, double area) {
         Eigen::Matrix<double, 3, Eigen::Dynamic> obs(3, n);
         std::uniform_real_distribution<double> pos(-area / 2.0, area / 2.0);
@@ -189,34 +201,235 @@ struct RandomProblemGenerator {
     }
 };
 
+struct FormationProblemGenerator {
+    std::mt19937 rng;
+
+    // Standard deviations of the perturbation on the initial states
+    double sigma_pos;    // [m]
+    double sigma_theta;  // [rad]
+    double sigma_v;      // [m/s]
+
+    // Nominal initial states (mean) and fixed goals
+    std::vector<vehicle_state> nominal_initial{
+        {-5.0,  28.0,  0.8, 0.7},   // blue
+        { 1.0,  22.0, -0.4, 0.5},   // orange
+        {-5.0,  18.0, -0.8, 0.7},   // yellow
+        {-10.0, 12.0,  0.0, 0.5},   // purple
+        {-8.0,   5.0, -0.4, 0.5}    // green
+    };
+
+    std::vector<vehicle_state> goal_states{
+        {60.0, 12.0, 0.0, 0.7},     // blue
+        {80.0, 12.0, 0.0, 0.7},     // orange
+        {70.0, 17.0, 0.0, 0.7},     // yellow
+        {80.0, 22.0, 0.0, 0.7},     // purple
+        {60.0, 22.0, 0.0, 0.7}      // green
+    };
+
+    FormationProblemGenerator(unsigned seed,
+                              double sigma_pos,
+                              double sigma_theta,
+                              double sigma_v)
+        : rng(seed),
+          sigma_pos(sigma_pos),
+          sigma_theta(sigma_theta),
+          sigma_v(sigma_v) {}
+
+    // New perturbed set of initial states; call once per iteration
+    std::vector<vehicle_state> sampleInitialStates()
+    {
+        std::normal_distribution<double> n_pos(0.0, sigma_pos);
+        std::normal_distribution<double> n_theta(0.0, sigma_theta);
+        std::normal_distribution<double> n_v(0.0, sigma_v);
+
+        std::vector<vehicle_state> states;
+        states.reserve(nominal_initial.size());
+
+        for (const auto& nom : nominal_initial) {
+            vehicle_state s = nom;
+            s.x     += n_pos(rng);
+            s.y     += n_pos(rng);
+            s.theta += n_theta(rng);
+            s.v      = std::clamp(nom.v + n_v(rng), 0.1, 1.5);  // stay within speed limits
+            states.push_back(s);
+        }
+        return states;
+    }
+
+    const std::vector<vehicle_state>& goals() const { return goal_states; }
+};
+
+struct SquareProblemGenerator {
+    std::mt19937 rng;
+
+    int    n;           // number of vehicles = number of divisions
+    double side;        // square side [m], centred at the origin
+    double sigma_pos;   // std of position inside the cell [m]
+    double sigma_theta; // std of heading [rad]
+    double sigma_v;     // std of speed [m/s]
+
+    static constexpr double UP_HEADING = M_PI / 2.0;
+
+    SquareProblemGenerator(unsigned seed, int n, double side,
+                        double sigma_pos, double sigma_theta, double sigma_v)
+        : rng(seed), n(n), side(side),
+        sigma_pos(sigma_pos), sigma_theta(sigma_theta), sigma_v(sigma_v) {}
+
+    // bottom = true: lower half, bottom = false: upper half
+    std::vector<vehicle_state> sampleStates(bool bottom, double v_mean)
+    {
+        const double cell_w = side / n;
+        const double cell_h = side / 2.0;
+        const double y_center = bottom ? -side / 4.0 : side / 4.0;
+
+        // Each vehicle gets a distinct division
+        std::vector<int> cells(n);
+        std::iota(cells.begin(), cells.end(), 0);
+        std::shuffle(cells.begin(), cells.end(), rng);
+
+        std::normal_distribution<double> n_pos(0.0, 1.0);
+        std::normal_distribution<double> n_theta(0.0, 1.0);
+        std::normal_distribution<double> n_v(0.0, 1.0);
+
+        std::vector<vehicle_state> states;
+        states.reserve(n);
+
+        for (int i = 0; i < n; ++i) {
+            const double cx = -side / 2.0 + (cells[i] + 0.5) * cell_w;
+
+            // Normal around the cell centre, clamped to stay inside the cell
+            double dx = sigma_pos * n_pos(rng);
+            double dy = sigma_pos * n_pos(rng);
+            dx = std::clamp(dx, -cell_w / 2.0, cell_w / 2.0);
+            dy = std::clamp(dy, -cell_h / 2.0, cell_h / 2.0);
+
+            vehicle_state s;
+            s.x     = cx + dx;
+            s.y     = y_center + dy;
+            s.theta = UP_HEADING + sigma_theta * n_theta(rng);
+            s.v     = v_mean + sigma_v * n_v(rng);
+            states.push_back(s);
+        }
+        return states;
+    }
+
+    std::vector<vehicle_state> sampleInitialStates() { return sampleStates(true,  0.05); }
+    std::vector<vehicle_state> sampleGoalStates()    { return sampleStates(false, 0.05); }
+};
+
+struct SpreadStats {
+    double mean{0.0}, median{0.0};
+    double p16{0.0}, p84{0.0};          // empirical band
+    double gmean{0.0};                  // geometric mean
+    double g_lower{0.0}, g_upper{0.0};  // exp(mu -/+ s_log)
+    double worst{0.0};
+};
+
+// Linear-interpolated percentile, q in [0,1]; v must be sorted and non-empty
+static double percentileSorted(const std::vector<double>& v, double q) {
+    if (v.size() == 1) return v.front();
+    const double pos = q * (v.size() - 1);
+    const size_t lo = static_cast<size_t>(std::floor(pos));
+    const size_t hi = static_cast<size_t>(std::ceil(pos));
+    return v[lo] + (pos - lo) * (v[hi] - v[lo]);
+}
+
+static SpreadStats computeSpread(std::vector<double> v, bool positive_only = true) {
+    SpreadStats s;
+    if (v.empty()) return s;
+
+    std::sort(v.begin(), v.end());
+    s.mean   = std::accumulate(v.begin(), v.end(), 0.0) / v.size();
+    s.median = percentileSorted(v, 0.5);
+    s.p16    = percentileSorted(v, 0.16);
+    s.p84    = percentileSorted(v, 0.84);
+    s.worst  = v.back();
+
+    if (positive_only && v.front() > 0.0) {
+        double mu = 0.0;
+        for (double t : v) mu += std::log(t);
+        mu /= v.size();
+
+        double sq = 0.0;
+        for (double t : v) { const double d = std::log(t) - mu; sq += d * d; }
+        const double s_log = v.size() > 1 ? std::sqrt(sq / (v.size() - 1)) : 0.0;
+
+        s.gmean   = std::exp(mu);
+        s.g_lower = std::exp(mu - s_log);
+        s.g_upper = std::exp(mu + s_log);
+    }
+    return s;
+}
+
+static BoxStats computeBox(std::vector<double> v) {
+    BoxStats b;
+    if (v.empty()) return b;
+    std::sort(v.begin(), v.end());
+
+    b.q1     = percentileSorted(v, 0.25);
+    b.median = percentileSorted(v, 0.50);
+    b.q3     = percentileSorted(v, 0.75);
+
+    const double iqr = b.q3 - b.q1;
+    const double lo_fence = b.q1 - 1.5 * iqr;
+    const double hi_fence = b.q3 + 1.5 * iqr;
+
+    b.whisker_low  = v.back();
+    b.whisker_high = v.front();
+    for (double t : v) {
+        if (t < lo_fence || t > hi_fence) { b.outliers.push_back(t); continue; }
+        b.whisker_low  = std::min(b.whisker_low, t);
+        b.whisker_high = std::max(b.whisker_high, t);
+    }
+    return b;
+}
+
+void printBanner(const std::string &msg) {
+    const std::size_t W = 63;
+    const std::size_t inner = W - 2;
+    std::string text = msg.substr(0, inner);
+    std::size_t left  = (inner - text.size()) / 2;
+    std::size_t right = inner - text.size() - left;
+    std::string border(W, '#');
+    std::string blank = "#" + std::string(inner, ' ') + "#";
+
+    std::cout << border << "\n"
+              << border << "\n"
+              << blank  << "\n"
+              << "#" << std::string(left, ' ') << text << std::string(right, ' ') << "#\n"
+              << blank  << "\n"
+              << border << "\n"
+              << border << "\n" << std::endl;
+}
+
 // ---------------------------------------------------------------------------
 // Single trial: build + solve one random instance of a given scenario
 // ---------------------------------------------------------------------------
-TrialResult runSingleTrial(const ScenarioParams &p, RandomProblemGenerator &gen) {
+TrialResult runSingleTrial(const ScenarioParams &p, SquareProblemGenerator &gen) {
     TrialResult result;
 
-    vehicle_state initial{3.66, -1.86, 1.4, 0.02};
-    vehicle_state goal{0.0, 0.0, -1.4, 0.02};
+    auto current_states = gen.sampleInitialStates();
+    auto goal_states    = gen.sampleGoalStates();
 
-    std::vector<vehicle_state> current_states{initial};
-    std::vector<vehicle_state> goal_states{goal};
+    // std::vector<vehicle_state> current_states{initial};
+    // std::vector<vehicle_state> goal_states{goal};
 
     auto t0 = std::chrono::high_resolution_clock::now();
     MultipleVehiclePlanner solver(p.bezier_degree, p.n_vehicles, p.nSplit, p.constr_flags);
-    solver.setBoundsAndGains(0.01, 1.0,
-                         -5, 5,
-                         -5, 5,
-                         -5, 5,
-                         1.5, 5000.0,
-                         1.5, 1.0, 0.0, 0.0);
+    // solver.setBoundsAndGains(0.01, 1.0,
+    //                      -5, 5,
+    //                      -5, 5,
+    //                      -5, 5,
+    //                      1.5, 5000.0,
+    //                      1.5, 1.0, 0.0, 0.0);
     
 
-    solver.setFinalVelHeadMode(false, false);
+    // solver.setFinalVelHeadMode(false, false);
 
-    Eigen::MatrixXd Current(2, 2);
-    Current << 0, 1,
-        0, 0;
-    solver.setupSymbolic(Current);
+    // Eigen::MatrixXd Current(2, 2);
+    // Current << 0, 1,
+    //     0, 0;
+    solver.setupSymbolic();
     solver.computeCostFunction();
     solver.setOptimizationProblem(current_states, goal_states);
     solver.createConstraintVector();
@@ -228,7 +441,50 @@ TrialResult runSingleTrial(const ScenarioParams &p, RandomProblemGenerator &gen)
     solver.solveOptimizationProblem(&cancel_flag);
     auto t1 = std::chrono::high_resolution_clock::now();
 
-    result.solve_time_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    result.solve_time_ms = solver.getTcomput();
+    result.status = solver.getOptimizationstatus();
+    result.tf = solver.getTf();
+    result.ControlPts = solver.getControlPoints();
+    result.opt_traj = solver.getOptimalTrajectories(2000);
+
+    result.success =
+        result.status.find("Succeeded") != std::string::npos ||
+        result.status.find("success")   != std::string::npos ||
+        result.status.find("SUCCESS")   != std::string::npos;
+
+    return result;
+}
+
+// ---------------------------------------------------------------------------
+// Single trial: build + solve one random instance of a given scenario
+// ---------------------------------------------------------------------------
+TrialResult runSingleTrial_comparetime(const ScenarioParams &p, FormationProblemGenerator &gen) {
+    TrialResult result;
+
+    std::vector<vehicle_state> current_states = gen.sampleInitialStates();
+    std::vector<vehicle_state> goal_states = gen.goals();
+
+    MultipleVehiclePlanner solver(p.bezier_degree, p.n_vehicles, {p.conservativeness,p.conservativeness,p.conservativeness}, p.constr_flags);
+    solver.setBoundsAndGains(0.001, 1.5,
+                            -0.1, 0.1,
+                            -0.35, 0.35,
+                            -5, 5,
+                            1.5, 5000.0,
+                            1.5, 1.0, 0.0, 0.0);
+
+    solver.setupSymbolic();
+    solver.computeCostFunction();
+    solver.setOptimizationProblem(current_states, goal_states);
+    solver.createConstraintVector();
+    solver.createDecisionVector();
+
+    std::atomic<bool> cancel_flag{false};
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    solver.solveOptimizationProblem(&cancel_flag);
+    auto t1 = std::chrono::high_resolution_clock::now();
+
+    result.solve_time_ms = solver.getTcomput();
     result.status = solver.getOptimizationstatus();
     result.tf = solver.getTf();
     result.ControlPts = solver.getControlPoints();
@@ -350,14 +606,11 @@ TrialResult runSingleTrial_with_lower_order_guess(const ScenarioParams &p, Rando
 // ---------------------------------------------------------------------------
 // Single trial: build + solve one random instance of a given scenario
 // ---------------------------------------------------------------------------
-TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, RandomProblemGenerator &gen) {
+TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, SquareProblemGenerator &gen) {
     TrialResult result;
 
-    auto current_states = gen.randomStates(p.n_vehicles, p.area_size, 1.7);
-    auto goal_states     = gen.randomStates(p.n_vehicles, p.area_size, 1.7);
-    auto circ_obs = gen.randomCircObs(p.n_circ_obs, p.area_size);
-    auto elip_obs = gen.randomElipObs(p.n_elip_obs, p.area_size);
-    auto line_obs = gen.randomLineObs(p.n_line_obs, p.area_size);
+    auto current_states = gen.sampleInitialStates();
+    auto goal_states    = gen.sampleGoalStates();
 
     MultipleVehiclePlanner solver_guess(p.bezier_degree, 1, p.nSplit, p.constr_flags);
     
@@ -366,9 +619,8 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, RandomProblem
     std::vector<double> Tf_values(p.n_vehicles, 0.0);
     std::vector<bool> success_first(p.n_vehicles, false);
 
-    
+    result.solve_time_ms_strategy = 0.0;
 
-    auto t0 = std::chrono::high_resolution_clock::now();
     for(int i = 0; i < p.n_vehicles; i++)
     {
         solver_guess.setupSymbolic();
@@ -379,7 +631,7 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, RandomProblem
 
         current_state_vec.push_back(current_states[i]);
         goal_state_vec.push_back(goal_states[i]);
-        solver_guess.setOptimizationProblem(current_state_vec, goal_state_vec, circ_obs, line_obs, elip_obs);
+        solver_guess.setOptimizationProblem(current_state_vec, goal_state_vec);
         
         solver_guess.createConstraintVector();
         solver_guess.createDecisionVector();
@@ -387,7 +639,8 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, RandomProblem
         std::atomic<bool> cancel_flag{false};
 
         solver_guess.solveOptimizationProblem(&cancel_flag);
-
+        
+        result.solve_time_ms_strategy = result.solve_time_ms_strategy + solver_guess.getTcomput();
 
         result.status_strategy = solver_guess.getOptimizationstatus();
         success_first[i] =
@@ -395,7 +648,7 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, RandomProblem
             result.status_strategy.find("success")   != std::string::npos ||
             result.status_strategy.find("SUCCESS")   != std::string::npos;
         
-
+        
 
         Eigen::Tensor<double, 3> cp_raw = solver_guess.getControlPoints();
 
@@ -412,16 +665,19 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, RandomProblem
             }
         }
         Tf_values[i] = solver_guess.getTf();
-        Tf_guess = std::max(Tf_guess, Tf_values[i]);
-        
-        
+        if (success_first[i]) {
+            Tf_guess = std::max(Tf_guess, Tf_values[i]);
+        }        
     }
 
     std::vector<std::pair<int,int>> collisions;
     bool collision_detected = false;
 
     for (int i = 0; i < p.n_vehicles; ++i) {
+        if (!success_first[i]) continue;
         for (int j = i + 1; j < p.n_vehicles; ++j) {
+            if (!success_first[j]) continue;
+
             Eigen::MatrixXd P1 = BezierUtils::tensor_2_matrix(all_control_points, i);
             Eigen::MatrixXd P2 = BezierUtils::tensor_2_matrix(all_control_points, j);
 
@@ -432,63 +688,56 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, RandomProblem
         }
     }
 
+    std::vector<int> failed_vehicles;
+    for (int i = 0; i < p.n_vehicles; ++i) {
+        if (!success_first[i]) failed_vehicles.push_back(i);
+    }
+
     double strategy_tf{0.0};
-    if (collision_detected) {
-        std::vector<std::pair<int,int>> sorted_collisions = collisions;
+    if (collision_detected || !failed_vehicles.empty()) {
+        std::vector<int> to_remove;
 
-        std::sort(sorted_collisions.begin(), sorted_collisions.end(),
-            [&](auto& a, auto& b) {
-                double scoreA = Tf_values[a.first] + Tf_values[a.second];
-                double scoreB = Tf_values[b.first] + Tf_values[b.second];
-                return scoreA > scoreB; // prioritize high Tf conflicts
-            });
+        if (collision_detected) {
+            std::vector<std::pair<int,int>> sorted_collisions = collisions;
 
-        std::vector<int> to_remove = BezierUtils::selectTrajectoriesToRemove(p.n_vehicles, sorted_collisions, Tf_values);
-        
+            std::sort(sorted_collisions.begin(), sorted_collisions.end(),
+                [&](auto& a, auto& b) {
+                    double scoreA = Tf_values[a.first] + Tf_values[a.second];
+                    double scoreB = Tf_values[b.first] + Tf_values[b.second];
+                    return scoreA > scoreB; // prioritize high Tf conflicts
+                });
+
+            to_remove = BezierUtils::selectTrajectoriesToRemove(p.n_vehicles, sorted_collisions, Tf_values);
+        }
+
+        // Failed vehicles are always re-computed in the joint solve
+        for (int i : failed_vehicles) {
+            if (std::find(to_remove.begin(), to_remove.end(), i) == to_remove.end()) {
+                to_remove.push_back(i);
+            }
+        }
+        std::sort(to_remove.begin(), to_remove.end());
+
+        // Tf_min comes only from the vehicles that are kept
         double Tf_min = 0.0;
         for (int i = 0; i < p.n_vehicles; ++i) {
             if (std::find(to_remove.begin(), to_remove.end(), i) == to_remove.end()) {
-                std::cout << "There are " << p.n_vehicles << ", and vehicle " << i << " must be removed" << std::endl;
                 Tf_min = std::max(Tf_min, Tf_values[i]);
-            } 
+            }
         }
-
-        std::cout << "###############################################################" << std::endl;
-        std::cout << "###############################################################" << std::endl;
-        std::cout << "#                                                             #" << std::endl;
-        std::cout << "# Now starting the new optimization without good trajectories #" << std::endl;
-        std::cout << "#                                                             #" << std::endl;
-        std::cout << "###############################################################" << std::endl;
-        std::cout << "###############################################################" << std::endl;
-        std::cout << "                                                           " << std::endl;
         
         MultipleVehiclePlanner solver_collision(p.bezier_degree, p.n_vehicles, p.nSplit, p.constr_flags);
         solver_collision.setupSymbolic();
         solver_collision.computeCostFunction();
         
-        solver_collision.setOptimizationProblem(current_states, goal_states, circ_obs, line_obs, elip_obs, all_control_points, Tf_guess, false);
+        solver_collision.setOptimizationProblem(current_states, goal_states,Eigen::Matrix<double, 3, Eigen::Dynamic>(3, 0), Eigen::Matrix<double, 3, Eigen::Dynamic>(3, 0), Eigen::Matrix<double, 5, Eigen::Dynamic>(5, 0),  all_control_points, Tf_guess, false);
         solver_collision.createConstraintVector(to_remove);
-        std::cout << "##############                            ###############" << std::endl;
-        std::cout << "              ############################               " << std::endl;
-        std::cout << "##############      PASSED CONSTR         ###############" << std::endl;
-        std::cout << "              ############################               " << std::endl;
-        std::cout << "##############                            ###############" << std::endl;
         solver_collision.createDecisionVector(to_remove, Tf_min);
-        std::cout << "##############                            ###############" << std::endl;
-        std::cout << "              ############################               " << std::endl;
-        std::cout << "##############      PASSED DECIS         ###############" << std::endl;
-        std::cout << "              ############################               " << std::endl;
-        std::cout << "##############                            ###############" << std::endl;
-        
         std::atomic<bool> cancel_flag{false};
         solver_collision.solveOptimizationProblem(&cancel_flag);
-        std::cout << "##############                            ###############" << std::endl;
-        std::cout << "              ############################               " << std::endl;
-        std::cout << "##############      PASSED SOLVER         ###############" << std::endl;
-        std::cout << "              ############################               " << std::endl;
-        std::cout << "##############                            ###############" << std::endl;
 
         strategy_tf = solver_collision.getTf();
+        result.solve_time_ms_strategy = result.solve_time_ms_strategy + solver_collision.getTcomput();
         result.status_strategy = solver_collision.getOptimizationstatus();
         result.success_strategy =
             result.status_strategy.find("Succeeded") != std::string::npos ||
@@ -507,30 +756,25 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, RandomProblem
             }
         }
     }
-    auto t1 = std::chrono::high_resolution_clock::now();
-
-    result.solve_time_ms_strategy = std::chrono::duration<double, std::milli>(t1 - t0).count();
 
     result.tf_strategy = strategy_tf;
 
-    t0 = std::chrono::high_resolution_clock::now();
 
     MultipleVehiclePlanner solver(p.bezier_degree, p.n_vehicles, p.nSplit, p.constr_flags);
 
     solver.setupSymbolic();
     solver.computeCostFunction();
 
-    solver.setOptimizationProblem(current_states, goal_states, circ_obs, line_obs, elip_obs);
+    solver.setOptimizationProblem(current_states, goal_states);
     solver.createConstraintVector();
     solver.createDecisionVector();
 
     std::atomic<bool> cancel_flag{false};
 
     solver.solveOptimizationProblem(&cancel_flag);
-    t1 = std::chrono::high_resolution_clock::now();
 
     result.tf = solver.getTf();
-    result.solve_time_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    result.solve_time_ms = solver.getTcomput();
     result.status = solver.getOptimizationstatus();
 
     // --- Fallback success criterion (adapt once wasSuccessful() exists) ---
@@ -570,9 +814,12 @@ AggregateResult runScenario(const ScenarioParams &p, int n_trials, unsigned seed
     prc_maneuver_times.reserve(n_trials);
 
     for (int i = 0; i < n_trials; ++i) {
-        RandomProblemGenerator gen(seed_base + static_cast<unsigned>(i));
+        SquareProblemGenerator gen(seed_base + static_cast<unsigned>(i) + n_trials*static_cast<unsigned>(p.bezier_degree), p.n_vehicles, 800.0, 5.0, 0.5, 0.1);
+        // FormationProblemGenerator gen(seed_base + static_cast<unsigned>(i), 0.5, 0.1, 0.05);
         try {
-            TrialResult r = runSingleTrial(p, gen);
+            printBanner("Starting trial " + std::to_string(i + 1) + "/" + std::to_string(n_trials) +
+                " | N Vehicles = " + std::to_string(p.n_vehicles)+ " | Degree = " + std::to_string(p.bezier_degree));
+            TrialResult r = runSingleTrial_with_Collision(p, gen);
             if (r.success) {
                 ++n_success;
                 success_times.push_back(r.solve_time_ms);
@@ -621,6 +868,8 @@ AggregateResult runScenario(const ScenarioParams &p, int n_trials, unsigned seed
         agg.std_time_success_ms = stddev;
 
         agg.tf_value = std::accumulate(tf_times.begin(), tf_times.end(), 0.0) / tf_times.size();
+
+        agg.box_time_success = computeBox(success_times);
     }
 
     if (!success_times_strategy.empty()) {
@@ -639,6 +888,7 @@ AggregateResult runScenario(const ScenarioParams &p, int n_trials, unsigned seed
 
         agg.tf_value_strategy = std::accumulate(tf_times_strategy.begin(), tf_times_strategy.end(), 0.0) / tf_times_strategy.size();
 
+        agg.box_time_success_strategy = computeBox(success_times_strategy);
     }
 
     if (!prc_maneuver_times.empty()) {
@@ -654,6 +904,8 @@ AggregateResult runScenario(const ScenarioParams &p, int n_trials, unsigned seed
         agg.avg_percentage_strategy = mean;
         agg.worst_percentage_strategy = *std::max_element(prc_maneuver_times.begin(), prc_maneuver_times.end());
         agg.std_percentage_strategy = stddev;
+
+        agg.box_percentage_strategy = computeBox(prc_maneuver_times);
     }
 
     return agg;
@@ -738,6 +990,22 @@ std::vector<ScenarioParams> sweepDegreeSingleVehicleNoObstacles(const int start,
     }
     return out;
 }
+// --- Plot 1: Bezier degree vs. time, 1 vehicle, 0 obstacles -----------------
+std::vector<ScenarioParams> sweepNsplit(const int start, const int end) {
+    std::vector<ScenarioParams> out;
+    for (int d = start; d <= end; d++) {
+        ScenarioParams p;
+        p.bezier_degree = 6;
+        p.n_vehicles = 5;
+        p.n_circ_obs = 0;
+        p.n_elip_obs = 0;
+        p.n_line_obs = 0;
+        p.conservativeness = d;
+        p.label = "nsplit=" + std::to_string(d);
+        out.push_back(p);
+    }
+    return out;
+}
 
 // --- Plot 2: N vehicles vs. time, Bezier degree fixed at 9, 0 obstacles -----
 std::vector<ScenarioParams> sweepVehiclesFixedDegree(const std::vector<int> &values, int fixed_degree) {
@@ -761,12 +1029,31 @@ std::vector<ScenarioParams> sweepVehiclesFixedDegree(const std::vector<int> &val
 // ---------------------------------------------------------------------------
 void writeCsv(const std::vector<AggregateResult> &results, const std::string &path) {
     std::ofstream csv(path);
+
+    auto boxHeader = [](const std::string &p) {
+        return "," + p + "_q1," + p + "_median," + p + "_q3," +
+               p + "_whisker_low," + p + "_whisker_high," + p + "_outliers";
+    };
+
+    auto writeBox = [&csv](const BoxStats &b) {
+        std::ostringstream out;
+        for (size_t i = 0; i < b.outliers.size(); ++i)
+            out << (i ? ";" : "") << b.outliers[i];
+        csv << "," << b.q1 << "," << b.median << "," << b.q3
+            << "," << b.whisker_low << "," << b.whisker_high
+            << "," << out.str();
+    };
+
     csv << "label,n_vehicles,bezier_degree,n_circ_obs,n_elip_obs,n_line_obs,"
            "conservativeness,n_trials,"
            "n_success,failure_pct,avg_time_success_ms,worst_time_success_ms,std_time_success_ms,"
            "n_success_strategy,failure_pct_strategy,avg_time_success_ms_strategy,"
            "worst_time_success_ms_strategy,std_time_success_ms_strategy,"
-           "avg_percentage_strategy,worst_percentage_strategy,std_percentage_strategy\n";
+           "avg_percentage_strategy,worst_percentage_strategy,std_percentage_strategy"
+        << boxHeader("box_time")
+        << boxHeader("box_time_strategy")
+        << boxHeader("box_percentage")
+        << "\n";
 
     for (const auto &r : results) {
         csv << r.params.label << ","
@@ -789,7 +1076,12 @@ void writeCsv(const std::vector<AggregateResult> &results, const std::string &pa
             << r.std_time_success_ms_strategy << ","
             << r.avg_percentage_strategy << ","
             << r.worst_percentage_strategy << ","
-            << r.std_percentage_strategy << "\n";
+            << r.std_percentage_strategy;
+
+        writeBox(r.box_time_success);
+        writeBox(r.box_time_success_strategy);
+        writeBox(r.box_percentage_strategy);
+        csv << "\n";
     }
     std::cout << "Wrote results to " << path << "\n";
 }
@@ -940,12 +1232,14 @@ std::string todayDateString() {
     return std::string(buf);
 }
 
+
 // ---------------------------------------------------------------------------
 // main: run each axis sweep as its own CSV, plus print a quick summary
 // ---------------------------------------------------------------------------
 int main() {
-    const int N_TRIALS = 1;      // trials per scenario point, as requested
-    const unsigned SEED_BASE = 10;
+    const int N_TRIALS = 50;      // trials per scenario point, as requested
+    const unsigned SEED_BASE = 1099;
+
     const std::string date_tag = todayDateString();
     struct Sweep {
         std::string name;
@@ -954,11 +1248,11 @@ int main() {
  
     std::vector<Sweep> sweeps = {
         // Plot 1: degree 5..15, 1 vehicle, 0 obstacles
-        {"degree_1veh_0obs", sweepDegreeSingleVehicleNoObstacles(3,45)}
- 
+        //{"degree_1veh", sweepDegreeSingleVehicleNoObstacles(14,20)}
+        // {"nsplit_sweep_5veh_6deg", sweepNsplit(0,4)}
         // // Plot 2: n_vehicles 1..N, Bezier degree fixed at 9, 0 obstacles
-        // {"vehicles_deg9_0obs", sweepVehiclesFixedDegree(
-        //     {9}, /*fixed_degree=*/9)},
+        {"vehicles_deg7", sweepVehiclesFixedDegree(
+              {1,2,3,4,5,6,7,8,9,10,11,12,13}, /*fixed_degree=*/6)},
 
     };
  
@@ -981,9 +1275,9 @@ int main() {
         }
  
         writeCsv(results, "src/farol2/farol2_motion_planning/test/results/benchmark_" + date_tag + "_original_plot_" + sweep.name + ".csv");
-        writeCsv_simple(results, "src/farol2/farol2_motion_planning/test/results/benchmark_" + date_tag + "_simple.csv");
-        writeCsv_controlPts(results, "src/farol2/farol2_motion_planning/test/results/benchmark_" +  date_tag + "_controlPts.csv");
-        writeCsv_trajectories(results, "src/farol2/farol2_motion_planning/test/results/benchmark_" +  date_tag + "_trajectories.csv");
+        writeCsv_simple(results, "src/farol2/farol2_motion_planning/test/results/benchmark_" + date_tag + "_simple_" + sweep.name + ".csv");
+        // writeCsv_controlPts(results, "src/farol2/farol2_motion_planning/test/results/benchmark_" +  date_tag + "_controlPts_" + sweep.name + ".csv");
+        // writeCsv_trajectories(results, "src/farol2/farol2_motion_planning/test/results/benchmark_" +  date_tag + "_trajectories_" + sweep.name + ".csv");
     }
  
     return 0;
