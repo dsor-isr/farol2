@@ -63,17 +63,56 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 ament_export_dependencies(rosidl_default_runtime)
 
+# # --------------------
+# # Executables
+# # --------------------
+# add_executable(${PROJECT_NAME}_node
+#   src/algorithms/multiple_vehicle_planner.cpp
+#   src/algorithms/bezier_utils.cpp
+#   src/ros/interactive_planner_node.cpp
+#   src/underway/distributed_planner_node.cpp
+#   src/underway/distributed_utils.cpp
+# )
+
+# ament_target_dependencies(${PROJECT_NAME}_node
+#   rclcpp
+#   std_msgs
+#   std_srvs
+#   nav_msgs
+#   geometry_msgs
+# )
+
+# # Include directories
+# target_include_directories(${PROJECT_NAME}_node PUBLIC
+#   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+#   ${CASADI_INCLUDE_DIR}
+# )
+
+# # C/C++ standard
+# target_compile_features(${PROJECT_NAME}_node PUBLIC c_std_99 cxx_std_17)
+
+# # --------------------
+# # Link libraries
+# # --------------------
+# # Link this package's generated typesupport (for custom msg/srv types)
+# rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
+# target_link_libraries(${PROJECT_NAME}_node
+#   "${cpp_typesupport_target}"
+#   Eigen3::Eigen
+#   ${CASADI_LIBRARIES}
+# )
+
 # --------------------
-# Executables
+# Shared library
 # --------------------
-add_executable(${PROJECT_NAME}_node
+add_library(${PROJECT_NAME}_core
   src/algorithms/multiple_vehicle_planner.cpp
   src/algorithms/bezier_utils.cpp
-  src/ros/interactive_planner_node.cpp
-  src/underway/distributed_planner_node.cpp
+  src/underway/distributed_utils.cpp
 )
 
-ament_target_dependencies(${PROJECT_NAME}_node
+ament_target_dependencies(${PROJECT_NAME}_core
   rclcpp
   std_msgs
   std_srvs
@@ -81,31 +120,40 @@ ament_target_dependencies(${PROJECT_NAME}_node
   geometry_msgs
 )
 
-# Include directories
-target_include_directories(${PROJECT_NAME}_node PUBLIC
+target_include_directories(${PROJECT_NAME}_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
   ${CASADI_INCLUDE_DIR}
 )
 
-# C/C++ standard
-target_compile_features(${PROJECT_NAME}_node PUBLIC c_std_99 cxx_std_17)
+target_compile_features(${PROJECT_NAME}_core PUBLIC c_std_99 cxx_std_17)
 
-# --------------------
-# Link libraries
-# --------------------
-# Link this package's generated typesupport (for custom msg/srv types)
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
-target_link_libraries(${PROJECT_NAME}_node
+target_link_libraries(${PROJECT_NAME}_core
   "${cpp_typesupport_target}"
   Eigen3::Eigen
   ${CASADI_LIBRARIES}
 )
 
 # --------------------
+# Executables
+# --------------------
+add_executable(${PROJECT_NAME}_node src/ros/interactive_planner_node.cpp)
+target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME}_core)
+
+add_executable(distributed_planner_node src/underway/distributed_planner_node.cpp)
+target_link_libraries(distributed_planner_node ${PROJECT_NAME}_core)
+
+# --------------------
 # Install
 # --------------------
-install(TARGETS ${PROJECT_NAME}_node
+install(TARGETS ${PROJECT_NAME}_core
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+install(TARGETS ${PROJECT_NAME}_node distributed_planner_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -144,6 +192,7 @@ target_link_libraries(benchmark_planner
 install(TARGETS benchmark_planner
   DESTINATION lib/${PROJECT_NAME}
 )
+
 
 # --------------------
 # Testing

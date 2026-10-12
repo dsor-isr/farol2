@@ -54,3 +54,11 @@ farol2_motion_planning:
     
     # End-point cost weight
     gamma: 1.0
+
+    # ============================================
+    # Distributed Parameters
+    # ============================================
+    use_goal_straight_line: false
+    use_goal_closer_point: true
+    cell_margin: 2.0
+
