@@ -122,6 +122,10 @@ private:
     std::thread opt_thread_;
     std::atomic<bool> opt_running_{false};
 
+    // MultipleVehiclePlanner solver_;
+    // MultipleVehiclePlanner solver_guess_;
+    bool solver_changed_{true};
+
     // Results
     Eigen::Tensor<double, 3> last_control_points_;
     double last_Tf_;

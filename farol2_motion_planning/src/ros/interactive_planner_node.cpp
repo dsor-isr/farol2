@@ -322,6 +322,15 @@ void InteractivePlannerNode::setBezierParamsService(const std::shared_ptr<farol2
         return;
     }
 
+    // Check whether any solver parameter has changed
+    const bool parameters_changed =
+        (bezier_degree_ != req->bezier_degree) ||
+        (guess_degree_ != req->guess_degree) ||
+        (nSplit_ != req->n_split) ||
+        (constr_flags_ != req->constr_flags);
+
+    solver_changed_ = parameters_changed;
+    
     bezier_degree_ = req->bezier_degree;
     guess_degree_ = req->guess_degree;
     use_initial_guess_ = req->guess_active;
@@ -544,6 +553,7 @@ GuessResult InteractivePlannerNode::calculateGuessUnconflicted(const vehicle_sta
     guess.Tf_guess = -std::numeric_limits<double>::infinity();
     guess.Tf_values.assign(NVehicles, 0.0);
     guess.success.assign(NVehicles, false);
+
 
     MultipleVehiclePlanner solver_first(guess_degree_, 1, nSplitInt(), constraintFlagsUint8());
 
@@ -1106,6 +1116,7 @@ bool InteractivePlannerNode::runOptimization(std::vector<std::string> vehicles,
     const int NVehicles = vehicles.size();
     bool overall_success = true;
 
+    
     MultipleVehiclePlanner solver(bezier_degree_, NVehicles, nSplitInt(), constraintFlagsUint8());
     if (bounds_.is_set)
     {
@@ -1128,7 +1139,7 @@ bool InteractivePlannerNode::runOptimization(std::vector<std::string> vehicles,
 
     // Lambda capturing necessary data for the optimization thread
     auto optimization_task = [this, vehicles, ref_state, current_states, goal_states,
-                                overall_success, solver = std::move(solver)]() mutable
+                                &overall_success, solver = std::move(solver)]() mutable
     {   
         try
         {
@@ -1237,19 +1248,40 @@ bool InteractivePlannerNode::runOptimization(std::vector<std::string> vehicles,
         }
         catch (const std::exception &e)
         {
-            RCLCPP_WARN_STREAM(this->get_logger(), "Optimization thread stopped: " << e.what());
-            publishLog(std::string("Optimization thread stopped: ") + e.what());
+            overall_success = false;
+
+            RCLCPP_WARN_STREAM(
+                this->get_logger(),
+                "Optimization thread stopped: " << e.what()
+            );
+
+            publishLog(
+                std::string("Optimization thread stopped: ") + e.what()
+            );
+
             opt_running_ = false;
         }
     };
 
-        // Detach thread for async optimization
-        if (opt_thread_.joinable())
-        {
-            opt_thread_.join();
-        }
-        opt_thread_ = std::thread(optimization_task);
-        opt_thread_.detach();
+    // Ensure any previous thread has completed.
+    if (opt_thread_.joinable())
+    {
+        opt_thread_.join();
+    }
+
+    // Start optimization in its own thread.
+    opt_thread_ = std::thread(optimization_task);
+
+    // Wait for the solver to finish and update overall_success.
+    if (opt_thread_.joinable())
+    {
+        opt_thread_.join();
+    }
+
+    publishLog(
+        std::string("Overall optimization success: ") +
+        (overall_success ? "true" : "false")
+    );
 
     return overall_success;
 }
@@ -1309,7 +1341,6 @@ void InteractivePlannerNode::runOptimizationService(const std::shared_ptr<farol2
 
     bool overall_success = true;
 
-    //use_initial_guess_ = false;
     if(use_initial_guess_)
     {
         publishLog("Starting Optimization with guess");
@@ -1339,10 +1370,14 @@ void InteractivePlannerNode::runOptimizationService(const std::shared_ptr<farol2
         publishLog("Starting Optimization without guess");
         overall_success = runOptimization(vehicles, ref_state, current_states, goal_states);
     }
-    
 
+
+    // Set the service response after the selected optimization path finishes.
     res->success = overall_success;
-    res->message = "Optimization finished";
+
+    res->message = overall_success ? "Optimization finished successfully" : "Optimization failed";
+
+    publishLog(res->message);
 }
 
 void InteractivePlannerNode::cancelOptimizationService(const std::shared_ptr<std_srvs::srv::Trigger::Request> req,

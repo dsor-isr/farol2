@@ -91,11 +91,11 @@ def plot_control_points(csv_path_cp, csv_path_traj, outdir, degrees=None):
                 x = traj_trial["x"].to_numpy()
                 y = traj_trial["y"].to_numpy()
 
-                dx_dt = np.gradient(x, t)+y
+                dx_dt = np.gradient(x, t)
                 dy_dt = np.gradient(y, t)
 
                 velocity = np.sqrt(dx_dt**2 + dy_dt**2)
-                heading = np.degrees(np.arctan2(dy_dt, dx_dt)) % 360
+                heading = np.degrees(np.unwrap(np.arctan2(dy_dt, dx_dt)))
 
                 # ------------------------------------------------
                 # Label
@@ -163,7 +163,7 @@ def plot_control_points(csv_path_cp, csv_path_traj, outdir, degrees=None):
     ax.grid(True, linewidth=0.4, alpha=0.5)
     ax.plot(x_analytical, y_analytical,"--",label="Analytical",linewidth=2)
     ax.tick_params(axis="both", labelsize=smaller_size)
-    ax.legend(fontsize=smaller_size)
+    # ax.legend(fontsize=smaller_size)
  
 
     fig.tight_layout()
@@ -178,7 +178,7 @@ def plot_control_points(csv_path_cp, csv_path_traj, outdir, degrees=None):
     ax_vel.set_ylabel("Velocity magnitude", fontsize=normal_size)
     ax_vel.grid(True, linewidth=0.4, alpha=0.5)
     ax_vel.tick_params(axis="both", labelsize=smaller_size)
-    ax_vel.legend(fontsize=smaller_size)
+    #ax_vel.legend(fontsize=smaller_size)
     ax_vel.set_ylim(0.0, 1.1)
 
     fig_vel.tight_layout()
@@ -194,7 +194,7 @@ def plot_control_points(csv_path_cp, csv_path_traj, outdir, degrees=None):
     ax_heading.grid(True, linewidth=0.4, alpha=0.5)
     ax_heading.plot(tau_analytical, theta_analytical_deg,"--",label="Analytical",linewidth=2)
     ax_heading.tick_params(axis="both", labelsize=smaller_size)
-    ax_heading.legend(fontsize=smaller_size)
+   # ax_heading.legend(fontsize=smaller_size)
     # Analytical solution
     
     # ax_heading.set_ylim(104, 106)
@@ -240,9 +240,16 @@ def main():
 
     args = parser.parse_args()
 
-    os.makedirs(args.outdir, exist_ok=True)
+    indir = os.path.join(RESULTS_DIR, args.date)
+    outdir = os.path.join(indir, "figures")
+    os.makedirs(outdir, exist_ok=True)
 
-    plot_control_points(csv_path_cp=os.path.join(args.indir,f"benchmark_{args.date}_controlPts.csv",), csv_path_traj=os.path.join(args.indir,f"benchmark_{args.date}_trajectories.csv",),outdir=args.outdir,degrees=args.degrees,)
+    plot_control_points(
+        csv_path_cp=os.path.join(indir, f"benchmark_{args.date}_controlPts_vehicles_deg7.csv"),
+        csv_path_traj=os.path.join(indir, f"benchmark_{args.date}_trajectories_vehicles_deg7.csv"),
+        outdir=outdir,
+        degrees=args.degrees,
+    )
 
 
 if __name__ == "__main__":

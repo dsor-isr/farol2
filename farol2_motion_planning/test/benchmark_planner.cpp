@@ -36,6 +36,8 @@
 #include <sstream>
 #include <atomic>
 #include <stdexcept>
+#include <filesystem>
+#include <iomanip>
 
 #include "algorithms/multiple_vehicle_planner.hpp"  // MultipleVehiclePlanner, vehicle_state
 
@@ -66,6 +68,8 @@ struct TrialResult {
     bool success_strategy = false;
     double solve_time_ms_strategy = 0.0;
     double tf_strategy = 0.0;
+    Eigen::Tensor<double, 3> ControlPts_strategy;
+    Eigen::Tensor<double, 3> opt_traj_strategy;
     std::string status_strategy;
 };
 
@@ -101,6 +105,9 @@ struct AggregateResult {
     double worst_time_success_ms_strategy = std::nan("");
     double std_time_success_ms_strategy = std::nan("");
     double tf_value_strategy = std::nan("");
+    std::vector<Eigen::Tensor<double, 3>> ControlPts_strategy;
+    std::vector<Eigen::Tensor<double, 3>> opt_traj_strategy;
+    std::vector<int> ControlPts_trial_strategy;
 
     double avg_percentage_strategy = std::nan("");
     double worst_percentage_strategy = std::nan("");
@@ -268,7 +275,7 @@ struct SquareProblemGenerator {
     double sigma_theta; // std of heading [rad]
     double sigma_v;     // std of speed [m/s]
 
-    static constexpr double UP_HEADING = M_PI / 2.0;
+    static constexpr double UP_HEADING =M_PI / 2.0;
 
     SquareProblemGenerator(unsigned seed, int n, double side,
                         double sigma_pos, double sigma_theta, double sigma_v)
@@ -307,7 +314,7 @@ struct SquareProblemGenerator {
             s.x     = cx + dx;
             s.y     = y_center + dy;
             s.theta = UP_HEADING + sigma_theta * n_theta(rng);
-            s.v     = v_mean + sigma_v * n_v(rng);
+            s.v = std::max(0.01, 0.05 + sigma_v * n_v(rng));
             states.push_back(s);
         }
         return states;
@@ -612,8 +619,17 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, SquareProblem
     auto current_states = gen.sampleInitialStates();
     auto goal_states    = gen.sampleGoalStates();
 
+    for (size_t i = 0; i < current_states.size(); ++i) {
+        std::cout << "Vehicle " << i
+                << " | Initial heading: "
+                << current_states[i].theta * 180.0 / M_PI
+                << " deg | Goal heading: "
+                << goal_states[i].theta * 180.0 / M_PI
+                << " deg\n";
+    }
+
     MultipleVehiclePlanner solver_guess(p.bezier_degree, 1, p.nSplit, p.constr_flags);
-    
+    // solver_guess.setFinalVelHeadMode(false,false);
     double Tf_guess = -std::numeric_limits<double>::infinity();
     Eigen::Tensor<double, 3> all_control_points;
     std::vector<double> Tf_values(p.n_vehicles, 0.0);
@@ -647,6 +663,7 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, SquareProblem
             result.status_strategy.find("Succeeded") != std::string::npos ||
             result.status_strategy.find("success")   != std::string::npos ||
             result.status_strategy.find("SUCCESS")   != std::string::npos;
+        
         
         
 
@@ -727,6 +744,7 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, SquareProblem
         }
         
         MultipleVehiclePlanner solver_collision(p.bezier_degree, p.n_vehicles, p.nSplit, p.constr_flags);
+        // solver_collision.setFinalVelHeadMode(false,false);
         solver_collision.setupSymbolic();
         solver_collision.computeCostFunction();
         
@@ -739,6 +757,8 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, SquareProblem
         strategy_tf = solver_collision.getTf();
         result.solve_time_ms_strategy = result.solve_time_ms_strategy + solver_collision.getTcomput();
         result.status_strategy = solver_collision.getOptimizationstatus();
+        result.ControlPts_strategy = solver_collision.getControlPoints();
+        result.opt_traj_strategy = solver_collision.getOptimalTrajectories(2000);
         result.success_strategy =
             result.status_strategy.find("Succeeded") != std::string::npos ||
             result.status_strategy.find("success")   != std::string::npos ||
@@ -761,7 +781,7 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, SquareProblem
 
 
     MultipleVehiclePlanner solver(p.bezier_degree, p.n_vehicles, p.nSplit, p.constr_flags);
-
+    // solver.setFinalVelHeadMode(false,false);
     solver.setupSymbolic();
     solver.computeCostFunction();
 
@@ -776,6 +796,8 @@ TrialResult runSingleTrial_with_Collision(const ScenarioParams &p, SquareProblem
     result.tf = solver.getTf();
     result.solve_time_ms = solver.getTcomput();
     result.status = solver.getOptimizationstatus();
+    result.ControlPts = solver.getControlPoints();
+    result.opt_traj = solver.getOptimalTrajectories(2000);
 
     // --- Fallback success criterion (adapt once wasSuccessful() exists) ---
     // CasADi/IPOPT typically report something like "Solve_Succeeded".
@@ -808,19 +830,27 @@ AggregateResult runScenario(const ScenarioParams &p, int n_trials, unsigned seed
     std::vector<double> success_times_strategy;
     std::vector<double> tf_times_strategy;
     success_times_strategy.reserve(n_trials);
+    std::vector<Eigen::Tensor<double, 3>> ControlPts_strategy;
+    std::vector<Eigen::Tensor<double, 3>> opt_traj_strategy;
+    std::vector<int> ControlPts_trial_strategy;
     int n_success_strategy = 0;
 
     std::vector<double> prc_maneuver_times;
     prc_maneuver_times.reserve(n_trials);
 
     for (int i = 0; i < n_trials; ++i) {
-        SquareProblemGenerator gen(seed_base + static_cast<unsigned>(i) + n_trials*static_cast<unsigned>(p.bezier_degree), p.n_vehicles, 800.0, 5.0, 0.5, 0.1);
+        SquareProblemGenerator gen(seed_base + static_cast<unsigned>(i) + n_trials*static_cast<unsigned>(p.bezier_degree), p.n_vehicles, 800.0, 5.0, 0.0, 0.1);
         // FormationProblemGenerator gen(seed_base + static_cast<unsigned>(i), 0.5, 0.1, 0.05);
         try {
             printBanner("Starting trial " + std::to_string(i + 1) + "/" + std::to_string(n_trials) +
                 " | N Vehicles = " + std::to_string(p.n_vehicles)+ " | Degree = " + std::to_string(p.bezier_degree));
             TrialResult r = runSingleTrial_with_Collision(p, gen);
             if (r.success) {
+                std::cout << "[Trial " << i << "] ControlPts dimensions: "
+                    << r.ControlPts.dimension(0) << " x "
+                    << r.ControlPts.dimension(1) << " x "
+                    << r.ControlPts.dimension(2) << std::endl;
+
                 ++n_success;
                 success_times.push_back(r.solve_time_ms);
                 tf_times.push_back(r.tf);
@@ -829,9 +859,17 @@ AggregateResult runScenario(const ScenarioParams &p, int n_trials, unsigned seed
                 ControlPts_trial.push_back(i);
             }
             if (r.success_strategy) {
+                std::cout << "[Trial " << i << "] ControlPts_strategy dimensions: "
+                    << r.ControlPts_strategy.dimension(0) << " x "
+                    << r.ControlPts_strategy.dimension(1) << " x "
+                    << r.ControlPts_strategy.dimension(2) << std::endl;
+
                 ++n_success_strategy;
                 success_times_strategy.push_back(r.solve_time_ms_strategy);      
                 tf_times_strategy.push_back(r.tf_strategy);      
+                ControlPts_strategy.push_back(r.ControlPts_strategy);
+                opt_traj_strategy.push_back(r.opt_traj_strategy);
+                ControlPts_trial_strategy.push_back(i);
             }
             if (r.success && r.success_strategy) {
                 prc_maneuver_times.push_back((r.tf_strategy-r.tf)/r.tf);
@@ -853,6 +891,9 @@ AggregateResult runScenario(const ScenarioParams &p, int n_trials, unsigned seed
     agg.ControlPts = ControlPts;
     agg.opt_traj = opt_traj;
     agg.ControlPts_trial = ControlPts_trial;
+    agg.ControlPts_strategy = ControlPts_strategy;
+    agg.opt_traj_strategy = opt_traj_strategy;
+    agg.ControlPts_trial_strategy = ControlPts_trial_strategy;
     if (!success_times.empty()) {
         double sum = std::accumulate(success_times.begin(), success_times.end(), 0.0);
         double mean = sum / success_times.size();
@@ -1224,6 +1265,122 @@ void writeCsv_trajectories(const std::vector<AggregateResult>& results, const st
     std::cout << "Wrote trajectories points to " << path << "\n";
 }
 
+void writeCsv_controlPts_strategy(const std::vector<AggregateResult>& results, const std::string& path)
+{
+    std::ofstream csv(path);
+
+    if (!csv.is_open()) {
+        throw std::runtime_error(
+            "Could not open control point CSV: " + path);
+    }
+
+    csv << "label,bezier_degree,trial,vehicle,control_point,x,y,tf\n";
+
+    for (const auto& r : results)
+    {
+        for (size_t trial_idx = 0;
+             trial_idx < r.ControlPts_strategy.size();
+             ++trial_idx)
+        {
+            const auto& tensor = r.ControlPts_strategy[trial_idx];
+
+            int trial = r.ControlPts_trial[trial_idx];
+
+            const int n_vehicles =
+                static_cast<int>(tensor.dimension(0));
+
+            const int n_coords =
+                static_cast<int>(tensor.dimension(1));
+
+            const int n_control_points =
+                static_cast<int>(tensor.dimension(2));
+
+            if (n_coords != 2) {
+                throw std::runtime_error(
+                    "Expected control-point tensor dimension 1 to be 2.");
+            }
+
+            for (int k = 0; k < n_vehicles; ++k)
+            {
+                for (int i = 0; i < n_control_points; ++i)
+                {
+                    double x = tensor(k, 0, i);
+                    double y = tensor(k, 1, i);
+
+                    csv << r.params.label << ","
+                        << r.params.bezier_degree << ","
+                        << trial << ","
+                        << k << ","
+                        << i << ","
+                        << x << ","
+                        << y << ","
+                        << r.tf_value << "\n";
+                }
+            }
+        }
+    }
+
+    std::cout << "Wrote control points to " << path << "\n";
+}
+
+void writeCsv_trajectories_strategy(const std::vector<AggregateResult>& results, const std::string& path)
+{
+    std::ofstream csv(path);
+
+    if (!csv.is_open()) {
+        throw std::runtime_error(
+            "Could not open control point CSV: " + path);
+    }
+
+    csv << "label,bezier_degree,trial,vehicle,point_idx,x,y,tf\n";
+
+    for (const auto& r : results)
+    {
+        for (size_t trial_idx = 0;
+             trial_idx < r.opt_traj_strategy.size();
+             ++trial_idx)
+        {
+            const auto& tensor = r.opt_traj_strategy[trial_idx];
+
+            int trial = r.ControlPts_trial[trial_idx];
+
+            const int n_vehicles =
+                static_cast<int>(tensor.dimension(0));
+
+            const int n_coords =
+                static_cast<int>(tensor.dimension(1));
+
+            const int n_pts =
+                static_cast<int>(tensor.dimension(2));
+
+            if (n_coords != 2) {
+                throw std::runtime_error(
+                    "Expected trajectory tensor dimension 1 to be 2.");
+            }
+
+            for (int k = 0; k < n_vehicles; ++k)
+            {
+                for (int i = 0; i < n_pts; ++i)
+                {
+                    double x = tensor(k, 0, i);
+                    double y = tensor(k, 1, i);
+
+                    csv << r.params.label << ","
+                        << r.params.bezier_degree << ","
+                        << trial << ","
+                        << k << ","
+                        << i << ","
+                        << x << ","
+                        << y << ","
+                        << r.tf_value << "\n";
+                }
+            }
+        }
+    }
+
+    std::cout << "Wrote trajectories points to " << path << "\n";
+}
+
 std::string todayDateString() {
     std::time_t t = std::time(nullptr);
     std::tm tm = *std::localtime(&t);
@@ -1237,7 +1394,7 @@ std::string todayDateString() {
 // main: run each axis sweep as its own CSV, plus print a quick summary
 // ---------------------------------------------------------------------------
 int main() {
-    const int N_TRIALS = 50;      // trials per scenario point, as requested
+    const int N_TRIALS = 1;      // trials per scenario point, as requested
     const unsigned SEED_BASE = 1099;
 
     const std::string date_tag = todayDateString();
@@ -1252,12 +1409,35 @@ int main() {
         // {"nsplit_sweep_5veh_6deg", sweepNsplit(0,4)}
         // // Plot 2: n_vehicles 1..N, Bezier degree fixed at 9, 0 obstacles
         {"vehicles_deg7", sweepVehiclesFixedDegree(
-              {1,2,3,4,5,6,7,8,9,10,11,12,13}, /*fixed_degree=*/6)},
+              {7}, /*fixed_degree=*/6)},
 
     };
  
     // Other sweeps (obstacles, conservativeness) are still available via
     // sweepObstacles()/sweepConservativeness() 
+
+     namespace fs = std::filesystem;
+
+    const auto now = std::chrono::system_clock::now();
+    const std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+
+    std::tm local_time{};
+    #ifdef _WIN32
+    localtime_s(&local_time, &now_time);
+    #else
+    localtime_r(&now_time, &local_time);
+    #endif
+
+    std::ostringstream date_stream;
+    date_stream << std::put_time(&local_time, "%Y-%m-%d");
+
+    const std::string date_folder = date_stream.str();
+
+    const fs::path results_dir =
+        fs::path("src/farol2/farol2_motion_planning/test/results") / date_folder;
+
+    fs::create_directories(results_dir);
+
 
     for (const auto &sweep : sweeps) {
         std::vector<AggregateResult> results;
@@ -1273,11 +1453,39 @@ int main() {
                       << " worst=" << agg.worst_time_success_ms << " ms\n";
             results.push_back(agg);
         }
+
+       
+
  
-        writeCsv(results, "src/farol2/farol2_motion_planning/test/results/benchmark_" + date_tag + "_original_plot_" + sweep.name + ".csv");
-        writeCsv_simple(results, "src/farol2/farol2_motion_planning/test/results/benchmark_" + date_tag + "_simple_" + sweep.name + ".csv");
-        // writeCsv_controlPts(results, "src/farol2/farol2_motion_planning/test/results/benchmark_" +  date_tag + "_controlPts_" + sweep.name + ".csv");
-        // writeCsv_trajectories(results, "src/farol2/farol2_motion_planning/test/results/benchmark_" +  date_tag + "_trajectories_" + sweep.name + ".csv");
+        writeCsv(
+            results,
+            (results_dir / ("benchmark_" + date_tag + "_original_plot_" + sweep.name + ".csv")).string()
+        );
+
+        writeCsv_simple(
+            results,
+            (results_dir / ("benchmark_" + date_tag + "_simple_" + sweep.name + ".csv")).string()
+        );
+
+        writeCsv_controlPts(
+            results,
+            (results_dir / ("benchmark_" + date_tag + "_controlPts_" + sweep.name + ".csv")).string()
+        );
+
+        writeCsv_trajectories(
+            results,
+            (results_dir / ("benchmark_" + date_tag + "_trajectories_" + sweep.name + ".csv")).string()
+        );
+
+        writeCsv_controlPts_strategy(
+            results,
+            (results_dir / ("benchmark_" + date_tag + "_controlPts_strategy_" + sweep.name + ".csv")).string()
+        );
+
+        writeCsv_trajectories_strategy(
+            results,
+            (results_dir / ("benchmark_" + date_tag + "_trajectories_strategy_" + sweep.name + ".csv")).string()
+        );
     }
  
     return 0;

@@ -151,6 +151,7 @@ private:
     // --- CasADi symbolic variables ---
     casadi::SX sym_Tf_;                           // Final time (optimization variable)
     std::vector<casadi::SX> sym_P_all_;           // All control points N x (2 x (BezierDegree+1))
+    std::vector<casadi::SX> sym_P_all_problem_;   // Per-problem expressions; fixed points are substituted here
     casadi::SX sym_circ_obs_;                     // Circular obstacle parameters (3 x 1)
     casadi::SX sym_elip_obs_;                     // Elliptical obstacle parameters (5 x 1)
     casadi::SX sym_line_obs_;                     // Linear obstacle parameters (3 x 1)

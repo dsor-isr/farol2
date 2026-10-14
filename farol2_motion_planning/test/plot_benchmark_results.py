@@ -216,47 +216,64 @@ RESULTS_DIR = "/home/dsor-gorka/dsor/colcon_ws_mDrivers/src/farol2/farol2_motion
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--indir", default=RESULTS_DIR, help="directory containing the benchmark CSVs")
-    parser.add_argument("--outdir", default=os.path.join(RESULTS_DIR, "figures"), help="directory to write PNG figures to")
+   
     parser.add_argument(
         "--date",
         default=datetime.date.today().isoformat(),
         help="date tag matching the CSV filenames, format YYYY-MM-DD (default: today)",
     )
+
+    parser.add_argument(
+        "--sweep",
+        choices=["degree", "vehicles"],
+        required=True,
+        help="Sweep type: degree or vehicles",
+    )
+    parser.add_argument(
+        "--fixed",
+        type=int,
+        required=True,
+        help="Fixed degree for a vehicle sweep, or fixed number of vehicles for a degree sweep",
+    )
+
     args = parser.parse_args()
 
-    os.makedirs(args.outdir, exist_ok=True)
+    indir = os.path.join(RESULTS_DIR, args.date)
+    outdir = os.path.join(indir, "figures")
+    os.makedirs(outdir, exist_ok=True)
+
+    if args.sweep == "degree":
+        # Sweep the Bézier degree, keeping the number of vehicles fixed.
+        csv_path = os.path.join(
+            indir, f"benchmark_{args.date}_original_plot_degree_{args.fixed}veh.csv"
+        )
+        x_col = "bezier_degree"
+        x_label = "Bézier curve degree"
+        title_prefix = f"{args.fixed} vehicle(s), 0 obstacles"
+
+    else:
+        # Sweep the number of vehicles, keeping the Bézier degree fixed.
+        csv_path = os.path.join(
+            indir, f"benchmark_{args.date}_original_plot_vehicles_deg{args.fixed}.csv"
+        )
+        x_col = "n_vehicles"
+        x_label = "Number of vehicles"
+        title_prefix = f"Bézier degree = {args.fixed}, 0 obstacles"
 
     plot_sweep(
-        csv_path=os.path.join(args.indir, f"benchmark_{args.date}_original_plot_degree_1veh.csv"),
-        x_col="bezier_degree",
-        x_label="Bézier curve degree",
-        title_prefix="1 vehicle, 0 obstacles",
-        outdir=args.outdir,
+        csv_path=csv_path,
+        x_col=x_col,
+        x_label=x_label,
+        title_prefix=title_prefix,
+        outdir=outdir,
     )
 
     plot_sweep_boxplots(
-        csv_path=os.path.join(args.indir, f"benchmark_{args.date}_original_plot_degree_1veh.csv"),
-        x_col="bezier_degree",
-        x_label="Bézier curve degree",
-        outdir=args.outdir,
+        csv_path=csv_path,
+        x_col=x_col,
+        x_label=x_label,
+        outdir=outdir,
     )
-
-    # plot_sweep(
-    #     csv_path=os.path.join(args.indir, f"benchmark_{args.date}_original_plot_vehicles_deg7.csv"),
-    #     x_col="n_vehicles",
-    #     x_label="Number of vehicles",
-    #     title_prefix="Bezier degree = 6, 0 obstacles",
-    #     outdir=args.outdir,
-    # )
-
-    # plot_sweep_boxplots(
-    #     csv_path=os.path.join(args.indir, f"benchmark_{args.date}_original_plot_vehicles_deg7.csv"),
-    #     x_col="n_vehicles",
-    #     x_label="Number of vehicles",
-    #     outdir=args.outdir,
-    # )
-
 
 if __name__ == "__main__":
     main()

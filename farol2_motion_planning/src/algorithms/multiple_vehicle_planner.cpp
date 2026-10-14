@@ -38,7 +38,7 @@ void MultipleVehiclePlanner::setBoundsAndGains(double vel_min, double vel_max,
     if (acc_min >= acc_max) throw std::invalid_argument("acc_min must be less than acc_max");
     if (ang_vel_min >= ang_vel_max) throw std::invalid_argument("ang_vel_min must be less than ang_vel_max");
     if (ang_acc_min >= ang_acc_max) throw std::invalid_argument("ang_acc_min must be less than ang_acc_max");
-    
+    if (obs_max > 10000.0) obs_max =  std::numeric_limits<double>::infinity();
     VEL_MIN = vel_min;
     VEL_MAX = vel_max;
     ACC_MIN = acc_min;
@@ -329,6 +329,8 @@ void MultipleVehiclePlanner::createConstraintVector()
 {
     using namespace casadi;
 
+    sym_P_all_problem_ = sym_P_all_; // Start every problem from the original symbols.
+
     std::vector<SX> vars_to_substitute;
     std::vector<SX> values_to_substitute;
     std::vector<SX> all_obs_constraints;
@@ -446,7 +448,7 @@ void MultipleVehiclePlanner::createConstraintVector()
 
         for (int j = 0; j < NVehicles_; ++j)
         {
-            sym_P_all_[j] = SX::substitute(sym_P_all_[j], vars_to_substitute[i], values_to_substitute[i]);
+            sym_P_all_problem_[j] = SX::substitute(sym_P_all_problem_[j], vars_to_substitute[i], values_to_substitute[i]);
         }
     }
     
@@ -492,7 +494,7 @@ void MultipleVehiclePlanner::createDecisionVector()
     {
         if (first_iter_) {
             if (known_final_vel_ && known_final_head_) {
-                Function eval_endpoints = Function("eval_endpoints", {sym_Tf_}, {sym_P_all_[k](0,1), sym_P_all_[k](1,1), sym_P_all_[k](0, BezierDegree_-1), sym_P_all_[k](1, BezierDegree_-1)});
+                Function eval_endpoints = Function("eval_endpoints", {sym_Tf_}, {sym_P_all_problem_[k](0,1), sym_P_all_problem_[k](1,1), sym_P_all_problem_[k](0, BezierDegree_-1), sym_P_all_problem_[k](1, BezierDegree_-1)});
                 std::vector<DM> res = eval_endpoints({DM(Tf_guess)});
 
                 double x_init_val  = res[0].scalar();
@@ -529,7 +531,7 @@ void MultipleVehiclePlanner::createDecisionVector()
                         vars.push_back(sym_P_all_[k](j,i));
                     }
 
-                    double aux = (i-1) / double(sym_P_all_[k].size2() - 3);
+                    double aux = i / double(sym_P_all_[k].size2() - 1);
                     double val_x = aux * goal_states_[k].x + (1 - aux) * current_states_[k].x;
                     double val_y = aux * goal_states_[k].y + (1 - aux) * current_states_[k].y;
 
@@ -583,6 +585,8 @@ void MultipleVehiclePlanner::createDecisionVector()
 void MultipleVehiclePlanner::createConstraintVector(const std::vector<int>& active_vehicles)
 {
     using namespace casadi;
+
+    sym_P_all_problem_ = sym_P_all_; // Start every problem from the original symbols.
 
     std::vector<SX> vars_to_substitute;
     std::vector<SX> values_to_substitute;
@@ -705,7 +709,7 @@ void MultipleVehiclePlanner::createConstraintVector(const std::vector<int>& acti
 
         for (int j = 0; j < NVehicles_; ++j)
         {
-            sym_P_all_[j] = SX::substitute(sym_P_all_[j], vars_to_substitute[i], values_to_substitute[i]);
+            sym_P_all_problem_[j] = SX::substitute(sym_P_all_problem_[j], vars_to_substitute[i], values_to_substitute[i]);
         }
     }
     
@@ -861,7 +865,7 @@ void MultipleVehiclePlanner::solveOptimizationProblem(std::atomic<bool>* cancel_
         optimal_ContP_.resize(NVehicles_, rows, cols);
         for (int k = 0; k < NVehicles_; ++k)
         {
-            SX P_all_numeric_sx = sym_P_all_[k];
+            SX P_all_numeric_sx = sym_P_all_problem_[k];
             for (size_t i = 0; i < vars.size(); ++i)
             {
                 P_all_numeric_sx = SX::substitute(P_all_numeric_sx , vars[i], vals[i]);
@@ -959,7 +963,7 @@ void MultipleVehiclePlanner::solveOptimizationProblem_qrqp(std::atomic<bool>* ca
         optimal_ContP_.resize(NVehicles_, rows, cols);
         for (int k = 0; k < NVehicles_; ++k)
         {
-            SX P_all_numeric_sx = sym_P_all_[k];
+            SX P_all_numeric_sx = sym_P_all_problem_[k];
             for (size_t i = 0; i < vars.size(); ++i)
             {
                 P_all_numeric_sx = SX::substitute(P_all_numeric_sx , vars[i], vals[i]);
