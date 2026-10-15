@@ -1,0 +1,84 @@
+site_name: FAROL 2
+site_description: ROS 2 GNC stack for DSOR marine vehicles
+site_url: https://dsor-isr.github.io/farol2/
+repo_url: https://github.com/dsor-isr/farol2
+repo_name: dsor-isr/farol2
+edit_uri: edit/dev/docs/
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.action.edit
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js
+
+validation:
+  links:
+    anchors: warn
+
+nav:
+  - Home: README.md
+  - Getting started: getting-started.md
+  - Architecture: architecture.md
+  - Configuration: configuration.md
+  - Repositories: repositories.md
+  - MATLAB and Simulink: matlab.md
+  - Known gaps: GAPS.md
+  - Packages:
+      - Overview: packages/README.md
+      - Navigation:
+          - farol2_nav: packages/nav/README.md
+          - Sample and hold: packages/nav/sample_and_hold.md
+          - Current estimator: packages/nav/current_estimator.md
+          - Yaw-rate EKF: packages/nav/yaw_rate_ekf.md
+      - Guidance:
+          - farol2_waypoint: packages/waypoint/README.md
+          - farol2_planning: packages/planning/README.md
+          - Planning implementation: packages/planning/implementation.md
+          - farol2_path_following: packages/path_following/README.md
+          - Path-following implementation: packages/path_following/implementation.md
+      - Control:
+          - farol2_inner_loop: packages/inner_loop/README.md
+          - farol2_allocation: packages/allocation/README.md
+          - Allocation theory (main branch): packages/allocation/old_README.md
+      - Simulation and description:
+          - farol2_sim: packages/sim/README.md
+          - farol2_description: packages/description/README.md
+      - Support:
+          - farol2_interfaces: packages/interfaces/README.md
+          - farol2_utils: packages/utils/README.md
+          - Low-pass filter: packages/utils/low_pass_filter.md
+          - Notch filter: packages/utils/notch_filter.md
+          - farol2_console: packages/console/README.md
+          - farol2_bringup: packages/bringup/README.md
+          - farol2_cli: packages/cli/README.md

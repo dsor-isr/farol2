@@ -1,6 +1,8 @@
 # FAROL 2
 This repository is home to the code stack for underwater marine vehicles (both AUVs and ROVs) used by the DSOR-ISR (Dynamical System and Ocean Robotics - Institute for Systems and Robotics) Team. It contains the base of the Guidance, Navigation and Control algorithms found in DSOR marine vehicles, such as the Medusa AUVs, BlueROV2, DELFIM Catamaran and SLOCUM Gliders.
 
+Documentation: https://dsor-isr.github.io/farol2/ (source in [`docs/`](docs/README.md)).
+
 ## Disclaimer
 
 This code stack is the product of the work of many people that passed through the DSOR-ISR organisation. It suffered countless iterations through the years. While its essence survived ever since, the same can't be said about its contribution history. The last version is available [here](https://github.com/dsor-isr/farol).
