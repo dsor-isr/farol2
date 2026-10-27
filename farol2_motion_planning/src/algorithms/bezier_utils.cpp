@@ -120,6 +120,52 @@ casadi::SX BezierUtils::deCasteljau_Casadi(const casadi::SX &u, const casadi::SX
     return temp(casadi::Slice(), 0);
 }
 
+// casadi::SX BezierUtils::continuity_C3_Casadi(const casadi::SX &Tf, const Eigen::MatrixXd &P, double Ts, int m)
+// {
+//     casadi::SX result = casadi::SX(P.rows(),4);
+//     int n = P.cols() - 1;
+//     casadi::SX scale = Tf/Ts;
+
+//     double k1 = n / m;
+//     double k2 = k1 * (n - 1) / (m - 1);
+//     double k3 = k2 * (n - 2) / (m - 2);
+
+//     casadi::SX Pn  = casadi::SX(to_dm(P.col(n)));
+//     casadi::SX Pn1 = casadi::SX(to_dm(P.col(n-1)));
+//     casadi::SX Pn2 = casadi::SX(to_dm(P.col(n-2)));
+//     casadi::SX Pn3 = casadi::SX(to_dm(P.col(n-3)));
+
+//     result(casadi::Slice(),0) = Pn;
+//     result(casadi::Slice(),1) = scale * k1 * (Pn - Pn1) + result(casadi::Slice(),0);
+//     result(casadi::Slice(),2) = casadi::SX::pow(scale,2) * k2 * (Pn - 2*Pn1 + Pn2) + 2*result(casadi::Slice(),1) - result(casadi::Slice(),0);
+//     result(casadi::Slice(),3) = casadi::SX::pow(scale,3) * k3 * (Pn - 3*Pn1 + 3*Pn2 - Pn3) + 3*result(casadi::Slice(),2) - 3*result(casadi::Slice(),1) + result(casadi::Slice(),0);
+
+//     return result;
+// }
+
+casadi::SX BezierUtils::continuity_C3_Casadi(const casadi::SX &Tf, const Eigen::MatrixXd &Q, double T_old, int m)
+{
+    casadi::SX result = casadi::SX(Q.rows(), 4);
+    const int n = Q.cols() - 1;
+    casadi::SX scale = Tf / T_old;
+
+    const double k1 = double(n) / m;
+    const double k2 = k1 * (n - 1) / (m - 1);
+    const double k3 = k2 * (n - 2) / (m - 2);
+
+    casadi::SX Q0 = casadi::SX(to_dm(Q.col(0)));
+    casadi::SX Q1 = casadi::SX(to_dm(Q.col(1)));
+    casadi::SX Q2 = casadi::SX(to_dm(Q.col(2)));
+    casadi::SX Q3 = casadi::SX(to_dm(Q.col(3)));
+
+    result(casadi::Slice(),0) = Q0;
+    result(casadi::Slice(),1) = scale * k1 * (Q1 - Q0) + result(casadi::Slice(),0);
+    result(casadi::Slice(),2) = casadi::SX::pow(scale,2) * k2 * (Q2 - 2*Q1 + Q0) + 2*result(casadi::Slice(),1) - result(casadi::Slice(),0);
+    result(casadi::Slice(),3) = casadi::SX::pow(scale,3) * k3 * (Q3 - 3*Q2 + 3*Q1 - Q0) + 3*result(casadi::Slice(),2) - 3*result(casadi::Slice(),1) + result(casadi::Slice(),0);
+
+    return result;
+}
+
 // Bezier Operations used to obtain real values
 Eigen::MatrixXd BezierUtils::bezier_derivative(const Eigen::MatrixXd &P)
 {
@@ -647,6 +693,26 @@ casadi::SX BezierUtils::adaptive_inter_vehicle_constraints(
     return all_constraints.empty() ? SX(0) : SX::vertcat(all_constraints);
 }
 
+// Bezier_Utils.cpp
+casadi::SX BezierUtils::velocity_sampling_penalty(const casadi::SX &vel_constr, const casadi::SX &Tf, double Ts, int nsplit, double vel_max)
+{
+    using namespace casadi;
+
+    const int m = vel_constr.size1() / (1 << nsplit);   // control points per block
+    SX u = (1 << nsplit) * Ts / Tf;
+    SX vel_at_sampling = 0;
+
+    // Blocks are in reverse time order (stack in adaptive_dynamic_constraints)
+    for (int j = 0; j < (1 << nsplit); ++j)
+    {
+        SX blk = vel_constr(Slice(vel_constr.size1() - (j + 1) * m, vel_constr.size1() - j * m)).T();
+        vel_at_sampling = SX::if_else(SX::logic_and(u >= j, u < j + 1),
+                                      deCasteljau_Casadi(u - j, blk), vel_at_sampling);
+    }
+
+    return Ts * 1e-1 * log(1 + exp((vel_at_sampling - pow(vel_max - 0.05, 2)) / 1e-1));
+}
+
 Eigen::MatrixXd BezierUtils::tensor_2_matrix(const Eigen::Tensor<double, 3> &tensor, int vehicleIndex)
 {
     int numPoints = tensor.dimension(2);
@@ -660,6 +726,15 @@ Eigen::MatrixXd BezierUtils::tensor_2_matrix(const Eigen::Tensor<double, 3> &ten
     }
 
     return mat;
+}
+
+Eigen::Tensor<double, 3> BezierUtils::matrix_2_tensor(const Eigen::MatrixXd &matrix)
+{
+    Eigen::Tensor<double, 3> tensor(1, matrix.rows(), matrix.cols());
+    for (Eigen::Index d = 0; d < matrix.rows(); ++d)
+        for (Eigen::Index p = 0; p < matrix.cols(); ++p)
+            tensor(0, d, p) = matrix(d, p);
+    return tensor;
 }
 
 bool BezierUtils::check_vehicle_distances(const Eigen::MatrixXd &P1, const Eigen::MatrixXd &P2, double radius, int nsplit)
@@ -812,4 +887,9 @@ casadi::SX BezierUtils::multiply_Eigenmatrix_by_SX(const Eigen::MatrixXd& matrix
     }
 
     return result;
+}
+
+casadi::DM BezierUtils::to_dm(const Eigen::VectorXd &v)
+{
+    return casadi::DM(std::vector<double>(v.data(), v.data() + v.size()));
 }

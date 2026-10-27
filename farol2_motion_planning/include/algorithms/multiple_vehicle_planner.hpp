@@ -80,13 +80,21 @@ public:
                          double obs_min, double obs_max,
                          double radius, double alpha, double beta, double gamma);
 
+    void setOptimizationParameters(int BezierDegree, int NVehicles, const std::vector<int> &nSplit, const std::vector<uint8_t> &constr_flag);
+
     void setFinalVelHeadMode(bool known_final_head, bool known_final_vel);
+
+    void setFinalPosition(bool fixed_final_pos);
+
+    void setC3Continuity(bool continuity_C3);
 
     void setupSymbolic();
 
     void setupSymbolic(const Eigen::MatrixXd &current_velocity_matrix);
 
     void computeCostFunction();
+
+    void computeCostFunctionDistributed(double Ts);
 
     void setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& circ_obs,
@@ -109,6 +117,10 @@ public:
 
     void createDecisionVector(const std::vector<int>& active_vehicles, double Tf_min);
     
+    void createConstraintVectorDistributed(double Ts);
+
+    void createDecisionVectorDistributed(double Tmin);
+
     void solveOptimizationProblem(std::atomic<bool>* cancel_flag);
 
     void solveOptimizationProblem_qrqp(std::atomic<bool>* cancel_flag);
@@ -140,6 +152,8 @@ private:
     bool first_iter_;
     bool known_final_vel_{true};
     bool known_final_head_{true};
+    bool fixed_final_position_{true};
+    bool continuity_C3_{false};
     
     // --- NLP entries ---
     Bounds problem_Bounds_;
@@ -155,6 +169,7 @@ private:
     casadi::SX sym_circ_obs_;                     // Circular obstacle parameters (3 x 1)
     casadi::SX sym_elip_obs_;                     // Elliptical obstacle parameters (5 x 1)
     casadi::SX sym_line_obs_;                     // Linear obstacle parameters (3 x 1)
+    casadi::SX sym_goal_val_;                     // symbolic goal values for cost function when goal not fixed (2 x NVehicles_)
     std::vector<casadi::SX> sym_vel_constr_;      // Velocity constraints
     std::vector<casadi::SX> sym_ang_vel_constr_;  // Angular velocity constraints
     std::vector<casadi::SX> sym_acc_constr_;      // Linear acceleration constraints
@@ -189,6 +204,8 @@ private:
     double ALPHA = 1.0; // TF weight
     double BETA = 0.0;  // Energy weight
     double GAMMA = 0.0; // end point weight
+    double EPSILON = 2.0;
+    double ZETA = 5.0;
 };
 
 #endif // SINGLE_VEHICLE_MOTION_PLAN_H

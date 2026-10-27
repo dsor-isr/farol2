@@ -28,9 +28,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
 
-def _draw_boxes(ax, df, x_col, prefix, mean_col, offset, width, color):
+def _box_legend_handles(color):
+    return [
+        Patch(facecolor=color, alpha=0.4, edgecolor=color, label="Q1–Q3"),
+        Line2D([0], [0], color="black", label="Median"),
+        Line2D([0], [0], color=color, marker="_", label="Whiskers"),
+    ]
+
+
+def _draw_boxes(ax, df, x_col, prefix, offset, width, color):
     d = df[df[f"{prefix}_q1"].notna()]
     stats = []
     for _, r in d.iterrows():
@@ -40,13 +50,12 @@ def _draw_boxes(ax, df, x_col, prefix, mean_col, offset, width, color):
             q3=r[f"{prefix}_q3"],
             whislo=r[f"{prefix}_whisker_low"],
             whishi=r[f"{prefix}_whisker_high"],
-            mean=r[mean_col],
         ))
     ax.bxp(
         stats,
         positions=d[x_col].to_numpy() + offset,
         widths=width,
-        showmeans=True,
+        showmeans=False,
         showfliers=False,
         manage_ticks=False,
         patch_artist=True,
@@ -54,8 +63,6 @@ def _draw_boxes(ax, df, x_col, prefix, mean_col, offset, width, color):
         medianprops=dict(color="black"),
         whiskerprops=dict(color=color),
         capprops=dict(color=color),
-        meanprops=dict(marker="D", markerfacecolor="white",
-                       markeredgecolor="black", markersize=3),
     )
 
 
@@ -71,17 +78,20 @@ def plot_sweep_boxplots(csv_path, x_col, x_label, outdir):
 
     # --- Solve time: centralized vs. individual + deconfliction ---
     fig, ax = plt.subplots(figsize=(6, 3))
-    _draw_boxes(ax, df, x_col, "box_time", "avg_time_success_ms", -0.2, w, "C0")
-    _draw_boxes(ax, df, x_col, "box_time_strategy", "avg_time_success_ms_strategy", 0.2, w, "firebrick")
+    _draw_boxes(ax, df, x_col, "box_time", -0.2, w, "C0")
+    _draw_boxes(ax, df, x_col, "box_time_strategy", 0.2, w, "firebrick")
     ax.set_xticks(xs)
     ax.set_xlabel(x_label)
-    ax.set_ylabel("Solve time [ms]\n(successful trials)")
+    ax.set_ylabel("Solver time [ms]\n(successful trials)")
     ax.grid(True, linewidth=0.4, alpha=0.5)
-    #ax.legend(handles=[Patch(facecolor="C0", alpha=0.4, edgecolor="C0", label="Centralized"),
-                    #    Patch(facecolor="firebrick", alpha=0.4, edgecolor="firebrick",
-                    #          label="Individual + deconfliction")])
+    #ax.legend(handles=_box_legend_handles("C0"), loc="upper center",
+    #          bbox_to_anchor=(0.5, -0.28), ncol=3, frameon=False)
+    ax.legend(handles=[Patch(facecolor="C0", alpha=0.4, edgecolor="C0", label="Regular approach"),
+       Patch(facecolor="firebrick", alpha=0.4, edgecolor="firebrick",
+             label="Individual + deconfliction")])
     fig.tight_layout()
-    fig.savefig(os.path.join(outdir, f"{base}_box_time.png"), dpi=300)
+    fig.savefig(os.path.join(outdir, f"{base}_box_time.png"), dpi=300,
+                bbox_inches="tight")
     plt.close(fig)
 
     # # --- Increase in optimality ---
@@ -105,75 +115,26 @@ def plot_sweep(csv_path, x_col, x_label, title_prefix, outdir):
 
     base = os.path.splitext(os.path.basename(csv_path))[0]
 
-    # --- Average solve time (successful trials only) ---
-    fig, ax = plt.subplots(figsize=(6, 3))
-    ax.plot(df[x_col], df["avg_time_success_ms"], marker="o", ms=3)
-    # ax.fill_between(
-    #     df[x_col],
-    #     df["avg_time_success_ms"] - df["std_time_success_ms"].fillna(0),
-    #     df["avg_time_success_ms"] + df["std_time_success_ms"].fillna(0),
-    #     alpha=0.2,
-    # )
-    ax.set_xlabel(x_label)
-    ax.set_ylabel("Average solver time [ms]\n(successful trials)")
-    #ax.set_title(f"{title_prefix}: average solve time")
-    ax.grid(True, linewidth=0.4, alpha=0.5)
-    fig.tight_layout()
-    fig.savefig(os.path.join(outdir, f"{base}_avg_time.png"), dpi=300)
-    plt.close(fig)
-
-    # --- Failure rate ---
-    fig, ax = plt.subplots(figsize=(6, 3))
-    ax.plot(df[x_col], df["failure_pct"], marker="o", color="firebrick")
-    ax.set_xlabel(x_label)
-    ax.set_ylabel("Failure rate [%]")
-    #ax.set_title(f"{title_prefix}: failure rate")
-    ax.set_ylim(bottom=0)
-    ax.grid(True, linewidth=0.4, alpha=0.5)
-    fig.tight_layout()
-    fig.savefig(os.path.join(outdir, f"{base}_failure_rate.png"), dpi=300)
-    plt.close(fig)
-
-    # --- Worst-case solve time (successful trials only) ---
-    fig, ax = plt.subplots(figsize=(6, 3))
-    ax.plot(df[x_col], df["worst_time_success_ms"], marker="o", color="darkorange")
-    ax.set_xlabel(x_label)
-    ax.set_ylabel("Worst-case solve time [ms]\n(successful trials)")
-    #ax.set_title(f"{title_prefix}: worst-case solve time")
-    ax.grid(True, linewidth=0.4, alpha=0.5)
-    fig.tight_layout()
-    fig.savefig(os.path.join(outdir, f"{base}_worst_time.png"), dpi=300)
-    plt.close(fig)
-
-
-    # --- Average solve time (successful trials only) ---
+    # # --- Average solve time (successful trials only) ---
     # fig, ax = plt.subplots(figsize=(6, 3))
-    # ax.plot(df[x_col], df["avg_time_success_ms"], marker="o", label="Centralized")
-    # ax.fill_between(
-    #     df[x_col],
-    #     df["avg_time_success_ms"] - df["std_time_success_ms"].fillna(0),
-    #     df["avg_time_success_ms"] + df["std_time_success_ms"].fillna(0),
-    #     alpha=0.2,
-    # )
-    # ax.plot(df[x_col], df["avg_time_success_ms_strategy"], marker="o", color="firebrick", label="Individual + deconfliction")
-    # ax.fill_between(
-    #     df[x_col],
-    #     df["avg_time_success_ms_strategy"] - df["std_time_success_ms_strategy"].fillna(0),
-    #     df["avg_time_success_ms_strategy"] + df["std_time_success_ms_strategy"].fillna(0),
-    #     alpha=0.2, color="firebrick"
-    # )
+    # ax.plot(df[x_col], df["avg_time_success_ms"], marker="o", ms=3)
+    # # ax.fill_between(
+    # #     df[x_col],
+    # #     df["avg_time_success_ms"] - df["std_time_success_ms"].fillna(0),
+    # #     df["avg_time_success_ms"] + df["std_time_success_ms"].fillna(0),
+    # #     alpha=0.2,
+    # # )
     # ax.set_xlabel(x_label)
     # ax.set_ylabel("Average solver time [ms]\n(successful trials)")
+    # #ax.set_title(f"{title_prefix}: average solve time")
     # ax.grid(True, linewidth=0.4, alpha=0.5)
-    # ax.legend()
     # fig.tight_layout()
     # fig.savefig(os.path.join(outdir, f"{base}_avg_time.png"), dpi=300)
     # plt.close(fig)
-    
+
     # # --- Failure rate ---
     # fig, ax = plt.subplots(figsize=(6, 3))
-    # ax.plot(df[x_col], df["failure_pct"], marker="o")
-    # ax.plot(df[x_col], df["failure_pct_strategy"], marker="o", color="firebrick")
+    # ax.plot(df[x_col], df["failure_pct"], marker="o", color="firebrick")
     # ax.set_xlabel(x_label)
     # ax.set_ylabel("Failure rate [%]")
     # #ax.set_title(f"{title_prefix}: failure rate")
@@ -182,34 +143,83 @@ def plot_sweep(csv_path, x_col, x_label, title_prefix, outdir):
     # fig.tight_layout()
     # fig.savefig(os.path.join(outdir, f"{base}_failure_rate.png"), dpi=300)
     # plt.close(fig)
-    
-    # # --- Average solve time (successful trials only) ---
-    # fig, ax = plt.subplots(figsize=(6, 3))
-    # ax.plot(df[x_col], df["avg_percentage_strategy"], marker="o")
-    # ax.fill_between(
-    #     df[x_col],
-    #     df["avg_percentage_strategy"] - df["std_percentage_strategy"].fillna(0),
-    #     df["avg_percentage_strategy"] + df["std_percentage_strategy"].fillna(0),
-    #     alpha=0.2,
-    # )
-    # ax.set_xlabel(x_label)
-    # ax.set_ylabel("Average increase in optimality [%]\n")
-    # #ax.set_title(f"{title_prefix}: average solve time")
-    # ax.grid(True, linewidth=0.4, alpha=0.5)
-    # fig.tight_layout()
-    # fig.savefig(os.path.join(outdir, f"{base}_avg_percentage.png"), dpi=300)
-    # plt.close(fig)
-    
+
     # # --- Worst-case solve time (successful trials only) ---
     # fig, ax = plt.subplots(figsize=(6, 3))
-    # ax.plot(df[x_col], df["worst_percentage_strategy"], marker="o", color="darkorange")
+    # ax.plot(df[x_col], df["worst_time_success_ms"], marker="o", color="darkorange")
     # ax.set_xlabel(x_label)
-    # ax.set_ylabel("Worst increase in optimality [%]\n")
+    # ax.set_ylabel("Worst-case solve time [ms]\n(successful trials)")
     # #ax.set_title(f"{title_prefix}: worst-case solve time")
     # ax.grid(True, linewidth=0.4, alpha=0.5)
     # fig.tight_layout()
-    # fig.savefig(os.path.join(outdir, f"{base}_worst_percentage.png"), dpi=300)
+    # fig.savefig(os.path.join(outdir, f"{base}_worst_time.png"), dpi=300)
     # plt.close(fig)
+
+
+    # --- Average solve time (successful trials only) ---
+    fig, ax = plt.subplots(figsize=(6, 3))
+    ax.plot(df[x_col], df["avg_time_success_ms"], marker="o", label="Centralized")
+    ax.fill_between(
+        df[x_col],
+        df["avg_time_success_ms"] - df["std_time_success_ms"].fillna(0),
+        df["avg_time_success_ms"] + df["std_time_success_ms"].fillna(0),
+        alpha=0.2,
+    )
+    ax.plot(df[x_col], df["avg_time_success_ms_strategy"], marker="o", color="firebrick", label="Individual + deconfliction")
+    ax.fill_between(
+        df[x_col],
+        df["avg_time_success_ms_strategy"] - df["std_time_success_ms_strategy"].fillna(0),
+        df["avg_time_success_ms_strategy"] + df["std_time_success_ms_strategy"].fillna(0),
+        alpha=0.2, color="firebrick"
+    )
+    ax.set_xlabel(x_label)
+    ax.set_ylabel("Average solver time [ms]\n(successful trials)")
+    ax.grid(True, linewidth=0.4, alpha=0.5)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(os.path.join(outdir, f"{base}_avg_time.png"), dpi=300)
+    plt.close(fig)
+    
+    # --- Failure rate ---
+    fig, ax = plt.subplots(figsize=(6, 3))
+    ax.plot(df[x_col], df["failure_pct"], marker="o")
+    ax.plot(df[x_col], df["failure_pct_strategy"], marker="o", color="firebrick")
+    ax.set_xlabel(x_label)
+    ax.set_ylabel("Failure rate [%]")
+    #ax.set_title(f"{title_prefix}: failure rate")
+    ax.set_ylim(bottom=0)
+    ax.grid(True, linewidth=0.4, alpha=0.5)
+    fig.tight_layout()
+    fig.savefig(os.path.join(outdir, f"{base}_failure_rate.png"), dpi=300)
+    plt.close(fig)
+    
+    # --- Average solve time (successful trials only) ---
+    fig, ax = plt.subplots(figsize=(6, 3))
+    ax.plot(df[x_col], df["avg_percentage_strategy"], marker="o")
+    ax.fill_between(
+        df[x_col],
+        df["avg_percentage_strategy"] - df["std_percentage_strategy"].fillna(0),
+        df["avg_percentage_strategy"] + df["std_percentage_strategy"].fillna(0),
+        alpha=0.2,
+    )
+    ax.set_xlabel(x_label)
+    ax.set_ylabel("Average increase in optimality [%]\n")
+    #ax.set_title(f"{title_prefix}: average solve time")
+    ax.grid(True, linewidth=0.4, alpha=0.5)
+    fig.tight_layout()
+    fig.savefig(os.path.join(outdir, f"{base}_avg_percentage.png"), dpi=300)
+    plt.close(fig)
+    
+    # --- Worst-case solve time (successful trials only) ---
+    fig, ax = plt.subplots(figsize=(6, 3))
+    ax.plot(df[x_col], df["worst_percentage_strategy"], marker="o", color="darkorange")
+    ax.set_xlabel(x_label)
+    ax.set_ylabel("Worst increase in optimality [%]\n")
+    #ax.set_title(f"{title_prefix}: worst-case solve time")
+    ax.grid(True, linewidth=0.4, alpha=0.5)
+    fig.tight_layout()
+    fig.savefig(os.path.join(outdir, f"{base}_worst_percentage.png"), dpi=300)
+    plt.close(fig)
 
 RESULTS_DIR = "/home/dsor-gorka/dsor/colcon_ws_mDrivers/src/farol2/farol2_motion_planning/test/results"
 
@@ -236,9 +246,14 @@ def main():
         help="Fixed degree for a vehicle sweep, or fixed number of vehicles for a degree sweep",
     )
 
+    parser.add_argument(
+        "--folder",
+        default="",
+        help="subfolder inside RESULTS_DIR/<date> (default: none)",
+    )
     args = parser.parse_args()
 
-    indir = os.path.join(RESULTS_DIR, args.date)
+    indir = os.path.join(RESULTS_DIR, args.date, args.folder)
     outdir = os.path.join(indir, "figures")
     os.makedirs(outdir, exist_ok=True)
 

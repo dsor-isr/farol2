@@ -7,18 +7,22 @@
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_srvs/srv/trigger.hpp>
+#include <geometry_msgs/msg/pose_array.hpp>
 
 #include "algorithms/multiple_vehicle_planner.hpp"
 #include "underway/distributed_utils.hpp"
 #include <memory>
 #include <mutex>
 #include <atomic>
+#include <chrono>
 #include <thread>
 #include <regex>
+#include <optional>
 
 // Custom message headers
 #include <farol2_motion_planning/msg/stamped_matrix.hpp>
 #include <farol2_motion_planning/msg/neighbor_position.hpp>
+#include <farol2_motion_planning/msg/distributed_command.hpp>
 #include <farol2_motion_planning/srv/set_state.hpp>
 #include <farol2_motion_planning/srv/set_bounds_and_gains.hpp>
 #include <farol2_motion_planning/srv/set_bezier_params.hpp>
@@ -28,9 +32,10 @@
 
 constexpr char TOPIC_PUB_ALIVE[] = "node_alive";
 constexpr char TOPIC_PUB_LOG[] = "mission_log";
-constexpr char TOPIC_PUB_STATE[] = "current_state";
+constexpr char TOPIC_PUB_STATE[] = "neighbor_state";
 
 constexpr char TOPIC_SUB_STATE[] = "neighbor_state";
+constexpr char TOPIC_SUB_START_STOP[] = "start_stop_distributed";
 
 constexpr char TOPIC_SRV_SET_GOAL[] = "set_goal";
 constexpr char TOPIC_SRV_SET_STATES[] = "set_states";
@@ -79,6 +84,13 @@ public:
     ~DistributedPlannerNode();
 
 private:
+    struct PendingIteration
+    {
+        int index;
+        vehicle_state start_state;
+        VoronoiCell cell;
+    };
+    
     // Publishers
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr planning_alive_pub_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr mission_log_pub_;
@@ -105,7 +117,7 @@ private:
     int guess_degree_;
     std::vector<int64_t> nSplit_;
     std::vector<bool> constr_flags_;
-    int number_sample_Pts_;
+    int number_sample_Pts_ = 200;
     BoundsAndGains bounds_;
     bool use_collision_method_{false};
 
@@ -113,10 +125,9 @@ private:
     std::thread opt_thread_;
     std::atomic<bool> opt_running_{false};
 
-    // Results
-    Eigen::Tensor<double, 3> last_control_points_;
-    double last_Tf_;
-    double RADIUS = 1.5;
+    bool initial_state_received_{false};
+    bool goal_state_received_{false};
+
 
     
     
@@ -126,14 +137,31 @@ private:
     
     //Subscribers
     rclcpp::Subscription<farol2_motion_planning::msg::NeighborPosition>::SharedPtr neighbor_sub_;
+    rclcpp::Subscription<farol2_motion_planning::msg::DistributedCommand>::SharedPtr distributed_start_stop_sub_;
 
     //Publishers
     rclcpp::Publisher<farol2_motion_planning::msg::NeighborPosition>::SharedPtr state_pub_;
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr traj_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr traj_pub_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr mission_pub_;
     rclcpp::Publisher<farol2_motion_planning::msg::StampedMatrix>::SharedPtr control_points_pub_;
 
 
+    // sycronisation between solve and broadcast and publish trajectory
+    rclcpp::TimerBase::SharedPtr broadcast_timer_;
+    rclcpp::TimerBase::SharedPtr solve_watchdog_timer_;
+
+    std::atomic<bool> solve_cancel_flag_{false};
+    std::atomic<bool> solve_done_{false};
+    bool solve_running_{false};          // Accessed by ROS executor callbacks.
+    bool solve_result_ready_{false};     // Consume this in the iteration coordinator.
+    bool solve_succeeded_{false};
+    std::optional<PendingIteration> pending_iteration_;
+
+    std::optional<std::chrono::steady_clock::time_point> iteration_collection_started_;
+    rclcpp::TimerBase::SharedPtr scheme_timer_;
+
+
+    std::chrono::steady_clock::time_point solve_deadline_;
 
     // Variables
     bool distributed_scheme_running_{false};
@@ -141,14 +169,23 @@ private:
     bool use_goal_straight_line_;
     bool use_goal_closer_point_;
     double cell_margin_; // m
+    double sampling_period_;
+    double tf_min_;
+    bool first_run_{true};
 
     std::string vehicle_name_;
     vehicle_state initial_state_;
     vehicle_state goal_state_;
     std::vector<vehicle_state> states_history_;
     std::vector<VoronoiCell> cell_history_;
+    std::vector<Eigen::MatrixXd> control_points_history_;
+    std::vector<Eigen::MatrixXd> trajectories_history_;
+    std::vector<double> tf_history_;
 
+    MultipleVehiclePlanner solver_{7, 1, std::vector<int>{1,0,0}, std::vector<uint8_t>{1,1,1,1}};
+    
     // Relative to multiple vehicle stuff...
+    bool discovery_mode_;
     std::vector<std::string> known_vehicle_names_;
     std::map<uint32_t, std::map<std::string, Eigen::Vector2d>> neighbors_history_;
 
@@ -182,6 +219,15 @@ private:
 
     // Subscriber callbacks
     void neighborCallback(const farol2_motion_planning::msg::NeighborPosition::ConstSharedPtr msg);
+    void distributedStartStopCallback(const farol2_motion_planning::msg::DistributedCommand::SharedPtr msg);
+
+    // Publishers
+    void publishNeighborPosition();
+    void publishMissions();
+    void publishLog(const std::string& text);
+    void publishControlPoints(const Eigen::Tensor<double, 3>& tensor, const std::vector<double>& tf_values, bool is_guess);
+    void publishAliveStatus();
+    void publishTrajectorySamples(const Eigen::MatrixXd &trajectory, int first_sample, int last_sample);
 
     // Service callbacks
     void setGoalService(const std::shared_ptr<farol2_motion_planning::srv::SetState::Request> req,
@@ -197,53 +243,22 @@ private:
     void getPlannerConfigService(const std::shared_ptr<farol2_motion_planning::srv::GetPlannerConfig::Request> req,
                                  std::shared_ptr<farol2_motion_planning::srv::GetPlannerConfig::Response> res);
     
+    // Distributed stuff
+    void startDistributedSolve(std::chrono::nanoseconds budget);
+    void checkDistributedSolveDeadline();
+    void finishDistributedSolve();
+    void commitDistributedIteration();
     void runDistributedSchemeIteration();
 
     // Helper methods
     void processState(const vehicle_state msg, const std::string& vehicle_name);
-    void publishMissions();
     std::string formatMissionString(const Eigen::Tensor<double, 3> &controlPoints, double Tf_opt);
-    void publishLog(const std::string& text);
-    void publishControlPoints(const Eigen::Tensor<double, 3>& tensor, const std::vector<double>& tf_values, bool is_guess);
-    void publishAliveStatus();
+    void prepareSolver();
+    // in the class declaration
+    Eigen::Matrix<double, 3, Eigen::Dynamic> cellToLineObs(const VoronoiCell& cell);
+
+    std::vector<uint8_t> constraintFlagsUint8() const;
+    std::vector<int> nSplitInt() const;
 };
 
 #endif
-
-
-//########################################################################//
-//##################### Usage of neighbor_history_ #######################//
-//########################################################################//
-
-// Neighbor positions received by the subscriber, excluding this vehicle.
-// neighbors_history_[iteration][vehicle_name] = position (x, y)
-//
-// An entry for an iteration is created when the iteration starts, so an
-// iteration where no neighbor was heard exists with an empty inner map.
-// Only the current iteration is filled. Access requires state_mutex_.
-//
-// Number of iterations stored:
-//     neighbors_history_.size()
-//
-// Names of the vehicles heard at iteration k:
-//     for (const auto& [name, position] : neighbors_history_.at(k))
-//     {
-//         names.push_back(name);
-//     }
-//
-// Positions of the vehicles heard at iteration k (same order as the names):
-//     for (const auto& [name, position] : neighbors_history_.at(k))
-//     {
-//         positions.push_back(position);
-//     }
-//
-// Number of vehicles heard at iteration k:
-//     neighbors_history_.at(k).size()
-//
-// Position of vehicle "name" at iteration k, if it was heard:
-//     const auto& row = neighbors_history_.at(k);
-//     const auto it = row.find(name);
-//     if (it != row.end()) { it->second }
-//
-// Iterations are visited in ascending order:
-//     for (const auto& [iteration, row] : neighbors_history_)

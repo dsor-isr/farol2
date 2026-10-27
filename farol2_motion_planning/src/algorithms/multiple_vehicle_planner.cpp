@@ -55,12 +55,42 @@ void MultipleVehiclePlanner::setBoundsAndGains(double vel_min, double vel_max,
     GAMMA = gamma;
 }
 
+void MultipleVehiclePlanner::setOptimizationParameters(int BezierDegree, int NVehicles, const std::vector<int> &nSplit, const std::vector<uint8_t> &constr_flag)
+{
+    // Validate input parameters
+    if (BezierDegree_ <= 0) {
+        throw std::invalid_argument("BezierDegree must be positive");
+    }
+    if (NVehicles_ <= 0) {
+        throw std::invalid_argument("Number of Vehicles must be positive");
+    }
+    if (nSplit_.size() < 2) {
+        throw std::invalid_argument("nSplit must have at least 2 elements");
+    }
+    if (constr_flag_.size() < 4) {
+        throw std::invalid_argument("constr_flag must have at least 4 elements");
+    }
+    BezierDegree_ = BezierDegree;
+    NVehicles_ = NVehicles;
+    nSplit_ = nSplit;
+    constr_flag_ = constr_flag;
+}
+
 void MultipleVehiclePlanner::setFinalVelHeadMode(bool known_final_head, bool known_final_vel)
 {
     known_final_head_ = known_final_head;
     known_final_vel_ = known_final_vel;
 }
 
+void MultipleVehiclePlanner::setFinalPosition(bool fixed_final_position)
+{
+    fixed_final_position_ = fixed_final_position;
+}
+
+void MultipleVehiclePlanner::setC3Continuity(bool continuity_C3)
+{
+    continuity_C3_ = continuity_C3;
+}
 
 void MultipleVehiclePlanner::setupSymbolic()
 {
@@ -71,6 +101,7 @@ void MultipleVehiclePlanner::setupSymbolic()
     sym_circ_obs_ = SX::sym("circ_obs", 3, 1);
     sym_line_obs_ = SX::sym("line_obs", 3, 1);
     sym_elip_obs_ = SX::sym("elip_obs", 5, 1);
+
 
     // Resize containers
     sym_P_all_.resize(NVehicles_);
@@ -222,6 +253,46 @@ void MultipleVehiclePlanner::computeCostFunction()
     }
 }
 
+void MultipleVehiclePlanner::computeCostFunctionDistributed(double Ts)
+{
+    using namespace casadi;
+
+    sym_cost_ = SX(0); 
+    SX energy_cost = SX(0);
+    SX end_cost = SX(0);
+
+    sym_goal_val_ = SX::sym("goal_val", 2, NVehicles_);
+
+    SX final_point_cost = SX(0);
+    SX slack_variable = SX(0);
+    SX vel_at_sampling_cost = SX(0);
+    for (int i = 0; i < NVehicles_; ++i)
+    {
+        // Compute cost associated with energy (minimize acceleration squared terms)
+        if (constr_flag_[1] && constr_flag_[2] && constr_flag_[3])
+        {
+            int ang_vel_size = sym_ang_vel_constr_[i].size1();
+            int acc_size = sym_acc_constr_[i].size1();
+            int ang_acc_size = sym_ang_acc_constr_[i].size1();
+
+            SX angular_cost = pow(sum1(sym_ang_acc_constr_[i])/ang_acc_size, 2);
+            angular_cost = angular_cost/pow(ANG_VEL_MAX,2);
+            SX acceleration_cost = sum1(sym_acc_constr_[i])/acc_size;
+            acceleration_cost = acceleration_cost/pow(ACC_MAX,2);
+            energy_cost = angular_cost/2+ acceleration_cost/2;
+
+            // Compute cost associated with initial and final acc and angular rate
+            end_cost = (sym_acc_constr_[i](0)/pow(ACC_MAX,2) + sym_acc_constr_[i](acc_size - 1)/pow(ACC_MAX,2) + pow(sym_ang_vel_constr_[i](0),2)/pow(ANG_VEL_MAX,2) + pow(sym_ang_vel_constr_[i](ang_vel_size - 1),2)/pow(ANG_VEL_MAX,2))/4;
+        }
+        
+        final_point_cost = casadi::SX::pow(sym_P_all_[i](0,BezierDegree_)-sym_goal_val_(0,i), 2) + casadi::SX::pow(sym_P_all_[i](1,BezierDegree_)-sym_goal_val_(1,i), 2);
+
+        vel_at_sampling_cost = BezierUtils::velocity_sampling_penalty(sym_vel_constr_[i], sym_Tf_, Ts, nSplit_[0], VEL_MAX);
+
+        sym_cost_ = sym_cost_ + sym_Tf_ * (ALPHA + BETA * energy_cost + GAMMA * end_cost + EPSILON * final_point_cost + ZETA * vel_at_sampling_cost);
+    }
+}
+
 void MultipleVehiclePlanner::setOptimizationProblem(const std::vector<vehicle_state>& current_states, const std::vector<vehicle_state>& goal_states,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& circ_obs,
                             const Eigen::Matrix<double, 3, Eigen::Dynamic>& line_obs,
@@ -252,6 +323,10 @@ void MultipleVehiclePlanner::setOptimizationProblem(const std::vector<vehicle_st
 
     if (ContP_guess_.dimension(1) != 2) {
         std::cerr << "[setOptimizationProblem] ERROR: ContP_guess_ must be 2×(deg+1).\n";
+    }
+
+    if (ContP_guess_.dimension(2) != BezierDegree_+1) {
+        std::cerr << "[setOptimizationProblem] ERROR: ContP_guess_ must have the same degree as the curve to be optimized.\n";
     }
 
     if (Tf_guess_ <= 0) {
@@ -789,6 +864,325 @@ void MultipleVehiclePlanner::createDecisionVector(const std::vector<int>& active
 
 }
 
+void MultipleVehiclePlanner::createConstraintVectorDistributed(double Ts)
+{
+    using namespace casadi;
+
+    sym_P_all_problem_ = sym_P_all_; // Start every problem from the original symbols.
+
+    std::vector<SX> vars_to_substitute;
+    std::vector<SX> values_to_substitute;
+    std::vector<SX> all_obs_constraints;
+    
+    SX sym_vel_constr_all;
+    SX sym_ang_vel_constr_all;
+    SX sym_acc_constr_all;
+    SX sym_ang_acc_constr_all;
+
+    // Velocity and heading are only known together, and only if the position is known 
+    // TODO: Allow that either vel or angle are known (Not very important but who knows)
+    if (known_final_vel_ != known_final_head_ ||
+        ((known_final_vel_ || known_final_head_) && !fixed_final_position_))
+    {
+        throw std::runtime_error(
+            "Unsupported combination of fixed_final_position_, known_final_vel_ and known_final_head_. "
+            "Supported: (false,false,false), (true,false,false), (true,true,true)."
+        );
+    }
+
+    const bool full_final = known_final_vel_ && known_final_head_;
+
+    // Free control points are first_free..last_free (inclusive)
+    const int first_free = continuity_C3_ ? 4 : 2;
+    int last_free = NVehicles_;                                   // no final info: P_N is free
+    if (fixed_final_position_) last_free = NVehicles_ - 1;        // P_N fixed
+    if (full_final)            last_free = NVehicles_ - 2;        // P_N and P_{N-1} fixed
+
+
+    for (int i = 0; i < NVehicles_; ++i)
+    {
+        // Goal symbols used in the cost (always substituted) if the goal is fixed the term in the cost funtion is simply 0
+        vars_to_substitute.push_back(sym_goal_val_(0, i));
+        vars_to_substitute.push_back(sym_goal_val_(1, i));
+        values_to_substitute.push_back(SX(goal_states_[i].x));
+        values_to_substitute.push_back(SX(goal_states_[i].y));
+
+        if(fixed_final_position_)
+        {
+            vars_to_substitute.push_back(sym_P_all_[i](0,BezierDegree_));
+            vars_to_substitute.push_back(sym_P_all_[i](1,BezierDegree_));
+            values_to_substitute.push_back(SX(goal_states_[i].x));
+            values_to_substitute.push_back(SX(goal_states_[i].y));
+        } 
+        
+        if(full_final)
+        {
+            SX PNx = goal_states_[i].x - goal_states_[i].v * cos(goal_states_[i].theta) * sym_Tf_ / BezierDegree_;
+            SX PNy = goal_states_[i].y - goal_states_[i].v * sin(goal_states_[i].theta) * sym_Tf_ / BezierDegree_;
+
+            vars_to_substitute.push_back(sym_P_all_[i](0,BezierDegree_-1));
+            vars_to_substitute.push_back(sym_P_all_[i](1,BezierDegree_-1));
+            values_to_substitute.push_back(PNx);
+            values_to_substitute.push_back(PNy);
+        }
+
+        // Initial position heading and velocity are always known
+        vars_to_substitute.push_back(sym_P_all_[i](0,0));
+        vars_to_substitute.push_back(sym_P_all_[i](1,0));
+        values_to_substitute.push_back(SX(current_states_[i].x));
+        values_to_substitute.push_back(SX(current_states_[i].y));
+        
+        vars_to_substitute.push_back(sym_P_all_[i](0,1));
+        vars_to_substitute.push_back(sym_P_all_[i](1,1));
+        SX P1x = current_states_[i].x + current_states_[i].v * cos(current_states_[i].theta) * sym_Tf_ / BezierDegree_;
+        SX P1y = current_states_[i].y + current_states_[i].v * sin(current_states_[i].theta) * sym_Tf_ / BezierDegree_;
+        values_to_substitute.push_back(P1x);
+        values_to_substitute.push_back(P1y);
+
+        if (continuity_C3_)
+        {
+            casadi::SX result = BezierUtils::continuity_C3_Casadi(sym_Tf_, BezierUtils::tensor_2_matrix(ContP_guess_, i), Tf_guess_, BezierDegree_);
+            // 3rd Control Point
+            vars_to_substitute.push_back(sym_P_all_[i](0,2));
+            vars_to_substitute.push_back(sym_P_all_[i](1,2));
+            values_to_substitute.push_back(result(0,2));
+            values_to_substitute.push_back(result(1,2));
+
+            // 4th Control Point
+            vars_to_substitute.push_back(sym_P_all_[i](0,3));
+            vars_to_substitute.push_back(sym_P_all_[i](1,3));
+            values_to_substitute.push_back(result(0,3));
+            values_to_substitute.push_back(result(1,3));
+
+            casadi::Function f("c3_check", {sym_Tf_}, {result});
+            casadi::DM r = f(std::vector<casadi::DM>{casadi::DM(Tf_guess_)})[0];
+            Eigen::MatrixXd Pg = BezierUtils::tensor_2_matrix(ContP_guess_, i);
+            for (int c = 0; c < 4; ++c)
+                std::cout << "[c3 check] P" << c
+                        << " helper=(" << r(0, c).scalar() << ", " << r(1, c).scalar() << ")"
+                        << " expected=(" << Pg(0, c) << ", " << Pg(1, c) << ")\n";
+            std::cout << "[c3 check] P1 from state=("
+                    << current_states_[i].x + current_states_[i].v * std::cos(current_states_[i].theta) * Tf_guess_ / BezierDegree_ << ", "
+                    << current_states_[i].y + current_states_[i].v * std::sin(current_states_[i].theta) * Tf_guess_ / BezierDegree_ << ")\n";
+
+        }
+        
+
+        for (int k = 0; k < circ_obs_.cols(); ++k) {
+            SX substituted_constraint = sym_circ_constr_[i];
+            SX obs = SX::vertcat({SX(circ_obs_(0,k)), SX(circ_obs_(1,k)), SX(circ_obs_(2,k))});
+            for (casadi_int j = 0; j < obs.size1(); ++j)
+            {
+                substituted_constraint = SX::substitute(substituted_constraint, sym_circ_obs_(j), obs(j));
+            }
+            all_obs_constraints.push_back(substituted_constraint);
+        }
+        for (int k = 0; k < circ_obs_.cols(); ++k) {
+            SX substituted_constraint = sym_circ_constr_[i];
+            SX obs = SX::vertcat({SX(circ_obs_(0,k)), SX(circ_obs_(1,k)), SX(circ_obs_(2,k))});
+            for (casadi_int j = 0; j < obs.size1(); ++j)
+            {
+                substituted_constraint = SX::substitute(substituted_constraint, sym_circ_obs_(j), obs(j));
+            }
+            all_obs_constraints.push_back(substituted_constraint);
+        }
+        for (int k = 0; k < elip_obs_.cols(); ++k) {
+            SX substituted_constraint = sym_elip_constr_[i];
+            SX elip = SX::vertcat({SX(elip_obs_(0,k)), SX(elip_obs_(1,k)), SX(elip_obs_(2,k)), SX(elip_obs_(3,k)), SX(elip_obs_(4,k))});
+            for (casadi_int j = 0; j < elip.size1(); ++j)
+            {
+                substituted_constraint = SX::substitute(substituted_constraint, sym_elip_obs_(j), elip(j));
+            }
+            all_obs_constraints.push_back(substituted_constraint);
+        }
+
+        if (!sym_vel_constr_[i].is_empty())
+        {
+            if (sym_vel_constr_all.is_empty())
+                sym_vel_constr_all = sym_vel_constr_[i];
+            else
+                sym_vel_constr_all = SX::vertcat({sym_vel_constr_all, sym_vel_constr_[i]});
+        }
+        if (!sym_ang_vel_constr_[i].is_empty())
+        {
+            if (sym_ang_vel_constr_all.is_empty())
+                sym_ang_vel_constr_all = sym_ang_vel_constr_[i];
+            else
+                sym_ang_vel_constr_all = SX::vertcat({sym_ang_vel_constr_all, sym_ang_vel_constr_[i]});
+        }
+        if (!sym_acc_constr_[i].is_empty())
+        {
+            if (sym_acc_constr_all.is_empty())  
+                sym_acc_constr_all = sym_acc_constr_[i];
+            else
+                sym_acc_constr_all = SX::vertcat({sym_acc_constr_all, sym_acc_constr_[i]});
+        }
+        if (!sym_ang_acc_constr_[i].is_empty())
+        {
+            if (sym_ang_acc_constr_all.is_empty())
+                sym_ang_acc_constr_all = sym_ang_acc_constr_[i];
+            else
+                sym_ang_acc_constr_all = SX::vertcat({sym_ang_acc_constr_all, sym_ang_acc_constr_[i]});
+        }
+    }
+
+    SX all_obs_constr;
+    if(!all_obs_constraints.empty()){
+        all_obs_constr = SX::vertcat(all_obs_constraints);
+        std::cout << "Obstacle_constraint size: lines - " << all_obs_constr.size1() << "; columns - " << all_obs_constr.size2() << ";" << std::endl;
+    } else {
+        all_obs_constr = SX();
+    }
+    if(!sym_inter_vehicle_constr_.is_empty()){
+        all_obs_constr = SX::vertcat({all_obs_constr, sym_inter_vehicle_constr_});
+    }
+    constraints_ = vertcat(sym_vel_constr_all , sym_ang_vel_constr_all, sym_acc_constr_all, sym_ang_acc_constr_all, all_obs_constr);
+    cost_func_   = sym_cost_;
+
+    for (size_t i = 0; i < vars_to_substitute.size(); ++i)
+    {
+        constraints_ = SX::substitute(constraints_, vars_to_substitute[i], values_to_substitute[i]);
+
+        cost_func_   = SX::substitute(cost_func_, vars_to_substitute[i], values_to_substitute[i]);
+
+        for (int j = 0; j < NVehicles_; ++j)
+        {
+            sym_P_all_problem_[j] = SX::substitute(sym_P_all_problem_[j], vars_to_substitute[i], values_to_substitute[i]);
+        }
+    }
+    
+    int obs_size = all_obs_constr.size1();
+    int vel_size = sym_vel_constr_all.size1();
+    int ang_vel_size = sym_ang_vel_constr_all.size1();
+    int acc_size = sym_acc_constr_all.size1();
+    int ang_acc_size = sym_ang_acc_constr_all.size1();
+    int total_num = obs_size + vel_size + ang_vel_size + acc_size + ang_acc_size;
+
+    problem_Bounds_.g_lbx = DM::zeros(total_num);
+    problem_Bounds_.g_ubx = DM::zeros(total_num);
+    int idx = 0;
+    problem_Bounds_.g_lbx(Slice(idx, idx + vel_size)) = DM::ones(vel_size) * VEL_MIN * VEL_MIN;
+    problem_Bounds_.g_ubx(Slice(idx, idx + vel_size)) = DM::ones(vel_size) * VEL_MAX * VEL_MAX;
+    idx = idx + vel_size;
+    problem_Bounds_.g_lbx(Slice(idx, idx + ang_vel_size)) = DM::ones(ang_vel_size) * ANG_VEL_MIN;
+    problem_Bounds_.g_ubx(Slice(idx, idx + ang_vel_size)) = DM::ones(ang_vel_size) * ANG_VEL_MAX;
+    idx = idx + ang_vel_size;
+    problem_Bounds_.g_lbx(Slice(idx, idx + acc_size)) = DM::ones(acc_size) * (-ACC_MIN) * ACC_MIN;
+    problem_Bounds_.g_ubx(Slice(idx, idx + acc_size)) = DM::ones(acc_size) * ACC_MAX * ACC_MAX;
+    idx = idx + acc_size;
+    problem_Bounds_.g_lbx(Slice(idx, idx + ang_acc_size)) = DM::ones(ang_acc_size) * ANG_ACC_MIN;
+    problem_Bounds_.g_ubx(Slice(idx, idx + ang_acc_size)) = DM::ones(ang_acc_size) * ANG_ACC_MAX;
+    idx = idx + ang_acc_size;
+    problem_Bounds_.g_lbx(Slice(idx, idx + obs_size)) = DM::ones(obs_size) * OBS_MIN;
+    problem_Bounds_.g_ubx(Slice(idx, idx + obs_size)) = DM::ones(obs_size) * OBS_MAX;
+
+}
+
+void MultipleVehiclePlanner::createDecisionVectorDistributed(double Tmin)
+{
+    using namespace casadi;
+    std::vector<SX> vars;
+    std::vector<DM> guess;
+    double Tf_guess = 0.0;
+    const int N = BezierDegree_;
+
+    // Velocity and heading are only known together, and only if the position is known 
+    // TODO: Allow that either vel or angle are known (Not very important but who knows)
+    if (known_final_vel_ != known_final_head_ ||
+        ((known_final_vel_ || known_final_head_) && !fixed_final_position_))
+    {
+        throw std::runtime_error(
+            "Unsupported combination of fixed_final_position_, known_final_vel_ and known_final_head_. "
+            "Supported: (false,false,false), (true,false,false), (true,true,true)."
+        );
+    }
+
+    const bool full_final = known_final_vel_ && known_final_head_;
+
+    // Free control points are first_free..last_free (inclusive)
+    const int first_free = continuity_C3_ ? 4 : 2;
+    int last_free = N;                                   // no final info: P_N is free
+    if (fixed_final_position_) last_free = N - 1;        // P_N fixed
+    if (full_final)            last_free = N - 2;        // P_N and P_{N-1} fixed
+
+
+    for (int i = 0; i < NVehicles_; ++i)
+    {
+        Tf_guess = std::max(Tf_guess, sqrt(pow(current_states_[i].x - goal_states_[i].x, 2) +
+                                            pow(current_states_[i].y - goal_states_[i].y, 2)) / (VEL_MAX / 2));
+    }
+
+    for (int k = 0; k < NVehicles_; ++k)
+    {
+        if (first_iter_)
+        {
+            // Evaluates control point c (known up to Tf) at Tf_guess
+            auto eval_col = [&](int c) {
+                Function f("eval_col", {sym_Tf_},
+                           {sym_P_all_problem_[k](0, c), sym_P_all_problem_[k](1, c)});
+                std::vector<DM> r = f({DM(Tf_guess)});
+                return std::make_pair(r[0].scalar(), r[1].scalar());
+            };
+
+            auto [x0, y0] = eval_col(first_free - 1);   // start interpolation point
+            double bx, by;                              // end interpolation point
+            const int n_free = last_free - first_free + 1;
+            const int steps  = fixed_final_position_ ? n_free + 1 : n_free;   // intervals from start to b
+
+            if (!full_final)
+            {
+                bx = goal_states_[k].x;
+                by = goal_states_[k].y;
+            }
+            else
+            {
+                std::tie(bx, by) = eval_col(N - 1);
+            }
+
+            for (int i = first_free; i <= last_free; ++i)
+            {
+                double t = double(i - first_free + 1) / steps;
+                vars.push_back(sym_P_all_problem_[k](0, i));
+                vars.push_back(sym_P_all_problem_[k](1, i));
+                guess.push_back(DM(x0 + t * (bx - x0)));
+                guess.push_back(DM(y0 + t * (by - y0)));
+            }
+        }
+        else
+        {
+            for (int i = first_free; i <= last_free; ++i)
+            {
+                for (int j = 0; j < sym_P_all_problem_[k].size1(); ++j)
+                {
+                    vars.push_back(sym_P_all_problem_[k](j, i));
+                    guess.push_back(DM(ContP_guess_(k, j, i)));
+                }
+            }
+            Tf_guess = Tf_guess_;
+        }
+    }
+
+    Tf_guess = std::max(Tf_guess, Tmin + 0.1);
+
+    double minimum_tf_value;
+    if(fixed_final_position_)
+    {
+        minimum_tf_value = 0.0;
+    }
+    else 
+    {
+        minimum_tf_value = Tmin;
+    }
+    vars.push_back(sym_Tf_);
+    guess.push_back(Tf_guess);
+
+    decision_vec_ = SX::vertcat(vars);
+    initial_guess_ = DM::vertcat(guess);
+    problem_Bounds_.lbx = DM::ones(initial_guess_.size1()) * (-std::numeric_limits<double>::infinity());
+    problem_Bounds_.ubx = DM::ones(initial_guess_.size1()) * (std::numeric_limits<double>::infinity());
+    problem_Bounds_.lbx(initial_guess_.size1() - 1) = DM(minimum_tf_value);
+}
+
 void MultipleVehiclePlanner::solveOptimizationProblem(std::atomic<bool>* cancel_flag)
 {
     using namespace casadi;
@@ -979,6 +1373,10 @@ void MultipleVehiclePlanner::solveOptimizationProblem_qrqp(std::atomic<bool>* ca
         std::cout << "[Solver] Aborted: " << e.what() << "\n";
     }
 }
+
+//-----------------------------------------------------------------------------------
+//          Optimization solution return functions
+//-----------------------------------------------------------------------------------
 
 Eigen::Tensor<double, 3> MultipleVehiclePlanner::getControlPoints() const
 {

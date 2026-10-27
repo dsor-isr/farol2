@@ -17,6 +17,7 @@
  * optimization problem, related to dynamics and obstacles, as well as 
  * inter-vehicle constraints.
  */
+
 namespace BezierUtils
 {
     casadi::SX bezier_derivative_Casadi(const casadi::SX &P);
@@ -24,6 +25,7 @@ namespace BezierUtils
     casadi::SX multiply_bezier_Casadi(const casadi::SX &P1, const casadi::SX &P2);
     std::pair<casadi::SX, casadi::SX> divide_bezier_Casadi(const casadi::SX &P, double u);
     casadi::SX deCasteljau_Casadi(const casadi::SX &u, const casadi::SX &pts);
+    casadi::SX continuity_C3_Casadi(const casadi::SX &Tf, const Eigen::MatrixXd &P, double Ts, int degree);
 
     Eigen::MatrixXd bezier_derivative(const Eigen::MatrixXd &P);
     Eigen::MatrixXd elevate_degree(const Eigen::MatrixXd &P, int degree);
@@ -56,15 +58,21 @@ namespace BezierUtils
         double radius,
         int nsplit);
     
+    casadi::SX velocity_sampling_penalty(const casadi::SX &vel_constr, const casadi::SX &Tf, double Ts, int nsplit, double vel_max);
+    
     Eigen::Tensor<double, 3> elevateTensorDegree(const Eigen::Tensor<double, 3>& tensor, int degree);
 
     bool check_vehicle_distances(const Eigen::MatrixXd &P1, const Eigen::MatrixXd &P2, double radius, int nsplit);
     
     Eigen::MatrixXd tensor_2_matrix(const Eigen::Tensor<double, 3> &tensor, int vehicleIndex);
 
+    Eigen::Tensor<double, 3> matrix_2_tensor(const Eigen::MatrixXd &matrix);
+
     std::vector<int> selectTrajectoriesToRemove(int NVehicles, const std::vector<std::pair<int,int>>& collisions, const std::vector<double>& Tf_values);
     
     casadi::SX multiply_Eigenmatrix_by_SX(const Eigen::MatrixXd &matrix, const casadi::SX &P);
+
+    casadi::DM to_dm(const Eigen::VectorXd &v);
 }
 
 #endif // BEZIER_UTILS_H

@@ -56,10 +56,74 @@ farol2_motion_planning/interactive_planner_node:
     # End-point cost weight
     gamma: 1.0
 
+
+farol2_motion_planning/distributed_planner_node/*:
+  ros__parameters:
+    # Bezier curve parameters
+    bezier_degree: 9
+    guess_degree: 9
+    number_sample_points: 1000
+    use_initial_guess: false
+    
+    # Constraint flags: [velocity, angular_velocity, acceleration, angular_acceleration]
+    constraint_flags: [true, false, false, false]
+    
+    # nSplit parameters for adaptive constraints
+    n_split: [1, 1, 1]
+    
+    # ============================================
+    # Motion Planning Bounds
+    # ============================================
+    
+    # Velocity bounds (m/s)
+    vel_min: 0.01
+    vel_max: 1.0
+    
+    # Linear acceleration bounds (m/s²)
+    acc_min: -0.2
+    acc_max: 0.2
+    
+    # Angular velocity bounds (rad/s)
+    ang_vel_min: -0.4
+    ang_vel_max: 0.4
+    
+    # Angular acceleration bounds (rad/s²)
+    ang_acc_min: -0.1
+    ang_acc_max: 0.1
+    
+    # Obstacle bounds (m)
+    obs_min: 5.0
+    obs_max: 1000.0  # Use large number instead of infinity
+    
+    # ============================================
+    # Multi-Vehicle Parameters
+    # ============================================
+    
+    # Minimum distance between vehicles (m)
+    radius: 3.0
+    
+    # ============================================
+    # Cost Function Weights
+    # ============================================
+    
+    # Time cost weight
+    alpha: 1.0
+    
+    # Energy cost weight (acceleration penalties)
+    beta: 1.0
+    
+    # End-point cost weight
+    gamma: 1.0
+
     # ============================================
     # Distributed Parameters
     # ============================================
-    use_goal_straight_line: false
+    use_goal_straight_line: true
     use_goal_closer_point: true
     cell_margin: 2.0
+    sampling_period: 10.0
+
+    vehicle_name: mred0
+    discovery_mode: false
+
 

@@ -36,12 +36,12 @@ static constexpr double PLANNER_GAMMA = 1.0;
 // Scenario definition: one point in the parameter sweep
 // -----------------------------------------------------------------------------------
 struct ScenarioParams
-{
+{    
     std::string label; // human-readable tag, e.g. "N=4"
     int bezier_degree = 6;
     int n_vehicles = 2;
-    std::vector<int> nSplit = {2, 1, 2};                           // as used by createConstraintVector etc.
-    std::vector<uint8_t> constr_flags = {true, false, false, false}; // vel/acc/ang_vel/ang_acc on/off
+    std::vector<int> nSplit = {1, 1, 1};                           // as used by createConstraintVector etc.
+    std::vector<uint8_t> constr_flags = {true, true, true, false}; // vel/acc/ang_vel/ang_acc on/off
     int n_circ_obs = 0;
     int n_elip_obs = 0;
     int n_line_obs = 0;
@@ -1388,7 +1388,7 @@ AggregateResult runScenario(
             case TrialMode::Standard:
             {
                 SquareProblemGenerator gen(
-                    trial_seed, p.n_vehicles, 1000.0, 0.0, 0.0, 0.0);
+                    trial_seed, p.n_vehicles, 500.0, 5.0, 0.0, 0.0);
                 r = runSingleTrial(p, gen, *planners.full_size);
                 break;
             }
@@ -1539,7 +1539,7 @@ int main(int argc, char **argv)
     };
 
     std::vector<Sweep> sweeps = {
-        {"vehicles_deg7", sweepVehiclesFixedDegree({10}, /*fixed_degree=*/6)},
+        {"degree_1veh", sweepDegreeSingleVehicleNoObstacles(5,20)},
     };
 
     namespace fs = std::filesystem;
