@@ -1,110 +1,50 @@
-# PID Package
+# farol2_inner_loop
 
 ## Overview
-The `pid` package provides inner-loop PI/PID control for vehicle DOFs and can now run as a standalone package with its own launch and default configuration.
+`farol2_inner_loop` provides the inner-loop PI/PID controllers for the vehicle degrees of freedom and an `open_loop` node. It replaces the old ROS 1 `pid` package: the executable is `inner_loop_node` (ROS node name `inner_loop`), the message is `farol2_inner_loop/msg/PidDebug` and the service `farol2_inner_loop/srv/ChangeParams`.
 
-Implemented channels:
-- surge
-- sway
-- heave
-- yaw
-- pitch
-- roll
-- yaw_rate
-- pitch_rate
-- roll_rate
+Implemented channels: `surge`, `sway`, `heave`, `depth`, `altitude`, `yaw`, `pitch`, `roll`, `yaw_rate`, `pitch_rate`, `roll_rate`.
 
-## Refactored Runtime Model
-The node uses a data-driven runtime model with behavior equivalent to the previous implementation:
+Nodes:
+- [inner_loop_node](inner_loop_node.md): the controllers. Reads references and the navigation state, publishes a body wrench.
+- `open_loop` (see below): maps a surge reference directly to rpm (magicelectric).
 
-- A single generic reference callback handles all channels.
-- A single generic controller execution function dispatches by controller type.
-- Runtime wiring is stored in a `ControllerConfig` table (state accessor, reference accessor, optional rate accessor, output accumulator, debug filler).
-- Only enabled controllers are instantiated, subscribed, and executed.
-
-## Architecture (Short)
-Runtime control flow is:
-
-1. Load parameters from YAML.
-2. Select active channels: optional `controllers` allow-list, then `enabled: true` filter.
-3. Create only the active controller objects (PI/PID as required by channel).
-4. Create reference subscriptions only for active channels.
-5. On each timer tick, validate `dt`, execute active controllers, route outputs to axis publishers, then reset the accumulated wrench.
-
-Compact flow:
+## Runtime model
+- A single generic reference callback handles all channels. Runtime wiring is a `ControllerConfig` table (state accessor, reference accessor, optional rate accessor, output accumulator, debug filler).
+- Only channels with `enabled: true` in the YAML are instantiated, subscribed and executed.
+- Each timer tick: validate `dt`, run the active controllers, add each output to the wrench of its axis, publish the six axes, reset the wrench.
 
 ```text
-pid.yaml -> loadParams -> active controllers
+inner_loop.yaml -> loadParams -> active controllers
 active controllers -> createControllers + initialiseSubscribers
 timerCallback -> callControllers -> executeController
 executeController -> body_wrench_request_ accumulation
-body_wrench_request_ -> thrust/torque publishers -> resetBodyWrenchRequest
+body_wrench_request_ -> allocation/thrust_{x,y,z}, torque_{x,y,z} -> reset
 ```
 
-Key architectural points:
-- Channel behavior is explicit by controller type; runtime activation is data-driven.
-- Yaw keeps special state selection (`course_angle` vs `orientation.z`).
-- Existing unit conversions, gating, and output mapping are preserved.
+## Units and routing
+- Linear references/states: m/s and m. Angular references, states and rates: **degrees and deg/s** at the interface, converted with `deg2rad` internally.
+- Output mapping (several channels on one axis **add up**):
 
-## Configuration
-Default parameters live in `pid/config/pid.yaml`.
+| Channel | Output |
+|---|---|
+| surge | `thrust_x` |
+| sway | `thrust_y` |
+| heave, depth | `thrust_z` |
+| altitude | `thrust_z`, sign inverted to NED (down-positive) |
+| yaw, yaw_rate | `torque_z` |
+| pitch, pitch_rate | `torque_y` |
+| roll, roll_rate | `torque_x` |
 
-### Controller Activation
-Controllers are activated through each channel's `enabled` flag. The optional top-level `controllers` allow-list is supported but not required.
+- Yaw can use the course angle instead of heading when `course_instead_of_yaw` is true (parameter, or the service, see [inner_loop_node](inner_loop_node.md)).
 
-Activation flow:
-1. Start from optional `controllers` allow-list (if present).
-2. Parse controller parameter blocks.
-3. Keep only channels with `enabled: true`.
+## Safety and gating
+- A cycle is skipped if `dt <= 0` or `dt > 2/node_frequency`.
+- A channel only runs if at least one `NavigationState` has been received and its reference is newer than `ref_timeout` (default 2 s). After that the reference generator resets to the current state and nothing is published for the channel. **Publish references continuously (at least 5 Hz).**
+- A channel not enabled in the YAML ignores its reference topic (no subscriber exists).
 
-This means memory/runtime cost scales with enabled channels only.
+## open_loop node
+`inner_loop/open_loop` (executable `open_loop`, namespace `/<ns>/inner_loop`) listens to `inner_loop/ref/surge` and publishes `allocation/rpm_command` directly: `rpm = ref * surge.gain` (parameters `surge.enabled`, default false, and `surge.gain`, default 1.0, in the `open_loop:` block of the vehicle's `inner_loop.yaml`; magicelectric uses `gain: 2200.0`). It runs at a fixed 10 Hz with a fixed 0.2 s reference timeout, publishes two identical rpm entries, and outputs zero rpm while `mission_status` is 0. It does not clamp to the rpm limits of `allocation.yaml`. Enabled with the `open_loop` launch argument (`start_farol2.launch.py` starts it together with `pid: true`; it only acts when `surge.enabled: true`, which is the case for magicelectric and not for delfim).
 
-### Yaw Special Logic
-Yaw control keeps the original behavior:
-- if `course_control == true`, yaw state uses `course_angle`
-- otherwise yaw state uses `orientation.z`
-
-### Units and Routing
-The node preserves the original unit handling and output routing:
-
-- linear references/states: direct units
-- angular references/states/rates: converted with `deg2rad` where previously applied
-
-Output mapping:
-- surge -> force.x
-- sway -> force.y
-- heave -> force.z
-- depth -> force.z
-- altitude -> force.z (inverted to NED/down-positive force)
-- yaw/yaw_rate -> torque.z
-- pitch/pitch_rate -> torque.y
-- roll/roll_rate -> torque.x
-
-## Safety and Gating
-Control execution and publication still use the original gates:
-
-- timer `dt` sanity guard (`dt <= 0` or `dt > 2/f` skips cycle)
-- per-controller enable gate
-- recent-reference gate (`< 2/f` since last reference)
-
-## Standalone Usage
-Build package:
-
-```bash
-colcon build --packages-select pid
-```
-
-Run with package launch (recommended):
-
-```bash
-source install/setup.bash
-ros2 launch pid pid.launch.py
-```
-
-`ros2 run pid pid_control` requires parameters to be provided (for topic/service names and controller gains).
-
-## Live Parameter Service
-The `ChangeParams` service keeps current behavior and updates yaw gains at runtime.
-
-## Node Documentation
-- [pid](pid.md)
+## Testing helper
+`test/ref_pub.py` publishes test references (hard-coded to `/magicelectric0/`; edit it for other vehicles). For manual tests use `ros2 topic pub -r 5 /<ns>/inner_loop/ref/surge std_msgs/msg/Float32 "{data: 1.0}"` (see [docs/runbook.md](../../docs/runbook.md)).

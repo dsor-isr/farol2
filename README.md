@@ -36,9 +36,11 @@ git submodule add --recursive git@github.com:dsor-isr/farol2.git
 ## Install libraries
 
 ```
-sudo apt install libgeographiclib-dev
+sudo apt install libgeographiclib-dev libeigen3-dev
 sudo apt-get install -y ros-jazzy-xacro
 ```
+
+Other build dependencies (declared in the package manifests, installed by `rosdep install --from-paths src --ignore-src -r -y`): `tf2`, `tf2_ros`, `tf2_eigen`, `tf2_geometry_msgs`, `eigen3_cmake_module`, `robot_state_publisher`, `rosgraph_msgs`, and `python3-yaml` for `farol2_console`. The `3rd_party/nmea_msgs` submodule is only needed by `farol2_drivers`.
 
 ## Using FAROL 2 QOL scripts and alias
 
@@ -58,7 +60,7 @@ set_colcon_ws_function() {
     export COLCON_WS=colcon_ws_$1
     echo COLCON_WS = ${COLCON_WS}
 
-    # save into a hidden file the catkin workspace setting
+    # save into a hidden file the colcon workspace setting
     echo $COLCON_WS > ~/.colcon_ws_config
     source ~/.bashrc
 }
@@ -99,6 +101,17 @@ set_colcon_ws_function sim
 colcon_cd
 colcon build --symlink-install
 ```
+
+## Running and documentation
+
+```bash
+ros2 launch farol2_bringup start_vehicle_sim.launch.py vehicle_name:=delfim
+```
+
+- [docs/quickstart.md](docs/quickstart.md): architecture, units, the `mission_status` codes, timing gates.
+- [docs/runbook.md](docs/runbook.md): step-by-step procedures (launch, reference velocity, waypoint, path following, bags, gains, vehicles).
+- Per-package documentation is in each package's `docs/` folder (`farol2_nav`, `farol2_inner_loop`, `farol2_allocation`, `farol2_waypoint`, `farol2_planning`, `farol2_path_following`, `farol2_sim`, `farol2_bringup`, `farol2_interfaces`, `farol2_utils`, `farol2_console`, `farol2_description`) and the `farol` CLI in [farol2_cli/README.md](farol2_cli/README.md).
+- Branching rules: [WORKFLOW.md](WORKFLOW.md) (`main` is field-validated, `dev` is the integration branch).
 
 <!-- ### Citation
 If you use Farol 2 in a scientific publication, please cite:

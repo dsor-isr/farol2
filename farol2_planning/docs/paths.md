@@ -1,37 +1,44 @@
 # paths Node
-This node deals with the rationale previously explained in the *paths* documentation. It manages and deploys paths for the vehicles to follow. A detailed exaplanation is offered here:
 
-* [Implementation](implementation.md)
+The `paths` node (executable `path_node`, ROS node name `paths`, namespace `/<ns>/planning`) manages and deploys the path that the vehicle follows. A detailed explanation of the path representation is in [implementation](implementation.md).
 
-## Diagram
-![paths Diagram](img/paths.png)
+![paths Diagram](img/paths_diagram.png)
+
+Names below are relative to the vehicle namespace `/<vehicle_name><vehicle_id>/` (for example `/delfim0/`) and are remapped in `launch/farol2_planning.launch.py`.
 
 ## Subscribers
-| Subscribers | msgs type | Purpose |
-| ----------- | -------------- | --------- |
-| /#vehicle#/path_following/gamma | [std\_msgs/Float32](http://docs.ros.org/en/api/std_msgs/html/msg/Float32.html) | The coordination state of a certain vehicle with respect to others on the network |
-| /#vehicle#/nav/filter/state | farol\_msgs/NavigationState | The navigation state of the vehicle after filtering                               |
+| Topic | Type | Purpose |
+| --- | --- | --- |
+| `path_following/gamma` | `std_msgs/Float32` | Path parameter (progress) published by `path_following`, or by a coordination node when `SetMode` is false. |
+| `nav/filter/state` | `farol2_interfaces/NavigationState` | Filtered vehicle state, used to find the closest point on the path. |
 
 ## Publishers
-| Publishers | msgs type | Purpose |
-| ----------- | -------------- | --------- |
-| "/#vehicle#/path_following/path_data" | [paths/PathData](PathData.md) | Message with the path data on a certain point (curvature, tangent, velocity, etc.) |
-| "/#vehicle#/path_following/virtual_state" | farol\_msgs/StateConsole | Vehicle state message                                                              |
+| Topic | Type | Purpose |
+| --- | --- | --- |
+| `path_following/path_data` | [farol2_planning/PathData](PathData.md) | Path data at the current point (position, derivatives, curvature, tangent, desired speeds). |
+| `path_following/virtual_state` | `farol2_interfaces/StateConsole` | State of the virtual target (rabbit), for the console. |
 
 ## Services
-| Services                      | msgs type                                 | Purpose                                                                  |
-| -----------                   | --------------                            | ---------                                                                |
-| /#vehicle#/ResetPath          | [paths/ResetPath](ResetPath.md)           | Reset the current assigned path                                          |
-| /#vehicle#/SetConstVdRabbit   | [paths/SetConstSpeed](SetConstSpeed.md)   | Set a constant speed for the rabbit which a certain vehicle is following |
-| /#vehicle#/SetConstVdVehicle  | [paths/SetConstSpeed](SetConstSpeed.md)   | Set a constant speed for the vehicle itself                              |
-| /#vehicle#/SetMode            | [paths/SetMode](SetMode.md)               | Set if mode of operation calculates closest point to the path or if it receives an external gamma for path progression |
-| /#vehicle#/SpawnArc2DPath     | [paths/SpawnArc2D](SpawnArc2D.md)         | Create a 2D circumference arc path                                       |
-| /#vehicle#/SpawnBernoulliPath | [paths/SpawnBernoulli](SpawnBernoulli.md) | Create a Bernoulli path                                                  |
-| /#vehicle#/SpawnCircle2DPath  | [paths/SpawnCircle2D](SpawnCircle2D.md)   | Create a 2D Circle path                                                  |
-| /#vehicle#/SpawnLineDPath     | [paths/SpawnLine](SpawnLine.md)           | Create a Line path                                                       |
+| Service | Type | Purpose |
+| --- | --- | --- |
+| `ResetPath` | [ResetPath](ResetPath.md) | Reset the current path. |
+| `SetConstVdRabbit` | [SetConstSpeed](SetConstSpeed.md) | Constant speed for the virtual target. |
+| `SetConstVdVehicle` | [SetConstSpeed](SetConstSpeed.md) | Constant desired speed for the vehicle. |
+| `SetMode` | [SetMode](SetMode.md) | `closest_point_mode: true` computes the closest point to the path; false takes the path parameter from an external `gamma`. |
+| `SpawnArc2DPath` | [SpawnArc2D](SpawnArc2D.md) | Append a 2D circle arc. |
+| `SpawnBernoulliPath` | [SpawnBernoulli](SpawnBernoulli.md) | Append a lemniscate of Bernoulli. |
+| `SpawnCircle2DPath` | [SpawnCircle2D](SpawnCircle2D.md) | Append a 2D circle. |
+| `SpawnLinePath` | [SpawnLine](SpawnLine.md) | Append a line segment. |
+
+Path coordinates are UTM `[northing, easting, z]` in metres. Spawning appends a section to the current path; call `ResetPath` first for a new one. `path_following/Stop` also resets the path.
 
 ## Parameters
-| Parameters      | type   | Purpose                       |
-| -----------     | ----   | ---------                     |
-| frame\_id       | string | ID assigned to the path frame |
-| node\_frequency | float  | Working frequency of the node |
+In `farol2_bringup/config/<vehicle>/default/planning.yaml`, under `/**: paths: ros__parameters:`.
+
+| Parameter | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| `frame_id` | string | `Path_frame` | Frame assigned to the path data. |
+| `node_frequency` | double | 10.0 | Working frequency. |
+
+## Not implemented
+`Polynomial5.cpp` and `Sinusoid2D.cpp` are empty TODO stubs, and `include/algorithms/path_sections/Polinomial5.h` is a misspelled duplicate of `Polynomial5.h`. There is no service for those sections.

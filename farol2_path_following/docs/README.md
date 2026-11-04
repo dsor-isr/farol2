@@ -21,7 +21,7 @@ You can find further explanation of the Path Following algorithms in this [paper
 
 **Version:** 1.0.0
 
-**Last Update:** April/2021
+**Last Update:** April/2021 (ported to ROS 2 Jazzy; docs refreshed for the `dev` branch)
 
 ## Nodes
 * [path\_following](./path_following.md)

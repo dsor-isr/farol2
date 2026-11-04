@@ -9,7 +9,7 @@ At each timer tick:
 1. A measurement snapshot is assembled from asynchronous topics.
 2. The pipeline starts from a clean internal state.
 3. `sample_and_hold` (pass-through) fills state channels directly from sensors.
-4. Additional filters (for example `current_estimator`, `yaw_rate_ekf`) refine selected parts of that state.
+4. Additional filters (for example `asv_dynamics_model`, `current_estimator`, `yaw_rate_ekf`) refine selected parts of that state.
 5. The final fused `NavigationState` is published.
 
 This architecture favors composition: each filter can focus on one sub-problem and still cooperate through a shared state.
@@ -22,7 +22,7 @@ This architecture favors composition: each filter can focus on one sub-problem a
 - **Incremental**: adding a new filter does not require rewriting existing estimators.
 - **Traceable**: optional stage outputs (`<filter_name>/state`) allow per-stage inspection.
 - **Robust to async sensors**: input topics are buffered and consumed at fixed-rate ticks.
-- **Fail-soft**: stale measurements are dropped by timeout without crashing the pipeline.
+- **Fail-soft**: each tick only sees the measurements that arrived since the previous tick; missing measurements do not crash the pipeline.
 
 ## Runtime model
 
@@ -32,9 +32,8 @@ Subscribers update a `MeasurementSnapshot` cache asynchronously. Each message ty
 
 ### Tick-driven processing
 
-The timer runs at `node_frequency` and computes `dt` from wall time. On each tick:
+The timer is a wall-clock timer running at `node_frequency`; `dt` is the difference between consecutive `now()` stamps, i.e. node time (`/clock` when `use_sim_time` is true). On each tick:
 
-- stale measurements are invalidated by timeout,
 - filters run sequentially over the same `State` object,
 - the final state is always published,
 - consumed measurements are flushed (next tick only sees newly arrived data).
@@ -45,6 +44,7 @@ The timer runs at `node_frequency` and computes `dt` from wall time. On each tic
 
 Then each key in `filters` instantiates one plugin:
 
+- `asv_dynamics_model`
 - `current_estimator`
 - `yaw_rate_ekf`
 
@@ -75,11 +75,14 @@ Unknown keys are skipped with a warning.
 - `node_frequency` (Hz): pipeline tick rate.
 - `publish_all_steps` (bool): publish intermediate stage states.
 - `filters` (string[]): ordered plugins after `sample_and_hold`.
-- `timeouts.imu`, `timeouts.navsat`, `timeouts.utm`, `timeouts.rpm`: per-sensor freshness limits.
+- `measurements` (string[]): which measurement subscriptions are created (`gnss`, `imu`, `depth`, `velocity_over_ground`, `velocity_through_water`, `utm_ned`, `altimeter`, `thruster_rpm`, `control_surface_angle`; default `["gnss", "imu"]`).
+
+There is no per-sensor `timeouts.*` parameter in the current code: the freshness handling is the per-tick flush of the measurement snapshot.
 
 Plugin parameters live under:
 
 - `plugins.sample_and_hold.*`
+- `plugins.asv_dynamics_model.*`
 - `plugins.current_estimator.*`
 - `plugins.yaw_rate_ekf.*`
 
@@ -88,6 +91,7 @@ See dedicated filter pages below for details.
 ## Per-filter documentation
 
 - [sample_and_hold](sample_and_hold.md)
+- [asv_dynamics_model](asv_dynamics_model.md)
 - [current_estimator](current_estimator.md)
 - [yaw_rate_ekf](yaw_rate_ekf.md)
 
@@ -100,3 +104,10 @@ See dedicated filter pages below for details.
 5. Add plugin parameters to vehicle `nav.yaml`.
 
 The key idea is to modify only the extension points, not the existing filter logic.
+
+## Launch and configuration
+- Launch: `launch/farol2_nav.launch.py` (args `vehicle_name`, `vehicle_id`, `use_sim_time`, `config_to_use`, `sample_and_hold`, `filter_node`). The ROS node name is `navigation_filter`, namespace `/<ns>`.
+- Subscriptions are remapped to `/<ns>/measurement/<name>`; the output is `/<ns>/nav/filter/state`.
+- Per-vehicle parameters are in `farol2_bringup/config/<vehicle>/default/nav.yaml`. **They are keyed `filter_node:` while the node runs as `navigation_filter`, so they are currently not applied** (the node runs on the code defaults). Rename the key to apply them. `config/nav.yaml` inside this package is an example only and is not installed.
+- Without a `velocity_over_ground` entry in `measurements`, `NavigationState.velocity_over_ground` stays zero even if the simulator publishes it.
+- Services/debug: `current_estimator/tune` (`TuneCurrentEstimator`), the yaw-EKF tune service (`TuneYawRateEkf`), `current_estimator/debug` (`CurrentEstimatorDebug`), `yaw_rate_ekf/debug` (`YawRateEkfDebug`), `asv_dynamics_model/{uvr,tau}`.

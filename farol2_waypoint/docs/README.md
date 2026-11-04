@@ -1,6 +1,6 @@
 # Waypoint Package
 
-This package takes into account different waypoint functionalities for the vehicle's outer loop. Desired references are calculated so that the vehicle converges to the specified waypoint. The topic *Flag* is also closely monitored, since it dictates the general state of the vehicle (more on this below).
+Waypoint outer loop for the vehicle. Given a target position it computes the references (surge, sway, yaw, yaw rate) that make the vehicle converge to it, and publishes them to the inner loop. The package also owns part of the `mission_status` protocol (below).
 
 ## Nodes
 * [waypoint](waypoint.md)
@@ -9,14 +9,25 @@ This package takes into account different waypoint functionalities for the vehic
 * [sendWpType1](sendWpType1.md)
 
 ## Dependencies
-* None
+* `farol2_interfaces` (`NavigationState`)
+* Eigen3
 
-## The *Flag* Topic
+## The `mission_status` topic
 
-The very global topic *Flag* ([std_msgs/Int8](http://docs.ros.org/en/api/std_msgs/html/msg/Int8.html)) is used to specify the state in which the vehicle finds itself. In other words, the *Flag* topic determines if the vehicle should be idle, converging to a waypoint or following a path. It can be even redesigned to accommodate more states (custom) than the already defined in the table below:
+`mission_status` (`std_msgs/Int8`) was called `Flag` in the ROS 1 FAROL. It tells every outer-loop node which one is in control, and the allocation / open-loop nodes use it as an enable. Default code values:
 
-| Flag | State |
+| mission_status | State |
 | --- | --- |
 | 0 | Idle |
 | 4 | Waypoint |
-| 6 | Path Following |
+| 6 | Path following |
+
+It can be extended with custom states. The topic is both published and subscribed by `waypoint` and `path_following`.
+
+## Quick use
+
+```bash
+ros2 service call /delfim0/waypoint/send_wp_standard farol2_waypoint/srv/SendWpType1 "{x: <northing>, y: <easting>, yaw: 0.0}"
+```
+
+See [docs/runbook.md](../../docs/runbook.md) for a complete example and the stop command.
