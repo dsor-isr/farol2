@@ -1,5 +1,8 @@
 #include <open_loop.hpp>
 
+#include <algorithm>
+#include <limits>
+
 /* Constructor */
 OpenLoop::OpenLoop() : Node("open_loop") {
   loadParams();
@@ -7,7 +10,7 @@ OpenLoop::OpenLoop() : Node("open_loop") {
   initialisePublishers();
   // initialiseServices();
   timer_ = create_timer
-  (std::chrono::milliseconds(int(1.0/10.0*1000)), 
+  (std::chrono::milliseconds(static_cast<int>(1000.0 / node_frequency_)),
   std::bind(&OpenLoop::timerCallback, this));
 }
 
@@ -20,6 +23,20 @@ OpenLoop::~OpenLoop() = default;
 void OpenLoop::loadParams() {
   surge_enabled_ = declare_parameter<bool>("surge.enabled", false);
   surge_gain_ = declare_parameter<double>("surge.gain", 1.0);
+  // Saturation of the commanded rpm (defaults: no saturation). Set these to the limits
+  // of rpm_conversion in allocation.yaml, this node bypasses the allocation node.
+  rpm_max_ = declare_parameter<double>("surge.rpm_max", std::numeric_limits<double>::infinity());
+  rpm_min_ = declare_parameter<double>("surge.rpm_min", -std::numeric_limits<double>::infinity());
+  num_thrusters_ = declare_parameter<int>("surge.num_thrusters", 2);
+  node_frequency_ = declare_parameter<double>("node_frequency", 10.0);
+  ref_timeout_ = declare_parameter<double>("ref_timeout", 0.2);
+  if (node_frequency_ <= 0.0) {
+    RCLCPP_WARN(get_logger(), "node_frequency must be positive, using 10 Hz");
+    node_frequency_ = 10.0;
+  }
+  if (num_thrusters_ < 1) {
+    num_thrusters_ = 1;
+  }
 }
 
 
@@ -61,23 +78,20 @@ void OpenLoop::timerCallback() {
   /* If open loop for surge is not enabled */
   if (!surge_enabled_) return;
 
-  if (!has_surge_ref_ || (this->now() - last_surge_ref_time_).seconds() > 0.2) {
+  if (!has_surge_ref_ || (this->now() - last_surge_ref_time_).seconds() > ref_timeout_) {
     return;
   }
 
 
   if(mission_status_ == 0){
-     rpm_command_msg_.rpm = {};
-    rpm_command_msg_.rpm.push_back(0.0);
-    rpm_command_msg_.rpm.push_back(0.0);
+    rpm_command_msg_.rpm.assign(num_thrusters_, 0.0);
     rpm_command_pub_->publish(rpm_command_msg_);
     return;
   }
   
-  // this is just for magicelectric
-  rpm_command_msg_.rpm = {};
-  rpm_command_msg_.rpm.push_back(surge_ref_*surge_gain_);
-  rpm_command_msg_.rpm.push_back(surge_ref_*surge_gain_);
+  // Same rpm for all thrusters (common mode), saturated to [rpm_min, rpm_max]
+  const double rpm = std::clamp(surge_ref_ * surge_gain_, rpm_min_, rpm_max_);
+  rpm_command_msg_.rpm.assign(num_thrusters_, rpm);
   rpm_command_pub_->publish(rpm_command_msg_);
 }
 

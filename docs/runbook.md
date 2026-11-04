@@ -76,19 +76,21 @@ Sim-specific notes:
 
 ### Same on magicelectric (rudder + one thruster)
 
-`magicelectric` output is gated by `mission_status`. Without it the rpm and rudder outputs stay at zero.
+`magicelectric` output is gated by `mission_status` (without it rpm and rudder stay at zero) and only has the `yaw` channel enabled (plus the open-loop surge): a `ref/yaw_rate` is silently ignored on this vehicle.
 
 ```bash
 ros2 launch farol2_bringup start_vehicle_sim.launch.py vehicle_name:=magicelectric
-ros2 topic pub -r 5 /magicelectric0/inner_loop/ref/surge   std_msgs/msg/Float32 "{data: 1.5}"
-ros2 topic pub -r 5 /magicelectric0/inner_loop/ref/yaw_rate std_msgs/msg/Float32 "{data: 3.0}"
+ros2 topic pub -r 5 /magicelectric0/inner_loop/ref/surge std_msgs/msg/Float32 "{data: 1.5}"
+ros2 topic pub -r 5 /magicelectric0/inner_loop/ref/yaw   std_msgs/msg/Float32 "{data: 90.0}"    # degrees
 ros2 topic pub -r 2 /magicelectric0/mission_status std_msgs/msg/Int8 "{data: 4}"
-ros2 topic echo --once /magicelectric0/allocation/rpm_command --field rpm   # [3300.0, 3300.0] with the gate open, [0.0, 0.0] without
+ros2 topic echo --once /magicelectric0/allocation/rpm_command --field rpm                 # [2200.0, 2200.0]
+ros2 topic echo --once /magicelectric0/allocation/control_surface_angle --field angle     # rudder, ~21 deg
+ros2 topic echo --once /magicelectric0/nav/filter/state --field attitude.yaw              # approaches 90 (95 after ~18 s)
 ```
 
-Caveats seen in the run:
-- `open_loop` converts surge to rpm with a fixed gain of 2200 (1.5 m/s gives 3300 rpm) and nothing clamps it to the 2200 rpm limit in `allocation.yaml`.
-- `sim.yaml` for magicelectric has `fixed_rpm: true`, so the simulated propeller ignores `rpm_command` and runs at the configured fixed rpm. Set `fixed_rpm: false` in the vehicle's `sim.yaml` to make the simulator follow the commanded rpm.
+Notes:
+- `open_loop` converts surge to rpm with `surge.gain` (2200) and saturates it to `surge.rpm_min/rpm_max` (+-2200 in the vehicle's `inner_loop.yaml`; keep them equal to `rpm_conversion` in `allocation.yaml`). Without those parameters there is no saturation (1.5 m/s would give 3300 rpm).
+- `sim.yaml` for magicelectric has `fixed_rpm: true` and an initial body velocity of 1.78 m/s, so the simulated propeller ignores `rpm_command` and the vehicle already moves before any command. Set `fixed_rpm: false` in `sim.yaml` to make the simulator follow the commanded rpm.
 
 ## 3. Send a waypoint
 

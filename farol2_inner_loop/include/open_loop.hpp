@@ -61,5 +61,10 @@ class OpenLoop : public rclcpp::Node {
     rclcpp::Clock clock_;
     bool surge_enabled_;
     double surge_gain_;
+    double rpm_max_;
+    double rpm_min_;
+    int num_thrusters_;
+    double node_frequency_;
+    double ref_timeout_;
     int mission_status_ = 0;
 };

@@ -82,3 +82,6 @@
       surge:
         enabled: true
         gain: 2200.0 # surge m/s to rpms (basically max_rpms)
+        rpm_max: 2200.0 # keep equal to rpm_conversion.max_rpm in allocation.yaml
+        rpm_min: -2200.0
+        num_thrusters: 2
