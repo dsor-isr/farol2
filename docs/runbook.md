@@ -35,7 +35,7 @@ ros2 topic echo --once /delfim0/nav/filter/state --field utm_position
 
 Notes:
 - The first `ros2 node list` after launching can be incomplete. Wait a few seconds, or run `ros2 daemon stop` and retry.
-- A `WARN ... Static transform 'delfim0/gnss_link' -> 'delfim0/base_link' is not available, using identity` from `navigation_filter` is expected today: the URDFs define no sensor frames, so all sensors are treated as located at `base_link`.
+- A `WARN ... Static transform '<ns>/<sensor>_link' -> '<ns>/base_link' is not available, using identity` means the vehicle's xacro lacks that sensor frame (all current xacro files define them).
 - To launch a second vehicle in the same graph just run the same command again: `vehicle_id` is auto-assigned (`delfim1`).
 
 ## 2. Set a reference velocity (surge and yaw rate)

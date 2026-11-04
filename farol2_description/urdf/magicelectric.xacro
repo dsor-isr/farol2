@@ -60,4 +60,36 @@
     </joint>
   </xacro:unless>
 
+  <!-- Sensor frames used in the headers of the simulated measurements (farol2_sim). Placeholders at base_link with zero offset, the real mounting offsets still have to be measured. -->
+  <link name="gnss_link"/>
+  <joint name="base_to_gnss" type="fixed">
+    <parent link="base_link"/>
+    <child link="gnss_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  </joint>
+  <link name="dvl_link"/>
+  <joint name="base_to_dvl" type="fixed">
+    <parent link="base_link"/>
+    <child link="dvl_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  </joint>
+  <link name="depth_link"/>
+  <joint name="base_to_depth" type="fixed">
+    <parent link="base_link"/>
+    <child link="depth_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  </joint>
+  <link name="imu_link"/>
+  <joint name="base_to_imu" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  </joint>
+  <link name="rudder_link"/>
+  <joint name="base_to_rudder" type="fixed">
+    <parent link="base_link"/>
+    <child link="rudder_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  </joint>
+
 </robot>
