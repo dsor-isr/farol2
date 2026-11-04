@@ -2,7 +2,7 @@
 #  Parameters
 ################################
 /**:
-  filter_node:
+  navigation_filter:
     ros__parameters:
       node_frequency: 10.0
       publish_all_steps: true
