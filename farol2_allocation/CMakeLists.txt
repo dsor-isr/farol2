@@ -63,6 +63,13 @@ ament_target_dependencies(
   Eigen3
 )
 
+# Link Eigen through its imported target so that the include path (which can be
+# <prefix>/include/eigen3) is always propagated.
+target_link_libraries(static_thruster_allocator Eigen3::Eigen)
+target_link_libraries(rudder_allocator Eigen3::Eigen)
+target_link_libraries(thruster_rpm_converter Eigen3::Eigen)
+target_link_libraries(allocation_node Eigen3::Eigen)
+
 target_include_directories(static_thruster_allocator PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)

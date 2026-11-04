@@ -43,6 +43,8 @@ ament_target_dependencies(
   eigen3_cmake_module
 )
 
+target_link_libraries(waypoint_node Eigen3::Eigen)
+
 add_dependencies(waypoint_node ${PROJECT_NAME}__rosidl_typesupport_cpp)
 
 # Link generated service types

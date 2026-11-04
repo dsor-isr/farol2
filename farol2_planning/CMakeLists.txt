@@ -60,6 +60,8 @@ ament_target_dependencies(
   farol2_utils
   Eigen3
 )
+target_link_libraries(path_node Eigen3::Eigen)
+
 # Link generated service types
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
 target_link_libraries(path_node "${cpp_typesupport_target}")

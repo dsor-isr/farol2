@@ -12,16 +12,12 @@
   <exec_depend>ament_cmake_python</exec_depend>
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>rclpy</exec_depend>
-  <exec_depend>farol2_nav</exec_depend>
-  <exec_depend>farol2_description</exec_depend>
-  <exec_depend>farol2_allocation</exec_depend>
-  <exec_depend>farol2_inner_loop</exec_depend>
-  <exec_depend>farol2_waypoint</exec_depend>
-  <exec_depend>farol2_path_following</exec_depend>
-  <exec_depend>farol2_planning</exec_depend>
-  <exec_depend>farol2_console</exec_depend>
-  <exec_depend>farol2_sim</exec_depend>
   <exec_depend>ros2bag</exec_depend>
+  <!-- start_farol2.launch.py includes the launch files of farol2_nav, farol2_allocation, farol2_inner_loop,
+       farol2_waypoint, farol2_path_following, farol2_planning, farol2_console, farol2_description and
+       farol2_sim, but these are not declared as dependencies here: the launch files of those packages
+       read their configuration from this package (see farol2_allocation), and a declaration in both
+       directions is a dependency cycle that colcon cannot order. -->
 
   <test_depend>ament_copyright</test_depend>
 
