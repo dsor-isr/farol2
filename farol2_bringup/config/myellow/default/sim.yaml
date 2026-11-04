@@ -54,7 +54,7 @@
         imu: true
         dvl_activate: true
         dvl:
-          mode: "bottom_track"
+          mode: "water_track"  # see docs/isaac_closed_loop.md: the inner loop closes surge/sway/heave on velocity_through_water
           output_frame: "body"
         noise:
           activate: false
