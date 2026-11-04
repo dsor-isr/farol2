@@ -20,7 +20,7 @@ farol2_bringup/
 |---|---|
 | `start_vehicle_sim.launch.py` | Starts `sim_clock` (arg `farol2_clock`, default true), `farol2_sim` (`magic_electric_sim` for `vehicle_name == magicelectric`, otherwise `auv_sim`), then `start_farol2`. Simulated time comes from the `/clock` published by `sim_clock`; the stack is launched with `use_sim_time:=false`. |
 | `start_vehicle_real.launch.py` | Includes `farol2_drivers_bringup/<vehicle_name>_drivers.launch.py` (not part of the returned description at the moment) and `start_farol2` with `use_sim_time:=false`. Driver toggles are hard-coded in the file: copy it into your own bringup package and edit. |
-| `start_farol2.launch.py` | The GNC stack. Passes `vehicle_name`, `vehicle_id`, `use_sim_time`, `config_to_use` to each package launch file. Nav: `sample_and_hold=false`, `filter_node=true`. Inner loop: `pid=true`, `open_loop=true`. |
+| `start_farol2.launch.py` | The GNC stack. Passes `vehicle_name`, `vehicle_id`, `use_sim_time`, `config_to_use` to each package launch file. Nav: `sample_and_hold=false`, `filter_node=true`. Inner loop: `inner_loop=true`, `open_loop=true` (the former `pid` argument did not exist and was ignored). |
 | `bag_record.launch.py` | Args: `vehicle_name`, `vehicle_id`, `compression`, `prefix`. Needs `ROSDATA_DIR` in the environment. |
 
 Common arguments: `vehicle_name` (default `magicelectric`), `vehicle_id` (empty = next free id, found by looking at the ROS graph), `config_to_use` (config folder, default `default`; only `path_following` currently loads an override from it).

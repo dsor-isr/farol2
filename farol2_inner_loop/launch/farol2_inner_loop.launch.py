@@ -123,7 +123,7 @@ def generate_launch_description():
       ('debug_roll_rate', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/pid/roll_rate/debug')]),
       # Services
       ('change_params', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/change_params')]),
-      ('course_control', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/course_control')]),
+      ('course_instead_of_yaw', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/inner_loop/course_control')]),
     ]
   )
 

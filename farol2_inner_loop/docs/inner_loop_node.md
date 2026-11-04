@@ -21,7 +21,7 @@ Executable `inner_loop_node`, ROS node name `inner_loop`, namespace `/<vehicle_n
 | Service | Type | Notes |
 |---|---|---|
 | `inner_loop/change_params` | `farol2_inner_loop/srv/ChangeParams` | Fields `controller, kp, ki, kd, lpf_wc, tau_min, tau_max, w0, xi, mr`. **Only changes the yaw controller**, whatever `controller` says. |
-| `course_instead_of_yaw` | `std_srvs/srv/SetBool` | Yaw from course angle (true) or heading (false). The launch file remaps a name `course_control` that does not match, so the service appears at `/<ns>/course_instead_of_yaw`, not under `/inner_loop/`. |
+| `inner_loop/course_control` | `std_srvs/srv/SetBool` | Yaw from course angle (true) or heading (false). The node's internal name is `course_instead_of_yaw`; the launch file remaps it to `/<ns>/inner_loop/course_control`. |
 
 ## Parameters
 `farol2_bringup/config/<vehicle>/default/inner_loop.yaml`, under `/**: inner_loop: ros__parameters:`.

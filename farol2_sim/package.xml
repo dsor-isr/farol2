@@ -24,6 +24,8 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
 
+  <build_depend>geographiclib</build_depend>
+  <exec_depend>geographiclib</exec_depend>
   <exec_depend>ros2launch</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>

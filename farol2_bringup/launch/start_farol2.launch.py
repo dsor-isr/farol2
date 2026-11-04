@@ -87,7 +87,7 @@ def generate_launch_description():
             'vehicle_id': LaunchConfiguration('vehicle_id'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'config_to_use': LaunchConfiguration('config_to_use'),
-            'pid': 'true',
+            'inner_loop': 'true',
             'open_loop': 'true',
         }.items()
     )

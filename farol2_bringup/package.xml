@@ -10,6 +10,18 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <build_depend>ament_cmake_python</build_depend>
   <exec_depend>ament_cmake_python</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>farol2_nav</exec_depend>
+  <exec_depend>farol2_description</exec_depend>
+  <exec_depend>farol2_allocation</exec_depend>
+  <exec_depend>farol2_inner_loop</exec_depend>
+  <exec_depend>farol2_waypoint</exec_depend>
+  <exec_depend>farol2_path_following</exec_depend>
+  <exec_depend>farol2_planning</exec_depend>
+  <exec_depend>farol2_console</exec_depend>
+  <exec_depend>farol2_sim</exec_depend>
+  <exec_depend>ros2bag</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
 

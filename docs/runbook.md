@@ -1,6 +1,6 @@
 # FAROL 2 runbook
 
-Procedures for the common tasks. The commands in sections 1 to 4 (launch, reference velocity, waypoint, path following) and the stop commands in section 5 were run against a live `start_vehicle_sim` session (ROS 2 Jazzy, branch `dev`, vehicles `delfim` and `magicelectric`). Sections 6 to 9 (bags, gains, configuration, real vehicle) and the `UpdateGains` example are written from the source and launch files and were **not** executed. Read [quickstart.md](quickstart.md) first for units, the `mission_status` codes and the timing gates.
+Procedures for the common tasks. The commands in sections 1 to 4 (launch, reference velocity, waypoint, path following) and the stop commands in section 5 were run against a live `start_vehicle_sim` session (ROS 2 Jazzy, branch `dev`, vehicles `delfim` and `magicelectric`). The `change_params`, `UpdateGains`, `ResetVT`, `course_control` and `bag_record` commands were also run. Sections 8 and 9 (adding vehicles, real hardware) are written from the source and launch files and were **not** executed. Read [quickstart.md](quickstart.md) first for units, the `mission_status` codes and the timing gates.
 
 Conventions used below:
 - `delfim0` is the vehicle namespace for `vehicle_name:=delfim`. Replace it with your vehicle (`magicelectric0`, ...).
@@ -187,7 +187,7 @@ Path-following services under `/delfim0/path_following/`: `Start`, `Stop`, `Upda
 
 **Important:** selecting an algorithm reads its gains from `controller_gains.<algo>.*` in the vehicle's `path_following.yaml`. If that block is missing, the node throws a parameter exception. Check the YAML contains the algorithm before calling `Set<Algo>`. The default algorithm is `default_algorithm` in the same file.
 
-Change gains while running: `ros2 service call /delfim0/path_following/UpdateGains farol2_path_following/srv/UpdateGainsPF "{gains: [10.0]}"` (the number and order of gains is algorithm specific; see `farol2_path_following/docs/path_following.md`).
+Change gains while running: `ros2 service call /delfim0/path_following/UpdateGains farol2_path_following/srv/UpdateGainsPF "{gains: [...]}"`. The number and order of gains is algorithm specific (see `farol2_path_following/docs/path_following.md`) and the call returns `success=False` if it does not match: Breivik, for example, takes no gains, so `{gains: [10.0]}` returns `success=False` (tested). `ResetVT` with `{value: 0.0}` returns `success=True` (tested).
 
 ## 5. Abort everything
 
@@ -206,7 +206,7 @@ export ROSDATA_DIR=$HOME/rosbags && mkdir -p $ROSDATA_DIR           # required: 
 ros2 launch farol2_bringup bag_record.launch.py vehicle_name:=delfim vehicle_id:=0 [compression:=true]
 ```
 
-This runs `ros2 bag record -a` (all topics) into `$ROSDATA_DIR/delfim0_<YYYY_MM_DD-HH_MM_SS>`. The arguments `config_package_path_share` and `config_package_path_real` are unused. With the CLI: `farol bag info|topics|play|crop <bag>`.
+This runs `ros2 bag record -a` (all topics) into `$ROSDATA_DIR/delfim0_<YYYY_MM_DD-HH_MM_SS>` (mcap files). Stop it with a single Ctrl+C on the launch so that `metadata.yaml` is written; a bag whose recorder was killed has the `.mcap` file but `ros2 bag info` reports `Could not find metadata`. The arguments `config_package_path_share` and `config_package_path_real` are unused. With the CLI: `farol bag info|topics|play|crop <bag>`.
 
 ## 7. Change controller gains while running
 
@@ -217,7 +217,7 @@ ros2 service call /delfim0/inner_loop/change_params farol2_inner_loop/srv/Change
   "{controller: 'yaw', kp: 1.0, ki: 0.0, kd: 0.0, lpf_wc: 0.0, tau_min: -50.0, tau_max: 50.0, w0: 0.0, xi: 0.0, mr: 0.0}"
 ```
 
-For other gains edit `config/<vehicle>/default/inner_loop.yaml` and relaunch. Toggle yaw from heading to course with the `SetBool` service `/delfim0/course_instead_of_yaw` (note the name: it is not under `/inner_loop/`).
+For other gains edit `config/<vehicle>/default/inner_loop.yaml` and relaunch. Toggle yaw from heading to course with the `SetBool` service `/delfim0/inner_loop/course_control`.
 
 ## 8. Add or switch vehicle / configuration
 

@@ -45,9 +45,10 @@ def _launch(context, *args, **kwargs):
     }.items()
   )
 
-  ###############################################################
-  # Include the standard vehicle stack with use_sim_time forced #
-  ###############################################################
+  ###############################################################################
+  # Include the standard vehicle stack. The nodes of the stack keep use_sim_time #
+  # false: simulated time reaches them through the /clock topic of sim_clock.    #
+  ###############################################################################
   farol_stack = IncludeLaunchDescription(
     PythonLaunchDescriptionSource([
       PathJoinSubstitution([FindPackageShare('farol2_bringup'), 'launch', 'start_farol2.launch.py'])

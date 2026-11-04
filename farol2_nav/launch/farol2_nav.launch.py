@@ -35,6 +35,12 @@ def generate_launch_description():
     description='Config folder to use.'
   )
 
+  launch_filter_node_arg = DeclareLaunchArgument(
+    'filter_node',
+    default_value='true',
+    description='Boolean to determine if "filter_node" (navigation filter) is launched.'
+  )
+
   vehicle_ns = PythonExpression(["'", LaunchConfiguration('vehicle_name'), "' + '", LaunchConfiguration('vehicle_id'), "'"])
 
   ###################################
@@ -117,6 +123,7 @@ def generate_launch_description():
     vehicle_name_arg,
     use_sim_time_arg,
     config_to_use,
+    launch_filter_node_arg,
     # nodes
     filter_node,
   ])
