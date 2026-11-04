@@ -15,7 +15,7 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-Needs `libgeographiclib-dev`, `libeigen3-dev`, `ros-jazzy-xacro` and the usual ROS 2 Jazzy packages (see the root [README](../README.md)). If you use a conda/RoboStack ROS install where Eigen lives in `$CONDA_PREFIX/include/eigen3`, export `CPLUS_INCLUDE_PATH=$CONDA_PREFIX/include/eigen3` before building, or `farol2_allocation` fails with `Eigen/Dense: No such file`. The `farol` CLI (`farol build`, `farol cd`, ...) is described in [farol2_cli/README.md](../farol2_cli/README.md).
+Needs `libgeographiclib-dev`, `libeigen3-dev`, `ros-jazzy-xacro` and the usual ROS 2 Jazzy packages (see the root [README](../README.md)). The workspace builds in a conda/RoboStack ROS install as well (verified, all 12 packages, no extra flags). The `farol` CLI (`farol build`, `farol cd`, ...) is described in [farol2_cli/README.md](../farol2_cli/README.md).
 
 ## 1. Launch a simulated vehicle
 

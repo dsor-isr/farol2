@@ -592,7 +592,10 @@ AUV::AUV(double mass,
 
     /* Initiate the ocean disturbances random process distributions */
     this->generator_ = std::default_random_engine();
-    for(int i=0; i < 3; i++) distributions_[i] = std::normal_distribution<double>(disturbance_mean(i), disturbance_sigma(i));
+    /* std::normal_distribution requires stddev > 0 (it is an assertion with _GLIBCXX_ASSERTIONS, which the
+     * conda toolchain enables, and undefined behaviour otherwise), while a sigma of 0 means "no random current".
+     * A tiny positive value is equivalent to a deterministic disturbance equal to the mean. */
+    for(int i=0; i < 3; i++) distributions_[i] = std::normal_distribution<double>(disturbance_mean(i), std::max(disturbance_sigma(i), 1e-12));
 }
 
 void AUV::update(double dt, const Eigen::VectorXd &thrust) {
