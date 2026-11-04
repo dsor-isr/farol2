@@ -51,10 +51,11 @@ void NotchFilter::step(double x, double dt) {
     throw std::runtime_error("NotchFilter: call configure*() before step()");
   }
 
-  const double fs = 1.0 / dt;
-  if (fs <= 0.0) {
-    throw std::invalid_argument("fs must be > 0");
+  // dt == 0 would give fs = inf and NaN coefficients, so reject it before dividing.
+  if (!(dt > 0.0) || !std::isfinite(dt)) {
+    throw std::invalid_argument("dt must be > 0 and finite");
   }
+  const double fs = 1.0 / dt;
   if (f0_ >= fs / 2.0) {
     throw std::invalid_argument("f0 must be < fs/2");
   }
