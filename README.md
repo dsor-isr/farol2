@@ -109,6 +109,7 @@ ros2 launch farol2_bringup start_vehicle_sim.launch.py vehicle_name:=delfim
 ```
 
 - [docs/quickstart.md](docs/quickstart.md): architecture, units, the `mission_status` codes, timing gates.
+- [docs/analysis.md](docs/analysis.md): code analysis of 2026-11-04 (verified results, bugs, fixes applied, ROS 1 leftovers, open items).
 - [docs/runbook.md](docs/runbook.md): step-by-step procedures (launch, reference velocity, waypoint, path following, bags, gains, vehicles).
 - Per-package documentation is in each package's `docs/` folder (`farol2_nav`, `farol2_inner_loop`, `farol2_allocation`, `farol2_waypoint`, `farol2_planning`, `farol2_path_following`, `farol2_sim`, `farol2_bringup`, `farol2_interfaces`, `farol2_utils`, `farol2_console`, `farol2_description`) and the `farol` CLI in [farol2_cli/README.md](farol2_cli/README.md).
 - Branching rules: [WORKFLOW.md](WORKFLOW.md) (`main` is field-validated, `dev` is the integration branch).
