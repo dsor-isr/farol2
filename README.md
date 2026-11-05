@@ -109,7 +109,7 @@ TODO
 ### Documentation -->
 
 ### Active Developers
-- Eduardo Cunha <eduardo.m.a.cunha@tecnico.ulisboa.pt>
+- Ravi Regalo <ravi.regalo@tecnico.ulisboa.pt>
 
 ### License
 Farol is open-sourced under the MIT license. See the [LICENSE](LICENSE) file for details.
