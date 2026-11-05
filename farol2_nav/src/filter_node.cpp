@@ -158,7 +158,7 @@ void FilterNode::build_pipeline()
 void FilterNode::initialise_timer()
 {
   const auto period_ns = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / std::max(0.1, node_frequency_)));
-  timer_ = create_wall_timer(period_ns, [this]() { on_timer(); });
+  timer_ = create_timer(period_ns, [this]() { on_timer(); });
 }
 
 void FilterNode::on_timer()

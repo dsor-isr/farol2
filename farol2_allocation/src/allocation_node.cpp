@@ -203,7 +203,7 @@ void AllocationNode::initialiseTimers() {
 		[this](){initialiseAllocationFromTF();});
 
 	auto period = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / node_frequency_));
-	allocation_timer_ = create_wall_timer(period, [this]() { allocationTimerCallback(); });
+	allocation_timer_ = create_timer(period, [this]() { allocationTimerCallback(); });
 }
 
 AllocationNode::AllocationType AllocationNode::parseAllocationType(
