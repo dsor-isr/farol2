@@ -11,23 +11,36 @@
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
 
   <!-- Dependencies -->
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
   <depend>farol2_interfaces</depend>
+  <depend>farol2_utils</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
-  <depend>farol2_allocation</depend>
   <depend>rosgraph_msgs</depend>
   <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
+  <depend>eigen</depend>
+  <depend>geographiclib</depend>
+  <build_depend>pkg-config</build_depend>
 
   <exec_depend>ros2launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>rclpy</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>rcl_yaml_param_parser</test_depend>
+  <test_depend>rclpy</test_depend>
+  <test_depend>xacro</test_depend>
+  <test_depend>robot_state_publisher</test_depend>
+  <test_depend>python3-yaml</test_depend>
+  <test_depend>ament_index_python</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

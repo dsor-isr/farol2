@@ -19,6 +19,7 @@
       # Remove this key when copying into bringup: launch supplies the prefix,
       # and a YAML value would override it. Prefix is applied to base/thruster
       # TF names below; leave those names unprefixed. Use a trailing slash.
+      # prefix should be <vehicle_name><vehicle_id>
       frame_prefix: "sample0/"
 
       initial_state:
@@ -118,42 +119,53 @@
           drag_constant: 0.1
           drag_quadratic: 1.0
 
-      # Every sensor currently implemented by vehicle_sim is enabled below.
-      # Sensor sampling still follows node_frequency. Mounting effects, separate
-      # rates, latency and GNSS submergence validity are not configurable yet.
+      # Only sensors in this list are instantiated. Remove a name to disable it.
+      # All settings and noise belong to the individual sensor below.
+      # Sampling follows node_frequency; mounting transforms are read from TF.
+      # Rates and latency remain future work; frame names get the vehicle prefix.
+      # Noise bias is added only when that sensor's noise_enabled is true.
+      # standard_deviation uses m, m/s, rad or rad/s for the corresponding output.
+      # Depth uses the third component of position_noise (down).
+      # GNSS velocity and bottom-track DVL share velocity_over_ground; disable
+      # GNSS measure_velocity_over_ground when using bottom tracking if unwanted.
+      # thruster_rpm and control_surface_angle publish exact actuator feedback;
+      # they have no additional parameters. Angle feedback requires a rudder.
+      sensor_list: [gnss, imu, dvl, depth_cell, altimeter, thruster_rpm, control_surface_angle]
       sensor:
-        gnss: true
-        gnss_velocity_over_ground: true
-        utm_ned: true     # GNSS-derived northing/easting/UTM-zone output.
-        imu: true
-        depth_sensor: true
-        dvl_activate: true
-        dvl:
-          # water_track -> velocity_through_water; bottom_track -> velocity_over_ground.
-          # If switching to bottom_track, disable gnss_velocity_over_ground to
-          # avoid two sensor sources sharing the same velocity_over_ground topic.
-          mode: "water_track"
-          output_frame: "body"  # "body" or "inertial" (NED).
-
-        noise:
-          activate: false # Enable to apply the biases/noise configured below.
-          # LEGACY NAMING: "variance" values are currently passed as STANDARD
-          # DEVIATIONS to the Gaussian sampler. Noise semantics/covariances are
-          # pending the sensor refactor. Zero values give deterministic output.
-          position:
-            bias: [0.0, 0.0, 0.0]      # North/east/depth, m.
-            variance: [0.0, 0.0, 0.0]
-          orientation:
-            bias: [0.0, 0.0, 0.0]      # Roll/pitch/yaw, rad.
-            variance: [0.0, 0.0, 0.0]
-          orientation_rate:
-            bias: [0.0, 0.0, 0.0]      # Body p/q/r, rad/s.
-            variance: [0.0, 0.0, 0.0]
-          body_velocity:
-            # Shared ground-velocity noise: GNSS uses NED components;
-            # bottom-track DVL uses the selected DVL output frame. Units: m/s.
+        gnss:
+          frame: gnss_link
+          measure_velocity_over_ground: true
+          measure_utm_ned: true
+          noise_enabled: false
+          position_noise:
             bias: [0.0, 0.0, 0.0]
-            variance: [0.0, 0.0, 0.0]
-          fluid_velocity:
-            bias: [0.0, 0.0, 0.0]      # Water-track DVL, selected frame, m/s.
-            variance: [0.0, 0.0, 0.0]
+            standard_deviation: [0.0, 0.0, 0.0]
+          velocity_noise:
+            bias: [0.0, 0.0, 0.0]
+            standard_deviation: [0.0, 0.0, 0.0]
+        imu:
+          frame: imu_link
+          noise_enabled: false
+          orientation_noise:
+            bias: [0.0, 0.0, 0.0]
+            standard_deviation: [0.0, 0.0, 0.0]
+          angular_velocity_noise:
+            bias: [0.0, 0.0, 0.0]
+            standard_deviation: [0.0, 0.0, 0.0]
+        dvl:
+          frame: dvl_link
+          mode: water_track # [bottom_track, water_track]
+          output_frame: sensor
+          noise_enabled: false
+          velocity_noise:
+            bias: [0.0, 0.0, 0.0]
+            standard_deviation: [0.0, 0.0, 0.0]
+        depth_cell:
+          frame: depth_link
+          noise_enabled: false
+          position_noise:
+            bias: [0.0, 0.0, 0.0]
+            standard_deviation: [0.0, 0.0, 0.0]
+        altimeter:
+          frame: altimeter_link
+          period: 20.0  # seconds; synthetic sine wave between 2 and 4 m.
