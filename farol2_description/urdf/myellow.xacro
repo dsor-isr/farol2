@@ -7,6 +7,10 @@
   <!-- Base -->
   <link name="base_link"/>
 
+  <!-- ############### -->
+  <!-- #  ACTUATORS  # -->
+  <!-- ############### -->
+
   <!-- Portside horizontal back thruster -->
   <link name="thruster_portside_horizontal_back_link"/>
   <joint name="base_to_thruster_portside_horizontal_back" type="fixed">
@@ -55,6 +59,9 @@
     <origin xyz="0.300 0.197 0.0" rpy="0 0 ${0.25*M_PI}"/>
   </joint>
 
+  <!-- ############### -->
+  <!-- #   SENSORS   # -->
+  <!-- ############### -->
 
   <link name="dvl_link"/>
   <joint name="base_to_dvl" type="fixed">

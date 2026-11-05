@@ -1,0 +1,159 @@
+# EXAMPLE ONLY: a fictional vehicle with four thrusters, one rudder and every
+# currently supported sensor. These numbers are illustrative, not calibrated.
+# Copy the vehicle_sim section to your vehicle's bringup sim.yaml and replace
+# the parameters and frame names to match its model and description.
+# Launch start_simple_world.launch.py first, then join its ros_domain_id from vehicle bringup.
+#
+# Conventions: NED navigation frame; body X forward, Y starboard, Z down.
+# SI units unless stated otherwise. Model velocities are THROUGH WATER;
+# kinematics adds current once to obtain velocity OVER GROUND.
+# Arrays use floating-point values except active_dofs (integer indices).
+
+/**:
+  # Shared settings belong in farol2_bringup/config/simple_world.yaml.
+  # Launch the world separately and load the same world_config for the vehicle.
+  vehicle_sim:
+    ros__parameters:
+      use_sim_time: true
+      node_frequency: 100   # Physics/actuator updates per simulated second.
+      # Remove this key when copying into bringup: launch supplies the prefix,
+      # and a YAML value would override it. Prefix is applied to base/thruster
+      # TF names below; leave those names unprefixed. Use a trailing slash.
+      frame_prefix: "sample0/"
+
+      initial_state:
+        # Local [north, east, down] in m, relative to the world geographic origin.
+        position: [0.0, 0.0, 0.0]
+        velocity_reference: "water"  # "water" or "ground" for body_velocity.
+        body_velocity: [0.0, 0.0, 0.0]     # [surge, sway, heave], m/s.
+        orientation: [0.0, 0.0, 0.0]       # [roll, pitch, yaw], rad.
+        orientation_rate: [0.0, 0.0, 0.0]  # Body [p, q, r], rad/s, not RPY derivatives.
+
+      # Density, gravity, origin, water level and current come from world_config.
+
+      vehicle:
+        mass: 100.0  # kg.
+        center_of_gravity: [0.0, 0.0, 0.0]   # Body-frame offsets, m.
+        center_of_buoyancy: [0.0, 0.0, -0.05]
+
+        # Allowed water-relative body velocity components: u,v,w,p,q,r -> 0..5.
+        # Six DOFs may evolve even when there are fewer independent actuators.
+        # For a planar model, use [0, 1, 5] and compatible initial conditions.
+        active_dofs: [0, 1, 2, 3, 4, 5]
+
+        # Inertia ABOUT CG, kg*m^2: 3 diagonal entries or 9 row-major entries.
+        # Must be symmetric positive definite.
+        inertia_tensor: [8.0, 15.0, 18.0]
+
+        # 6 diagonal entries or 36 row-major entries, ordered u,v,w,p,q,r.
+        # Added mass must be symmetric positive semidefinite (linear entries
+        # in kg, angular entries in kg*m^2; mixed entries carry mixed units).
+        added_mass_tensor: [15.0, 30.0, 40.0, 1.0, 2.0, 3.0]
+
+        # POSITIVE resistance coefficients: damping is subtracted by the solver.
+        # Linear damping may be full symmetric positive semidefinite. Quadratic
+        # damping must be nonnegative and diagonal. Force convention:
+        # D_linear * nu_water + D_quadratic * (abs(nu_water) .* nu_water).
+        linear_damping_tensor: [10.0, 20.0, 25.0, 2.0, 3.0, 4.0]
+        quadratic_damping_tensor: [15.0, 30.0, 35.0, 1.0, 2.0, 3.0]
+
+        restoring:
+          displaced_volume: 0.0975609756097561  # m^3; mass/rho gives neutral buoyancy.
+          sphere_radius: 0.0  # m; zero = constant displaced volume.
+          # Positive sphere_radius enables the legacy sphere-based surface
+          # approximation. It is not a general surface-vessel hull model.
+
+        actuators:
+          # One model/parameter set is currently shared by all listed thrusters.
+          model: "polynomial"  # "polynomial" or "propeller".
+          base_frame: "base_link"
+          # RPM command array order MUST match this list. Define these frames
+          # in your Xacro/TF tree: their origins give moment arms and their
+          # rotated local +X axes give positive thrust directions.
+          frames:
+            - "thruster_port_horizontal_link"
+            - "thruster_starboard_horizontal_link"
+            - "thruster_port_vertical_link"
+            - "thruster_starboard_vertical_link"
+
+          minimum_rpm: -3000.0
+          maximum_rpm: 3000.0
+          deadzone: 100.0   # Commands with abs(RPM) below this become zero.
+          pole: 8.0        # s^-1; first-order motor pole, zero = ideal response.
+          delay: 0.1       # s; zero and fractional-step delays are supported.
+          fixed_rpm: false # false = receive rpm_command; true = use value below.
+          fixed_rpm_value: 0.0  # RPM; applied to every listed thruster if enabled.
+
+          # Polynomial model ONLY: force [N] = a*RPM^2 + b*abs(RPM) + c.
+          # Select a signed curve for forward/reverse RPM. Zero RPM gives zero force.
+          lump_param_positive: [0.000002, 0.0, 0.0]
+          lump_param_negative: [-0.000002, 0.0, 0.0]
+
+          # Propeller model ONLY: set model: "propeller" to use these instead
+          # of lump_param_*. Advance speed is the vehicle's through-water surge.
+          # Unselected-model keys are shown for reference and are not consumed.
+          thrust_coefficient: 0.06  # Dimensionless K_T.
+          diameter: 0.2            # m.
+          pitch: 0.15              # m/revolution.
+          thrust_scale: 1.0        # Dimensionless multiplier per listed actuator.
+
+        rudder:
+          enabled: true           # false = ignore all remaining rudder settings.
+          # Rudder geometry is currently explicit, rather than loaded from TF.
+          # Match its effective force position and zero-angle axes to your model.
+          position_body: [-1.0, 0.0, 0.0]     # m, relative to body origin.
+          orientation_body: [0.0, 0.0, 0.0]   # Zero-angle RPY, rad.
+          joint: "base_to_rudder" # Xacro joint name for published joint_states.
+          command_mode: "angle"  # "angle" = ControlSurfaceAngle input, in DEGREES.
+          # "rate" instead uses normalized rudder_cmd: >+0.5 / <-0.5 moves at
+          # +/-command_speed; otherwise holds. Internal angles are always rad.
+          command_speed: 0.17453292519943295  # rad/s; used only in rate mode.
+          minimum_angle: -0.6108652381980153 # rad (-35 deg).
+          maximum_angle: 0.6108652381980153  # rad (+35 deg).
+          rate_limit: 0.17453292519943295     # rad/s; zero = ideal angle tracking.
+          # Local planar flow: lift = K_L*alpha*speed^2,
+          # drag = (K_D0 + K_D1*alpha^2)*speed^2. Coefficients absorb area/density;
+          # these are force-law coefficients, not dimensionless lift/drag ratios.
+          lift_coefficient: 5.0
+          drag_constant: 0.1
+          drag_quadratic: 1.0
+
+      # Every sensor currently implemented by vehicle_sim is enabled below.
+      # Sensor sampling still follows node_frequency. Mounting effects, separate
+      # rates, latency and GNSS submergence validity are not configurable yet.
+      sensor:
+        gnss: true
+        gnss_velocity_over_ground: true
+        utm_ned: true     # GNSS-derived northing/easting/UTM-zone output.
+        imu: true
+        depth_sensor: true
+        dvl_activate: true
+        dvl:
+          # water_track -> velocity_through_water; bottom_track -> velocity_over_ground.
+          # If switching to bottom_track, disable gnss_velocity_over_ground to
+          # avoid two sensor sources sharing the same velocity_over_ground topic.
+          mode: "water_track"
+          output_frame: "body"  # "body" or "inertial" (NED).
+
+        noise:
+          activate: false # Enable to apply the biases/noise configured below.
+          # LEGACY NAMING: "variance" values are currently passed as STANDARD
+          # DEVIATIONS to the Gaussian sampler. Noise semantics/covariances are
+          # pending the sensor refactor. Zero values give deterministic output.
+          position:
+            bias: [0.0, 0.0, 0.0]      # North/east/depth, m.
+            variance: [0.0, 0.0, 0.0]
+          orientation:
+            bias: [0.0, 0.0, 0.0]      # Roll/pitch/yaw, rad.
+            variance: [0.0, 0.0, 0.0]
+          orientation_rate:
+            bias: [0.0, 0.0, 0.0]      # Body p/q/r, rad/s.
+            variance: [0.0, 0.0, 0.0]
+          body_velocity:
+            # Shared ground-velocity noise: GNSS uses NED components;
+            # bottom-track DVL uses the selected DVL output frame. Units: m/s.
+            bias: [0.0, 0.0, 0.0]
+            variance: [0.0, 0.0, 0.0]
+          fluid_velocity:
+            bias: [0.0, 0.0, 0.0]      # Water-track DVL, selected frame, m/s.
+            variance: [0.0, 0.0, 0.0]

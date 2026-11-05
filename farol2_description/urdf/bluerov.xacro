@@ -7,6 +7,10 @@
   <!-- Base -->
   <link name="base_link"/>
 
+  <!-- ############### -->
+  <!-- #  ACTUATORS  # -->
+  <!-- ############### -->
+
   <!-- Starboard horizontal front thruster -->
   <link name="thruster_starboard_horizontal_front_link"/>
   <joint name="base_to_thruster_starboard_horizontal_front" type="fixed">
@@ -69,6 +73,45 @@
     <parent link="base_link"/>
     <child link="thruster_portside_vertical_back_link"/>
     <origin xyz="-0.12 -0.22 -0.005" rpy="0 -${0.5*M_PI} 0"/>
+  </joint>
+
+  <!-- ############### -->
+  <!-- #   SENSORS   # -->
+  <!-- ############### -->
+
+  <link name="dvl_link"/>
+  <joint name="base_to_dvl" type="fixed">
+    <parent link="base_link"/>
+    <child link="dvl_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="gnss_link"/>
+  <joint name="base_to_gnss" type="fixed">
+    <parent link="base_link"/>
+    <child link="gnss_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="imu_link"/>
+  <joint name="base_to_imu" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="depth_link"/>
+  <joint name="base_to_depth" type="fixed">
+    <parent link="base_link"/>
+    <child link="depth_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="altimeter_link"/>
+  <joint name="base_to_altimeter" type="fixed">
+    <parent link="base_link"/>
+    <child link="altimeter_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
   </joint>
 
 </robot>
