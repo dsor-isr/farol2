@@ -22,7 +22,9 @@
           open_loop: true
           base_frame: "base_link"
           frames:
-            - "thruster_middle_link"
+            # Port, starboard; thrust_rudder sends only surge to this pair.
+            - "thruster_left_link"
+            - "thruster_right_link"
       rpm_conversion:
         mode: 0 # Mode 1 uses coef_fwd/coef_bwd; mode 0 uses the propeller model.
         # Force [N] = rho*(rpm/60)^2*D^4*K_T_BP*(1 - u/(rps*prop_pitch))

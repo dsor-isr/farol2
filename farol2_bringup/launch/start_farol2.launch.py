@@ -22,17 +22,22 @@ def generate_launch_description():
         'use_sim_time', default_value='false', description='Use simulation time for Farol stack.'
     )
 
-    
-    # --- EDIT BELOW: This is your new stack definition ---
-    # Add/remove IncludeLaunchDescription or Node actions as needed
-    # Example: Navigation
+    #########################
+    ## PROCESS LAUNCHES    ##
+    #########################
 
-    # Example: add custom arguments per subsystem as needed
-    # Just add more key-value pairs to the launch_arguments dict
-
-    ########################################################################################
-    ## NEW PROCESS LAUNCHES GO HERE (copy-paste from old process.yaml and edit as needed) ##
-    ########################################################################################
+    tf_static = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('farol2_description'), 'launch', 'tf_static.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'vehicle_name': LaunchConfiguration('vehicle_name'),
+            'vehicle_id': LaunchConfiguration('vehicle_id'),
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+        }.items()
+    )
 
     nav = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -47,19 +52,6 @@ def generate_launch_description():
             'config_to_use': LaunchConfiguration('config_to_use'),
             'sample_and_hold': 'false',
             'filter_node': 'true',
-        }.items()
-    )
-
-    tf_static = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('farol2_description'), 'launch', 'tf_static.launch.py'
-            ])
-        ]),
-        launch_arguments={
-            'vehicle_name': LaunchConfiguration('vehicle_name'),
-            'vehicle_id': LaunchConfiguration('vehicle_id'),
-            'use_sim_time': LaunchConfiguration('use_sim_time'),
         }.items()
     )
 
@@ -135,21 +127,19 @@ def generate_launch_description():
         }.items()
     )
 
-    console = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('farol2_console'), 'launch', 'farol2_console.launch.py'
-            ])
-        ]),
-        launch_arguments={
-            'vehicle_name': LaunchConfiguration('vehicle_name'),
-            'vehicle_id': LaunchConfiguration('vehicle_id'),
-            'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'config_to_use': LaunchConfiguration('config_to_use'),
-        }.items()
-    )
-
-    # --- END EDIT ---
+    # console = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([
+    #         PathJoinSubstitution([
+    #             FindPackageShare('farol2_console'), 'launch', 'farol2_console.launch.py'
+    #         ])
+    #     ]),
+    #     launch_arguments={
+    #         'vehicle_name': LaunchConfiguration('vehicle_name'),
+    #         'vehicle_id': LaunchConfiguration('vehicle_id'),
+    #         'use_sim_time': LaunchConfiguration('use_sim_time'),
+    #         'config_to_use': LaunchConfiguration('config_to_use'),
+    #     }.items()
+    # )
 
     return LaunchDescription([
         # args
@@ -158,12 +148,12 @@ def generate_launch_description():
         config_to_use_arg,
         use_sim_time_arg,
         # launches (one per package)
-        nav,
         tf_static,
+        nav,
         allocation,
         inner_loop,
         waypoint,
         path_following,
         planning,
-        console,
+        # console,
     ])

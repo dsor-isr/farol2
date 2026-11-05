@@ -1,0 +1,27 @@
+# One clock per world instance. Choose its DDS domain at launch, before nodes
+# start: ros2 launch farol2_bringup start_simple_world.launch.py ros_domain_id:=41
+# Launch another instance with a different ID, e.g. ros_domain_id:=42.
+# Every vehicle joining an instance must use that same ros_domain_id.
+/world/sim_clock:
+  ros__parameters:
+    use_sim_time: false
+    node_frequency: 100  # /clock updates per simulated second; cover vehicle rates.
+    speedup: 1.0        # Simulated seconds per wall second.
+
+# Shared environmental settings, loaded by every vehicle_sim for now.
+# Use the same world_config file when launching the world and its vehicles.
+/**:
+  vehicle_sim:
+    ros__parameters:
+      environment:
+        fluid_density: 1025.0  # kg/m^3.
+        gravity: 9.8           # m/s^2.
+        origin:
+          latitude: 38.690323  # degrees.
+          longitude: -9.211736 # degrees.
+          altitude: 0.0       # m, geographic altitude at local NED z=0.
+        water_surface_z: 0.0  # m, water surface in local NED (positive down).
+        current:
+          # Constant horizontal current, shared by all vehicles in this world.
+          speed: 0.0  # m/s, nonnegative.
+          angle: 0.0  # degrees clockwise from north, flowing TOWARD this heading.  # 0 = north, 90 = east; vertical current is zero.
