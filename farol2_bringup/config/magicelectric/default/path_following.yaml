@@ -8,19 +8,19 @@
   # the lines k1 and k2 in lapierre, for example.
   path_following:
     ros__parameters:
-      node_frequency: 1.0
+      node_frequency: 10.0
+      default_algorithm: ravi
       controller_gains:
+        ravi:
+          e_turn: 45.0            # meters at which to start turning, equivalent to lookahead distance
+          min_corridor: 5.0      # minimum hlaf-width of inner corridor where integral action is applied
+          xi: 1.0                 # ξ of the final system with integral
+          w0_min: 0.08            # ω0 of the final system with integral
+          epsilon_current: 0.2    # confidence on current estimate 
+        
         pramod:
-          # wc = 0.03 (0.15/5) 
           kp: 0.14
           ki: 0.01
-          # kp: 0.02
-          # ki: 0.0001
-
-        ravi:
-          e_turn: 30.0 # meters at which to start turning, ends up being the same as a lookahead distance
-          xi: 1.0 # luis is afraid of overshoot
-          epsilon_current: 0.2 # confidence on current estimate 
 
         breivik:
           delta_h: 10.0

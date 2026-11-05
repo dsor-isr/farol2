@@ -1,16 +1,22 @@
 #pragma once
 
-#include <farol2_allocation/msg/thruster_rpm.hpp>
+#include <farol2_interfaces/msg/control_surface_angle.hpp>
+#include <farol2_interfaces/msg/depth.hpp>
+#include <farol2_interfaces/msg/thruster_rpm.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
-#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
-#include <std_msgs/msg/float32.hpp>
+#include <sensor_msgs/msg/range.hpp>
 
 namespace farol2_nav
 {
 namespace filters
 {
+
+/*
+  This is used to hold all the measuremnt messages that are received so that they can be easily passed to all the filter plugins in an effiecient way. 
+  TODO: Right now only one message of each kind is stored, consider changing to make this a buffer of messages for each type so that the filters can use all the available measurements.
+*/
 
 struct MeasurementSnapshot
 {
@@ -19,20 +25,10 @@ struct MeasurementSnapshot
   geometry_msgs::msg::Vector3Stamped::SharedPtr utm_ned{};
   geometry_msgs::msg::Vector3Stamped::SharedPtr velocity_over_ground{};
   geometry_msgs::msg::Vector3Stamped::SharedPtr velocity_through_water{};
-  std_msgs::msg::Float32::SharedPtr depth{};
-  std_msgs::msg::Float32::SharedPtr altimeter{};
-  std_msgs::msg::Float32::SharedPtr rudder_angle{};
-  farol2_allocation::msg::ThrusterRPM::SharedPtr rpm_command{};
-
-  rclcpp::Time imu_stamp{};
-  rclcpp::Time gnss_stamp{};
-  rclcpp::Time utm_ned_stamp{};
-  rclcpp::Time velocity_over_ground_stamp{};
-  rclcpp::Time velocity_through_water_stamp{};
-  rclcpp::Time depth_stamp{};
-  rclcpp::Time altimeter_stamp{};
-  rclcpp::Time rudder_stamp{};
-  rclcpp::Time rpm_stamp{};
+  farol2_interfaces::msg::Depth::SharedPtr depth{};
+  sensor_msgs::msg::Range::SharedPtr altimeter{};
+  farol2_interfaces::msg::ThrusterRPM::SharedPtr thruster_rpm{};
+  farol2_interfaces::msg::ControlSurfaceAngle::SharedPtr control_surface_angle{};
 };
 
 }  // namespace filters

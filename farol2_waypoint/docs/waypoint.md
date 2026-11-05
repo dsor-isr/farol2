@@ -24,19 +24,19 @@ The waypoint node takes in the filtered state of the vehicle, as well as the *Fl
 ## Services
 | Services | msg type | Purpose |
 | --- | --- | --- |
-| /#vehicle#/controls/send_wp_standard | [waypoint/sendWpType1](sendWpType1.md) | Sends the waypoint position in x and y |
-| /#vehicle#/controls/send_wp_loose | [waypoint/sendWpType1](sendWpType1.md) | Sends the waypoint position in x and y, while limiting the yaw rate to achieve larger turns |
-| /#vehicle#/controls/send_wp_heading | [waypoint/sendWpType1](sendWpType1.md) | Send the waypoint position in x and y, as well as the a specific final yaw reference |
+| /#vehicle#s/send_wp_standard | [waypoint/sendWpType1](sendWpType1.md) | Sends the waypoint position in x and y |
+| /#vehicle#s/send_wp_loose | [waypoint/sendWpType1](sendWpType1.md) | Sends the waypoint position in x and y, while limiting the yaw rate to achieve larger turns |
+| /#vehicle#s/send_wp_heading | [waypoint/sendWpType1](sendWpType1.md) | Send the waypoint position in x and y, as well as the a specific final yaw reference |
 
 ## Parameters
 | Parameters | type | Default | Purpose |
 | --- | --- | --- | --- |
-| /#vehicle#/controls/outer_loops_controllers/waypoint/cdist | float | 1.5 | Distance to waypoint to consider the vehicle reached it |
-| /#vehicle#/controls/outer_loops_controllers/waypoint/delta_t | float | 5.0 | Time it takes to traverse to the defined waypoint |
-| /#vehicle#/controls/outer_loops_controllers/waypoint/type1/gains/ku | float | 1.0 | *u* gain for loose waypoint control |
-| /#vehicle#/controls/outer_loops_controllers/waypoint/type1/gains/ks | float | 4.0 | *s* gain for loose waypoint control |
-| /#vehicle#/controls/outer_loops_controllers/waypoint/type1/gains/speed_turn | float | 5.0 | Max yaw rate to saturate for the loose waypoint turn |
-| /#vehicle#/controls/outer_loops_controllers/waypoint/type2/gains/k1 | float | 0.05 | *k1* gain for standard waypoint control |
-| /#vehicle#/controls/outer_loops_controllers/waypoint/type2/gains/k2 | float | 0.1 | *k2* gain for standard waypoint control |
-| /#vehicle#/controls/outer_loops_controllers/waypoint/type2/gains/k3 | float | 0.1 | *k3* gain for standard waypoint control |
-| /#vehicle#/controls/outer_loops_controllers/waypoint/node_frequency | float | 10.0 | Working frequency of the node |
+| /#vehicle#s/outer_loops_controllers/waypoint/cdist | float | 1.5 | Distance to waypoint to consider the vehicle reached it |
+| /#vehicle#s/outer_loops_controllers/waypoint/delta_t | float | 5.0 | Time it takes to traverse to the defined waypoint |
+| /#vehicle#s/outer_loops_controllers/waypoint/type1/gains/ku | float | 1.0 | *u* gain for loose waypoint control |
+| /#vehicle#s/outer_loops_controllers/waypoint/type1/gains/ks | float | 4.0 | *s* gain for loose waypoint control |
+| /#vehicle#s/outer_loops_controllers/waypoint/type1/gains/speed_turn | float | 5.0 | Max yaw rate to saturate for the loose waypoint turn |
+| /#vehicle#s/outer_loops_controllers/waypoint/type2/gains/k1 | float | 0.05 | *k1* gain for standard waypoint control |
+| /#vehicle#s/outer_loops_controllers/waypoint/type2/gains/k2 | float | 0.1 | *k2* gain for standard waypoint control |
+| /#vehicle#s/outer_loops_controllers/waypoint/type2/gains/k3 | float | 0.1 | *k3* gain for standard waypoint control |
+| /#vehicle#s/outer_loops_controllers/waypoint/node_frequency | float | 10.0 | Working frequency of the node |

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+[[ $# -eq 1 ]] || { echo "farol: usage: farol pkg share <package>" >&2; exit 1; }
+prefix="$(ros2 pkg prefix "$1")"
+printf '%s/share/%s\n' "$prefix" "$1"

@@ -3,6 +3,7 @@
 #include <Eigen/Dense>
 
 #include <cstdint>
+#include <vector>
 
 namespace farol2_nav
 {
@@ -24,14 +25,12 @@ struct State
   // Vertical information
   double depth{0.0};
   double altimeter{0.0};
-  double altitude_ellipsoidal{0.0};
-  double local_datum_altitude{0.0};
+  double altitude_wgs84{0.0};
+  double altitude_local_datum_altitude{0.0};
 
   // Velocities
   Eigen::Vector3d velocity_over_ground_body{Eigen::Vector3d::Zero()};
   Eigen::Vector3d velocity_through_water_body{Eigen::Vector3d::Zero()};
-  Eigen::Vector3d velocity_over_ground_ned{Eigen::Vector3d::Zero()};
-  Eigen::Vector3d velocity_through_water_ned{Eigen::Vector3d::Zero()};
   double course_over_ground{0.0};
   Eigen::Vector3d current_velocity_ned{Eigen::Vector3d::Zero()};
 
@@ -40,6 +39,10 @@ struct State
   // Rotation from body frame to NED frame.
   Eigen::Matrix3d rotation_bn{Eigen::Matrix3d::Identity()};
   Eigen::Vector3d angular_velocity{Eigen::Vector3d::Zero()};
+
+  // Actuator states
+  std::vector<double> thruster_rpm{};
+  std::vector<double> control_surface_angle{};
 };
 
 }  // namespace filters

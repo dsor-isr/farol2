@@ -1,0 +1,5 @@
+float32 northing_est
+float32 easting_est
+float32 innovation_northing
+float32 innovation_easting
+float32 gain_correction

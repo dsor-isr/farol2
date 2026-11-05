@@ -76,11 +76,11 @@ def generate_launch_description():
     parameters=params,
     remappings=[
       # Subscribers
-      ('gamma', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/path_following/gamma')]),
+      ('gamma', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/path_following/gamma')]),
       ('vehicle_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/nav/filter/state')]),
       # Publishers
-      ('path_data', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/path_following/path_data')]),
-      ('virtual_target_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/control/path_following/virtual_state')]),
+      ('path_data', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/path_following/path_data')]),
+      ('virtual_target_state', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/path_following/virtual_state')]),
       # Services
       ('reset_path', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/ResetPath')]),
       ('set_mode', [TextSubstitution(text='/'), vehicle_ns, TextSubstitution(text='/SetMode')]),

@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+usage() {
+    cat <<'EOF'
+Usage:
+  farol bag crop [-a] [-o output_bag] [--storage STORAGE] <input_bag> <t1_sec> <t2_sec> [topics_or_patterns...]
+EOF
+}
+
+all_topics=false
+out_bag=""
+storage="mcap"
+
+while (($#)); do
+    case "$1" in
+        -h|--help|help)
+            usage
+            exit 0
+            ;;
+        -a|--all)
+            all_topics=true
+            shift
+            ;;
+        -o|--output)
+            shift
+            [[ $# -gt 0 ]] || { echo "farol: missing output bag" >&2; exit 1; }
+            out_bag="$1"
+            shift
+            ;;
+        --storage)
+            shift
+            [[ $# -gt 0 ]] || { echo "farol: missing storage id" >&2; exit 1; }
+            storage="$1"
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+[[ $# -ge 3 ]] || { usage >&2; exit 1; }
+in_bag="$1"
+t1="$2"
+t2="$3"
+shift 3
+requested_topics=("$@")
+
+[[ -e "$in_bag" ]] || { echo "farol: input bag does not exist: $in_bag" >&2; exit 1; }
+awk -v t1="$t1" -v t2="$t2" 'BEGIN { exit !(t2 > t1) }' || { echo "farol: t2 must be greater than t1" >&2; exit 1; }
+
+if [[ "$all_topics" == false ]] && ((${#requested_topics[@]} == 0)); then
+    echo "farol: specify topics/patterns or use --all" >&2
+    exit 1
+fi
+
+info="$(ros2 bag info "$in_bag")"
+start_sec="$(sed -n -E 's/.*Start:.*\(([0-9]+(\.[0-9]+)?)\).*/\1/p' <<<"$info" | sed -n '1p')"
+[[ -n "$start_sec" ]] || { echo "farol: could not extract bag start time from ros2 bag info" >&2; exit 1; }
+
+start_ns="$(awk -v start="$start_sec" -v offset="$t1" 'BEGIN { printf "%.0f\n", (start + offset) * 1000000000 }')"
+end_ns="$(awk -v start="$start_sec" -v offset="$t2" 'BEGIN { printf "%.0f\n", (start + offset) * 1000000000 }')"
+
+topics=()
+if [[ "$all_topics" == false ]]; then
+    mapfile -t available_topics < <(sed -n -E 's/.*Topic: ([^ ]+).*/\1/p' <<<"$info")
+    for req in "${requested_topics[@]}"; do
+        if [[ "$req" == *"*"* || "$req" == *"?"* || "$req" == *"["* ]]; then
+            for topic in "${available_topics[@]}"; do
+                [[ "$topic" == $req ]] && topics+=("$topic")
+            done
+        else
+            topics+=("$req")
+        fi
+    done
+    mapfile -t topics < <(printf '%s\n' "${topics[@]}" | sed '/^$/d' | sort -u)
+    ((${#topics[@]})) || { echo "farol: no topics matched" >&2; exit 1; }
+fi
+
+[[ -n "$out_bag" ]] || out_bag="${in_bag}_crop_${t1}_${t2}"
+tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/farol_bag_crop.XXXXXX")"
+trap 'rm -rf -- "$tmpdir"' EXIT
+config="$tmpdir/output.yaml"
+
+{
+    printf 'output_bags:\n'
+    printf -- '- uri: "%s"\n' "$out_bag"
+    printf '  storage_id: %s\n' "$storage"
+    printf '  start_time_ns: %s\n' "$start_ns"
+    printf '  end_time_ns: %s\n' "$end_ns"
+    if [[ "$all_topics" == true ]]; then
+        printf '  all_topics: true\n'
+        printf '  all_services: true\n'
+        printf '  all_actions: true\n'
+    else
+        printf '  topics:\n'
+        for topic in "${topics[@]}"; do
+            printf '  - "%s"\n' "$topic"
+        done
+    fi
+} >"$config"
+
+echo "Cropping bag:"
+echo "  input:   $in_bag"
+echo "  output:  $out_bag"
+echo "  storage: $storage"
+echo "  window:  ${t1}s -> ${t2}s relative to bag start"
+if [[ "$all_topics" == true ]]; then
+    echo "  topics:  all"
+else
+    echo "  topics:"
+    printf '    %s\n' "${topics[@]}"
+fi
+echo
+
+set -x
+exec ros2 bag convert -i "$in_bag" "$storage" -o "$config"

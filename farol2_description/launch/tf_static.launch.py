@@ -2,8 +2,9 @@
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution, TextSubstitution
+from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution, TextSubstitution, PythonExpression
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 from launch.substitutions import FindExecutable
 
@@ -22,8 +23,16 @@ def generate_launch_description():
         description="Use simulation clock if true",
     )
 
+    vehicle_id_arg = DeclareLaunchArgument(
+        "vehicle_id",
+        default_value="0",
+        description="Vehicle ID",
+    )
+
     vehicle_name = LaunchConfiguration("vehicle_name")
+    vehicle_id = LaunchConfiguration("vehicle_id")
     use_sim_time = LaunchConfiguration("use_sim_time")
+    vehicle_ns = PythonExpression(["'", vehicle_name, "' + '", vehicle_id, "'"])
 
 
     xacro_file = PathJoinSubstitution([
@@ -45,11 +54,13 @@ def generate_launch_description():
     rsp_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
+        namespace=vehicle_ns,
         name="robot_state_publisher",
         output="screen",
         parameters=[{
-            "robot_description": robot_description,
+            "robot_description": ParameterValue(robot_description, value_type=str),
             "use_sim_time": use_sim_time,
+            "frame_prefix": [vehicle_ns, TextSubstitution(text="/")],
         }],
     )
 
@@ -58,6 +69,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         vehicle_name_arg,
+        vehicle_id_arg,
         use_sim_time_arg,
         rsp_node,
     ])
