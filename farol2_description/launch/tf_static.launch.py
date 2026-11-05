@@ -4,6 +4,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution, TextSubstitution, PythonExpression
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 from launch.substitutions import FindExecutable
 
@@ -57,7 +58,7 @@ def generate_launch_description():
         name="robot_state_publisher",
         output="screen",
         parameters=[{
-            "robot_description": robot_description,
+            "robot_description": ParameterValue(robot_description, value_type=str),
             "use_sim_time": use_sim_time,
             "frame_prefix": [vehicle_ns, TextSubstitution(text="/")],
         }],
