@@ -99,8 +99,11 @@ def wrap(a):
 def test_vel(t):
     print("== vel: depth hold, surge steps, yaw step, yaw-rate step")
     d = 2.0
+    # face the centre of the 100 x 100 m world (sim/position is relative to its origin) so the surge steps have room
+    t.refs = {"depth": d, "surge": 0.0, "yaw": math.degrees(math.atan2(-t.pos.y, -t.pos.x))}
+    t.spin_for(30)
     t.refs = {"depth": d, "surge": 0.0}
-    t.spin_for(40)
+    t.spin_for(10)
     t.rows = []
     t.refs = {"depth": d, "surge": 0.5}
     t.spin_for(40, log=True)

@@ -15,7 +15,7 @@
       surge:
         enabled: true
         kp: 10.0
-        ki: 1.0
+        ki: 5.0
         lpf_wc: 31.4 # rad/s
         tau_min: -30.0 # N
         tau_max: 30.0 # N
