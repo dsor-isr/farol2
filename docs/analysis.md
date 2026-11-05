@@ -211,3 +211,15 @@ Functional unit tests: only `farol2_utils` has them (filters), all pass after `7
 - `delfim` yaw response in the sim is slow and the waypoint controller does not settle within `cdist` (sim parameters flagged unreliable).
 - Real vehicles and `farol2_drivers` were never launched. Runbook sections 8 (adding a vehicle) and 9 (real vehicle) are source-derived only.
 - Nothing is pushed. To publish: `git -C ~/farol2 push -u origin docs/analysis fix/analysis-findings` and open PRs against `dev` (do this only when the user asks).
+
+
+## 9. Closed loop with Farol-Isaac (2026-11-05, branch `feature/myellow-isaac`)
+
+| ID | Finding | Status |
+|---|---|---|
+| I1 | The surge/sway/heave PIDs read `nav_state.velocity_through_water`, filled only from `measurement/velocity_through_water`. `auv_sim` with `dvl.mode: bottom_track` publishes only `velocity_over_ground`, so the nav value stays 0 (checked live: true u 1.00 m/s, nav VTW 0). Surge then winds up (ref 0.5 -> 0.9 m/s and rising). This is the cause of the "still accelerating" observation in 2.2. Same code in `pid.cpp` on `main`. | myellow `sim.yaml` set to `water_track`; other vehicles not checked |
+| I2 | myellow shipped gains limit-cycle in `auv_sim` and Isaac: yaw kp 22 / kd 0 (period ~10 s, r +-40 deg/s), depth channel disabled and heave limited to +-6 N although the net lift is 7.4 N. | retuned, see `docs/isaac_closed_loop.md` |
+| I3 | `myellow.xacro` vertical joints were named opposite to their child links (positions OK). | fixed |
+| I4 | `auv_sim` buoyancy for myellow: sphere of 1 kg/l, B = 1.025 W, so the vehicle is 7.4 N buoyant uncontrolled (rises at ~0.4 m/s). | noted, reproduced in Isaac with `buoyancy:scale` |
+
+Verified in Isaac (flat world, no current): depth hold 2.00 m / step 3.04 m, surge 0.499 for 0.5 m/s, yaw +45 deg step settles on the reference, yaw rate 5.4 for 5 deg/s, `send_wp_standard` 20 m N + 10 m E reached within 1.35 m in 72 s, Breivik line following cross-track 3.99 -> 0.21 m over 30 m. Not run: other path-following algorithms, curved paths, current, waves, noise, altimeter; `colcon test` not re-run after the config changes.
