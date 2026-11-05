@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <variant>
+#include <farol2_utils/parameter_utils.hpp>
 #include <Eigen/Dense>
 
 #include "rclcpp/rclcpp.hpp"
@@ -80,7 +81,7 @@ std::variant<std::string, std::vector<double>> getFieldFromParameter(rclcpp::Nod
   if (key_name == "name") {
     return param.as_string();
   } else if (key_name == "moment_arms" || key_name == "angles") {
-    return param.as_double_array();
+    return farol2_utils::vectorParameter(param, 3);
   } else {
     RCLCPP_WARN(node.get_logger(), "Unknown loaded data from config in thruster configuration.");
     return "Unknown";

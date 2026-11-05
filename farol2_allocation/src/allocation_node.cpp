@@ -5,6 +5,7 @@
 #include <allocation_node.hpp>
 
 #include <farol2_utils/angles.hpp>
+#include <farol2_utils/parameter_utils.hpp>
 
 using namespace std::chrono_literals;
 
@@ -66,9 +67,9 @@ void AllocationNode::loadParams() {
 		thruster_frames_);
 
 	const auto coef_fwd =
-		declare_parameter<std::vector<double>>("rpm_conversion.coef_fwd");
+		farol2_utils::declareVectorParameter(*this, "rpm_conversion.coef_fwd", 3);
 	const auto coef_bwd =
-		declare_parameter<std::vector<double>>("rpm_conversion.coef_bwd");
+		farol2_utils::declareVectorParameter(*this, "rpm_conversion.coef_bwd", 3);
 	const auto max_rpm = declare_parameter<double>("rpm_conversion.max_rpm");
 	const auto min_rpm = declare_parameter<double>("rpm_conversion.min_rpm");
 

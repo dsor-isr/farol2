@@ -1,4 +1,5 @@
 #include "PathFollowingNode.h"
+#include <farol2_utils/parameter_utils.hpp>
 
 #include <algorithm>
 #include <cctype>
@@ -130,7 +131,7 @@ PathFollowing *PathFollowingNode::createControllerRelativeHeading() {
   double ky = get_parameter("controller_gains.relative_heading.ky").as_double();
   double kz = get_parameter("controller_gains.relative_heading.kz").as_double();
   double yaw_offset = get_parameter("controller_gains.relative_heading.yaw_offset").as_double();
-  std::vector<double> p_sat = get_parameter("controller_gains.relative_heading.p_sat").as_double_array();
+  std::vector<double> p_sat = farol2_utils::getVectorParameter(*this, "controller_gains.relative_heading.p_sat", 2);
 
   return new RelativeHeading(kx, ky, kz, Eigen::Vector2d(p_sat.data()), yaw_offset,
                              this->publishers_[0], this->publishers_[1], this->publishers_[2], this->publishers_[3]);
@@ -150,8 +151,8 @@ PathFollowing *PathFollowingNode::createControllerMarcelo() {
   double kz = get_parameter("controller_gains.marcelo.kz").as_double();
   double k_pos = get_parameter("controller_gains.marcelo.k_pos").as_double();
   double k_currents = get_parameter("controller_gains.marcelo.k_currents").as_double();
-  std::vector<double> rd = get_parameter("controller_gains.marcelo.rd").as_double_array();
-  std::vector<double> d = get_parameter("controller_gains.marcelo.d").as_double_array();
+  auto rd = farol2_utils::getVector3Parameter(*this, "controller_gains.marcelo.rd");
+  auto d = farol2_utils::getVector3Parameter(*this, "controller_gains.marcelo.d");
 
   return new Marcelo(delta, kk, kz, k_pos, k_currents, rd.data(), d.data(),
                      this->publishers_[0], this->publishers_[1], this->publishers_[2], this->publishers_[3], this->publishers_[4]);
@@ -169,7 +170,7 @@ PathFollowing *PathFollowingNode::createControllerRomulo() {
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_SWAY, 1));
   this->publishers_.push_back(create_publisher<std_msgs::msg::Float32>(TOPIC_PUB_RABBIT, 1));
 
-  std::vector<double> controller_gains = get_parameter("controller_gains.romulo.ke").as_double_array();
+  std::vector<double> controller_gains = farol2_utils::getVectorParameter(*this, "controller_gains.romulo.ke", 4);
   double kz = get_parameter("controller_gains.romulo.kz").as_double();
   controller_gains.push_back(kz);
 
