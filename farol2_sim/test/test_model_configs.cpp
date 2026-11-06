@@ -3,6 +3,7 @@
 #include <cmath>
 #include <gtest/gtest.h>
 #include <rcl_yaml_param_parser/parser.h>
+#include <rclcpp/parameter_map.hpp>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -146,6 +147,8 @@ TEST_P(SensorConfig, ListedSensorsHaveTheirOwnConfiguration) {
       ASSERT_NE(config.get(prefix + "measure_utm_ned").bool_value, nullptr);
     } else if (name == "imu") {
       noise_names = {"orientation_noise", "angular_velocity_noise"};
+    } else if (name == "odometer") {
+      noise_names = {"velocity_noise"};
     } else if (name == "dvl") {
       noise_names = {"velocity_noise"};
       const auto * mode = config.get(prefix + "mode").string_value;
@@ -170,3 +173,59 @@ TEST_P(SensorConfig, ListedSensorsHaveTheirOwnConfiguration) {
 
 INSTANTIATE_TEST_SUITE_P(VehiclesAndExample, SensorConfig,
   ::testing::Values("bluerov", "delfim", "magicelectric", "mblack", "mred", "myellow", "example"));
+
+class NavigationConfig : public ::testing::TestWithParam<const char *> {};
+
+TEST_P(NavigationConfig, LaunchedNodeReceivesMeasurementsForItsSensorsAndBothDvlModes) {
+  const std::string vehicle = GetParam();
+  const std::string file = std::string(FAROL2_SOURCE_ROOT) + "/farol2_bringup/config/" +
+    vehicle + "/default/nav.yaml";
+  const std::string node = "/" + vehicle + "1/navigation_filter";
+  const auto parameter_map = rclcpp::parameter_map_from_yaml_file(file, node.c_str());
+  const auto match = parameter_map.find(node);
+  ASSERT_NE(match, parameter_map.end()) << "Vehicle YAML does not match launched navigation node";
+  const auto parameter = [&match](const std::string & name) {
+    for (const auto & value : match->second) {
+      if (value.get_name() == name) { return value; }
+    }
+    throw std::runtime_error("Missing navigation parameter: " + name);
+  };
+  Config sim(vehicle);
+  const auto * sensors = sim.get("sensor_list").string_array_value;
+  ASSERT_NE(sensors, nullptr);
+  std::set<std::string> expected;
+  for (size_t i = 0; i < sensors->size; ++i) {
+    const std::string name = sensors->data[i];
+    if (name == "gnss") {
+      expected.insert("gnss");
+      if (*sim.get("sensor.gnss.measure_velocity_over_ground").bool_value) {
+        expected.insert("velocity_over_ground");
+      }
+      if (*sim.get("sensor.gnss.measure_utm_ned").bool_value) { expected.insert("utm_ned"); }
+    } else if (name == "dvl") {
+      expected.insert("velocity_over_ground");
+      expected.insert("velocity_through_water");
+    } else if (name == "odometer") {
+      expected.insert("velocity_through_water");
+    } else if (name == "depth_cell") {
+      expected.insert("depth");
+    } else {
+      expected.insert(name);
+    }
+  }
+  const auto measurements = parameter("measurements").as_string_array();
+  const std::set<std::string> actual(measurements.begin(), measurements.end());
+  EXPECT_EQ(actual, expected);
+  EXPECT_EQ(actual.size(), measurements.size()) << "Duplicate measurement names";
+  const auto initializers = parameter("plugins.sample_and_hold.initializer_measurements").as_string_array();
+  for (const auto & name : initializers) {
+    EXPECT_EQ(actual.count(name), 1u) << "Cannot initialize from an unsubscribed measurement: " << name;
+    if (expected.count("velocity_over_ground") && expected.count("velocity_through_water")) {
+      EXPECT_NE(name, "velocity_over_ground");
+      EXPECT_NE(name, "velocity_through_water");
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(Vehicles, NavigationConfig,
+  ::testing::Values("bluerov", "delfim", "magicelectric", "mblack", "mred", "myellow"));

@@ -86,9 +86,9 @@ void VehicleSimNode::initialize_sensors() {
   farol2_utils::requireUnique(names, "sensor_list");
   for (const auto & name : names) {
     if (name != "gnss" && name != "imu" && name != "dvl" && name != "depth_cell" &&
-        name != "altimeter" && name != "thruster_rpm" && name != "control_surface_angle") {
+        name != "altimeter" && name != "thruster_rpm" && name != "control_surface_angle" && name != "odometer") {
       throw std::invalid_argument("Unknown sensor in sensor_list: " + name +
-        ". Supported sensors: gnss, imu, dvl, depth_cell, altimeter, thruster_rpm, control_surface_angle");
+        ". Supported sensors: gnss, imu, dvl, depth_cell, altimeter, thruster_rpm, control_surface_angle, odometer");
     }
     if (name == "control_surface_angle" && !rudder_) {
       throw std::invalid_argument("control_surface_angle sensor requires an enabled rudder");
@@ -98,6 +98,7 @@ void VehicleSimNode::initialize_sensors() {
     if (name == "gnss") { sensors_.push_back(std::make_unique<GnssSensor>(*this)); }
     else if (name == "imu") { sensors_.push_back(std::make_unique<ImuSensor>(*this)); }
     else if (name == "dvl") { sensors_.push_back(std::make_unique<DvlSensor>(*this)); }
+    else if (name == "odometer") { sensors_.push_back(std::make_unique<OdometerSensor>(*this)); }
     else if (name == "depth_cell") { sensors_.push_back(std::make_unique<DepthCellSensor>(*this)); }
     else if (name == "altimeter") { sensors_.push_back(std::make_unique<AltimeterSensor>(*this)); }
     else if (name == "thruster_rpm") { sensors_.push_back(std::make_unique<ThrusterRpmSensor>(*this, base_frame_)); }

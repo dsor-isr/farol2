@@ -215,6 +215,22 @@ class LaunchPolicy(unittest.TestCase):
             topic = ''.join(part.perform(self.context()) for part in remappings[name])
             self.assertEqual(topic, '/mred0/measurement/' + name)
 
+    def test_navigation_and_simulator_measurement_topics_match(self):
+        simulator = launch_module('farol2_sim/launch/farol2_sim.launch.py')
+        navigation = launch_module('farol2_nav/launch/farol2_nav.launch.py')
+        with patch.object(simulator, 'Node', wraps=simulator.Node) as sim_node:
+            simulator.generate_launch_description()
+        with patch.object(navigation, 'Node', wraps=navigation.Node) as nav_node:
+            navigation.generate_launch_description()
+        self.assertEqual(nav_node.call_args.kwargs['name'], 'navigation_filter')
+        sim_remaps = dict(sim_node.call_args.kwargs['remappings'])
+        nav_remaps = dict(nav_node.call_args.kwargs['remappings'])
+        for name in ('imu', 'gnss', 'ned_utm', 'velocity_over_ground', 'velocity_through_water',
+                     'depth', 'altimeter', 'thruster_rpm', 'control_surface_angle'):
+            sim_topic = ''.join(part.perform(self.context()) for part in sim_remaps[name])
+            nav_topic = ''.join(part.perform(self.context()) for part in nav_remaps[name])
+            self.assertEqual(sim_topic, nav_topic)
+
 
 class ProbeLifecycle(unittest.TestCase):
     def test_probe_uses_private_domain_context_and_cleans_up(self):

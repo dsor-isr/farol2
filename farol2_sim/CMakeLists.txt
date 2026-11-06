@@ -53,7 +53,7 @@ pkg_check_modules(GEOGRAPHICLIB REQUIRED geographiclib)
 add_executable(vehicle_sim src/vehicle_sim_node.cpp
   src/sensors/mounted_sensor.cpp src/sensors/noise.cpp src/sensors/gnss.cpp src/sensors/imu.cpp
   src/sensors/dvl.cpp src/sensors/depth_cell.cpp src/sensors/altimeter.cpp
-  src/sensors/thruster_rpm.cpp src/sensors/control_surface_angle.cpp)
+  src/sensors/thruster_rpm.cpp src/sensors/control_surface_angle.cpp src/sensors/odometer.cpp)
 target_compile_features(vehicle_sim PRIVATE cxx_std_17)
 target_compile_options(vehicle_sim PRIVATE -Wall -Wextra -Wpedantic)
 ament_target_dependencies(vehicle_sim rclcpp std_msgs farol2_interfaces geometry_msgs
@@ -86,7 +86,7 @@ if(BUILD_TESTING)
   ament_add_gtest(test_model_configs test/test_model_configs.cpp)
   target_compile_definitions(test_model_configs PRIVATE
     FAROL2_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/..")
-  ament_target_dependencies(test_model_configs rcl_yaml_param_parser)
+  ament_target_dependencies(test_model_configs rcl_yaml_param_parser rclcpp)
   target_link_libraries(test_model_configs farol2_sim_dynamics)
   add_test(NAME simulation_launch_policy
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_simulation_launch.py)

@@ -33,6 +33,7 @@ use `vehicle_sim`; the old executable-selection launch arguments were removed.
 | `src/sensors/mounted_sensor.cpp` | Fixed sensor transform loading and validation from TF |
 | `src/sensors/imu.cpp` | Mounted orientation, angular velocity and accelerometer specific force |
 | `src/sensors/dvl.cpp` | Bottom/water tracking and body/NED velocity selection |
+| `src/sensors/odometer.cpp` | Mounted through-water velocity measurements |
 | `src/sensors/depth_cell.cpp` | Depth below the world water surface |
 | `src/sensors/altimeter.cpp` | Synthetic 2–4 m sinusoidal range for filter testing |
 | `src/sensors/thruster_rpm.cpp` | Actual simulated motor RPM feedback in actuator order |
@@ -358,7 +359,7 @@ angles (radians internally). Ground-truth topics, joint states and the world
 transform remain in the node; actuator measurement publishers belong to sensors.
 
 `sensor_list` selects the enabled sensors: `gnss`, `imu`, `dvl`, `depth_cell`,
-`altimeter`, `thruster_rpm`, and `control_surface_angle`.
+`altimeter`, `thruster_rpm`, `control_surface_angle`, and `odometer`.
 Unknown or duplicate names are rejected; an empty list disables all sensors.
 Each sensor's parameters live under `sensor.<name>`, including its noise settings.
 Only listed sensors create publishers and load their measurement parameters.
@@ -399,11 +400,22 @@ DVL bottom tracking uses ground velocity, while water tracking uses through-wate
 velocity. Shipped DVL configurations use `output_frame: sensor`, so mounting
 rotations and lever-arm velocities are present in the raw measurements.
 
+The odometer publishes `geometry_msgs/Vector3Stamped` on
+`/<vehicle>/measurement/velocity_through_water`, expressed in its mounted sensor
+axes, including the rotational lever-arm velocity. It reads
+`sensor.odometer.frame`, `noise_enabled` and `velocity_noise` (bias and standard
+deviation in m/s). Magic Electric enables this sensor instead of a water-track
+DVL. Its Xacro supplies a body-aligned origin mount as a provisional location;
+replace the transform with the surveyed sensor offset when available. The
+all-sensor example pairs an odometer with bottom-track DVL to provide both
+velocity references without two sources sharing either velocity topic.
+
 ### Mounting transforms
 
 GNSS, IMU, DVL, depth cell and the synthetic altimeter declare
 `sensor.<name>.frame`, defaulting to `gnss_link`, `imu_link`, `dvl_link`,
-`depth_link`, and `altimeter_link` respectively. The vehicle prefix is applied to
+`depth_link`, and `altimeter_link` respectively. The odometer defaults to
+`odometer_link`. The vehicle prefix is applied to
 unqualified frame names. Before simulation starts, the node loads each enabled
 sensor's `base_frame <- sensor_frame` transform from TF. Missing frames are
 retried along with actuator geometry; measurements are never generated using an
@@ -469,7 +481,7 @@ state updates for TF continue. RPM feedback is enabled for all shipped vehicles;
 angle feedback is enabled for Magic Electric and the example vehicle.
 
 Noise generators are now independent per sensor with distinct deterministic seeds
-(GNSS 0, IMU 1, DVL 2, depth 3).
+(GNSS 0, IMU 1, DVL 2, depth 3, odometer 4).
 Enabling another sensor no longer changes a sensor's noise sequence; exact random
 samples differ from the previous shared generator. Each sensor now has separate
 noise parameters: `bias` and `standard_deviation` (formerly named `variance`).

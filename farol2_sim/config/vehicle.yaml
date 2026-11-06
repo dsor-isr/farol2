@@ -119,6 +119,9 @@
           drag_constant: 0.1
           drag_quadratic: 1.0
 
+      # The all-sensor example uses bottom-track DVL plus an odometer to avoid
+      # two publishers on velocity_through_water. GNSS velocity is disabled so
+      # bottom-track DVL is the only velocity_over_ground publisher.
       # Only sensors in this list are instantiated. Remove a name to disable it.
       # All settings and noise belong to the individual sensor below.
       # Sampling follows node_frequency; mounting transforms are read from TF.
@@ -130,11 +133,11 @@
       # GNSS measure_velocity_over_ground when using bottom tracking if unwanted.
       # thruster_rpm and control_surface_angle publish exact actuator feedback;
       # they have no additional parameters. Angle feedback requires a rudder.
-      sensor_list: [gnss, imu, dvl, depth_cell, altimeter, thruster_rpm, control_surface_angle]
+      sensor_list: [gnss, imu, dvl, depth_cell, altimeter, thruster_rpm, control_surface_angle, odometer]
       sensor:
         gnss:
           frame: gnss_link
-          measure_velocity_over_ground: true
+          measure_velocity_over_ground: false
           measure_utm_ned: true
           noise_enabled: false
           position_noise:
@@ -154,7 +157,7 @@
             standard_deviation: [0.0, 0.0, 0.0]
         dvl:
           frame: dvl_link
-          mode: water_track # [bottom_track, water_track]
+          mode: bottom_track # Odometer supplies water velocity; DVL supplies ground velocity.
           output_frame: sensor
           noise_enabled: false
           velocity_noise:
@@ -169,3 +172,9 @@
         altimeter:
           frame: altimeter_link
           period: 20.0  # seconds; synthetic sine wave between 2 and 4 m.
+        odometer:
+          frame: odometer_link
+          noise_enabled: false
+          velocity_noise:
+            bias: [0.0, 0.0, 0.0]  # Sensor axes, m/s.
+            standard_deviation: [0.0, 0.0, 0.0]

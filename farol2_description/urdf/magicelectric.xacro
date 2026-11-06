@@ -53,4 +53,13 @@
     <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
   </joint>
 
+  <!-- Body-aligned through-water odometer. Actual mounting offset is not yet
+       surveyed here; update this transform when measured geometry is available. -->
+  <link name="odometer_link"/>
+  <joint name="base_to_odometer" type="fixed">
+    <parent link="base_link"/>
+    <child link="odometer_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
 </robot>

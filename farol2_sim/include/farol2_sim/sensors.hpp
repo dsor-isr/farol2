@@ -117,6 +117,16 @@ private:
   rclcpp::Publisher<farol2_interfaces::msg::Depth>::SharedPtr publisher_;
 };
 
+class OdometerSensor final : public MountedSensor {
+public:
+  explicit OdometerSensor(rclcpp::Node & node);
+  void publish(const SensorState & sample) override;
+private:
+  SensorNoise noise_;
+  NoiseParameters velocity_noise_;
+  rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr publisher_;
+};
+
 // Synthetic test signal only: no seabed geometry or vehicle-position dependence.
 class AltimeterSensor final : public MountedSensor {
 public:
