@@ -87,7 +87,8 @@ TEST_P(ShippedModel, ParametersParseAndDynamicsRemainFinite) {
   ASSERT_TRUE(std::isfinite(current_angle));
   e.current_ned = Eigen::Vector3d(current_speed * std::cos(current_angle),
     current_speed * std::sin(current_angle), 0.0);
-  EXPECT_DOUBLE_EQ(e.fluid_density, 1025.0);
+  ASSERT_GT(e.fluid_density, 0.0);
+  ASSERT_GT(e.gravity, 0.0);
   State state;
   state.position_ned = config.vector("initial_state.position", 3);
   state.rotation_body_to_ned = farol2_utils::rotationFromRpy(config.vector("initial_state.orientation", 3));

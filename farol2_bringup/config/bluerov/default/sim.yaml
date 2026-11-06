@@ -1,5 +1,7 @@
 # SI units; positive resistance coefficients; initial angles/rates in radians.
-# Legacy spherical surface approximation retained with densities converted to kg/m^3.
+# Hull source: farol_gazebo/farol_vehicles/bluerov_heavy_vehicle/urdf/{base,gazebo}.xacro.
+# UUV damping signs inverted; positions converted from FLU to FRD.
+# The existing spherical near-surface approximation remains simulator-specific.
 /**:
   vehicle_sim:
     ros__parameters:
@@ -11,8 +13,8 @@
         orientation_rate: [0.0, 0.0, 0.0]
         velocity_reference: water
       vehicle:
-        mass: 10.5
-        inertia_tensor: [1000.0, 1000.0, 4.14]
+        mass: 11.5
+        inertia_tensor: [0.21, 0.245, 0.245]
         linear_damping_tensor: [0.1213, 1.1732, 1.113, 0.5, 0.5, 0.5]
         quadratic_damping_tensor: [23.9, 46.27, 50.278, 1.0, 1.0, 1.0]
         added_mass_tensor: [27.08, 25.952, 29.9081, 1.0, 1.0, 1.0]
@@ -30,9 +32,9 @@
           maximum_rpm: 5000.0
           deadzone: 430.0
         center_of_gravity: [0.0, 0.0, 0.0]
-        center_of_buoyancy: [0.0, 0.0, 0.0]
+        center_of_buoyancy: [0.0, 0.0, -0.042]
         active_dofs: [0, 1, 2, 3, 4, 5]
-        restoring: {displaced_volume: 0.0105, sphere_radius: 0.13584184241663852}
+        restoring: {displaced_volume: 0.011054, sphere_radius: 0.13584184241663852}
       sensor_list: [gnss, imu, dvl, depth_cell, altimeter, thruster_rpm]
       sensor:
         gnss:

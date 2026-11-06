@@ -14,7 +14,7 @@
   vehicle_sim:
     ros__parameters:
       environment:
-        fluid_density: 1025.0  # kg/m^3.
+        fluid_density: 1028.0  # kg/m^3; matches the legacy UUV vehicle plugin defaults.
         gravity: 9.8           # m/s^2.
         origin:
           latitude: 38.690323  # degrees.
