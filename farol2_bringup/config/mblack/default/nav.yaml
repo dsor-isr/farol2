@@ -2,7 +2,7 @@
 #  Parameters
 ################################
 /**:
-  filter_node:
+  navigation_filter:
     ros__parameters:
       node_frequency: 10.0
       publish_all_steps: true
@@ -12,10 +12,11 @@
       measurements:
         - "gnss"
         - "imu"
-        # - "utm_ned"
-        # - "altimeter"
-        # - "thruster_rpm"
-      
+        - "velocity_over_ground"
+        - "depth"
+        - "altimeter"
+        - "thruster_rpm"
+
       plugins:
         sample_and_hold:
           initializer_measurements:

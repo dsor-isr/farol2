@@ -2,7 +2,19 @@
 
 ## Overview
 
-`farol2_nav` implements navigation estimation as a **single filter pipeline inside one ROS 2 node** (`filter_node`), instead of running one monolithic estimator.
+`farol2_nav` implements navigation estimation as a **single filter pipeline inside one ROS 2 node** (executable `filter_node`, launched as `navigation_filter`), instead of running one monolithic estimator.
+
+Vehicle YAMLs target `/**/navigation_filter`. Their `measurements` lists select
+the available sensors. DVL-equipped vehicles subscribe to both
+`velocity_over_ground` (bottom tracking) and `velocity_through_water` (water
+tracking); sample-and-hold fills the matching field when a message arrives and
+holds the previous value of the other field. Both are vectors in body axes after
+the mounting correction. Startup initialization uses GNSS and IMU, so it does not
+wait for both mutually exclusive DVL modes.
+
+Magic Electric's odometer provides measured through-water velocity. Its active
+pipeline uses sample-and-hold followed by the current estimator; the ASV dynamics
+stage is disabled because it would overwrite the odometer measurement.
 
 At each timer tick:
 

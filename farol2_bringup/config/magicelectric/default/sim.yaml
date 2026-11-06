@@ -51,7 +51,7 @@
           lift_coefficient: 1.398093
           drag_constant: 0.000575
           drag_quadratic: 0.520834
-      sensor_list: [gnss, imu, thruster_rpm, control_surface_angle]
+      sensor_list: [gnss, imu, thruster_rpm, control_surface_angle, odometer]
       sensor:
         gnss:
           frame: gnss_link
@@ -73,4 +73,9 @@
           angular_velocity_noise:
             bias: [0.0, 0.0, 0.0]
             standard_deviation: [0.0, 0.0, 0.0]
-
+        odometer:
+          frame: odometer_link
+          noise_enabled: false
+          velocity_noise:
+            bias: [0.0, 0.0, 0.0]  # Sensor axes, m/s.
+            standard_deviation: [0.0, 0.0, 0.0]

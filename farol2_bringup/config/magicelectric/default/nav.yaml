@@ -2,7 +2,7 @@
 #  Parameters
 ################################
 /**:
-  filter_node:
+  navigation_filter:
     ros__parameters:
       node_frequency: 10.0
       publish_all_steps: true
@@ -10,13 +10,16 @@
       measurements:
         - "gnss"
         - "imu"
+        - "utm_ned"
         - "velocity_over_ground"
         - "velocity_through_water"
-        - "control_surface_angle"
         - "thruster_rpm"
-      
+        - "control_surface_angle"
+
       filters: 
-        - "asv_dynamics_model"
+        # Odometer supplies measured water velocity; omit the model stage
+        # because it would overwrite that measurement.
+        # - "asv_dynamics_model"
         - "current_estimator"
         # - "yaw_rate_ekf"
       
