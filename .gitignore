@@ -10,7 +10,8 @@ __pycache__/
 .vshistory/
 
 # VS Code files for those working on multiple tools
-.vscode/*
+.vscode/
+.cenas/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json

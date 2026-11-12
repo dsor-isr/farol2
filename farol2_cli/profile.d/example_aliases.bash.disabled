@@ -1,0 +1,5 @@
+# Example aliases. Rename this file to `aliases.bash` to enable it.
+#
+# alias fbuild='farol build'
+# alias fclean='farol clean'
+# alias froot='farol cd root'

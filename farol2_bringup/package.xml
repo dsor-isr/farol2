@@ -10,6 +10,9 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <build_depend>ament_cmake_python</build_depend>
   <exec_depend>ament_cmake_python</exec_depend>
+  <exec_depend>farol2_sim</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>rclpy</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
 

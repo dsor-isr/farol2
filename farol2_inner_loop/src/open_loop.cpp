@@ -18,8 +18,8 @@ OpenLoop::~OpenLoop() = default;
  * @brief Load parameters
  */
 void OpenLoop::loadParams() {
-  surge_enabled_ = declare_parameter<bool>("surge.enabled");
-  surge_gain_ = declare_parameter<double>("surge.gain");
+  surge_enabled_ = declare_parameter<bool>("surge.enabled", false);
+  surge_gain_ = declare_parameter<double>("surge.gain", 1.0);
 }
 
 
@@ -47,7 +47,7 @@ void OpenLoop::initialiseSubscribers() {
  * @brief Initialise Publishers
  */
 void OpenLoop::initialisePublishers() {
-  rpm_command_pub_ = create_publisher<farol2_allocation::msg::ThrusterRPM>(
+  rpm_command_pub_ = create_publisher<farol2_interfaces::msg::ThrusterRPM>(
   TOPIC_PUB_RPM_COMMAND,
   rclcpp::QoS(1));
 }
@@ -61,7 +61,7 @@ void OpenLoop::timerCallback() {
   /* If open loop for surge is not enabled */
   if (!surge_enabled_) return;
 
-  if (!has_surge_ref_ || (this->now() - last_surge_ref_time_).seconds() > 2) {
+  if (!has_surge_ref_ || (this->now() - last_surge_ref_time_).seconds() > 0.2) {
     return;
   }
 

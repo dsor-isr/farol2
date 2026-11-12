@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+[[ $# -eq 1 ]] || { echo "farol: usage: farol bag topics <bag>" >&2; exit 1; }
+ros2 bag info "$1" | sed -n -E 's/.*Topic: ([^ ]+).*/\1/p' | sort -u

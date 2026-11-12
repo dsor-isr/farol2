@@ -26,7 +26,7 @@ In practice, this acts like a sample-and-hold stage: each tick uses the latest a
 ## Inputs used
 
 - `gnss`
-- `ned_utm`
+- `utm_ned`
 - `velocity_over_ground`
 - `velocity_through_water`
 - `depth`
@@ -42,6 +42,7 @@ In practice, this acts like a sample-and-hold stage: each tick uses the latest a
 
 ## Notes
 
-- This filter has no private parameters.
+- `measurements` controls which sensor topics `filter_node` subscribes to.
+- `plugins.sample_and_hold.initializer_measurements` controls which measurements must arrive before this filter is considered initialized. When omitted, it defaults to `measurements`.
 - Freshness gating is done by `filter_node` before filter execution (timeouts), not inside this filter.
 - It does not estimate hidden states; it only maps measurements.

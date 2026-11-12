@@ -14,7 +14,9 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(farol2_interfaces REQUIRED)
 find_package(farol2_allocation REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
@@ -27,8 +29,8 @@ find_library(GEOGRAPHIC_LIB GeographicLib)
 # --------------------
 # Interfaces (msg/srv)
 # --------------------
-file(GLOB MSG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
-file(GLOB SRV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "srv/*.srv")
+file(GLOB MSG_FILES CONFIGURE_DEPENDS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "msg/*.msg")
+file(GLOB SRV_FILES CONFIGURE_DEPENDS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "srv/*.srv")
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${MSG_FILES}
@@ -44,8 +46,9 @@ ament_export_dependencies(rosidl_default_runtime)
 add_executable(filter_node
   src/filter_node.cpp
   src/filters/sample_and_hold.cpp
-  src/filters/position_current_ekf.cpp
+  src/filters/current_estimator.cpp
   src/filters/yaw_rate_ekf.cpp
+  src/filters/asv_dynamics_model.cpp
 )
 
 
@@ -55,7 +58,9 @@ ament_target_dependencies(filter_node
   sensor_msgs
   geometry_msgs
   tf2
+  tf2_eigen
   tf2_geometry_msgs
+  tf2_ros
   farol2_interfaces
   farol2_allocation
   farol2_utils
@@ -65,6 +70,7 @@ ament_target_dependencies(filter_node
 # Include dirs
 target_include_directories(filter_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
 )
 

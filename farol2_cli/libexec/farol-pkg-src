@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=farol-common
+source "$SCRIPT_DIR/farol-common"
+
+[[ $# -eq 1 ]] || farol_die "usage: farol pkg src <package>"
+root="$(farol_workspace_root_or_die)"
+path="$(farol_colcon_list "$root" --paths-only --packages-select "$1" | sed -n '1p')"
+[[ -n "$path" ]] || farol_die "workspace package not found: $1"
+case "$path" in
+    /*) printf '%s\n' "$path" ;;
+    *) printf '%s\n' "$root/$path" ;;
+esac

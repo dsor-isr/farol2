@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+usage() {
+    cat <<'EOF'
+Usage:
+  farol bridge serial <device> [--link PATH] [--baud N]
+  farol bridge serial <device> <link> <baud>
+EOF
+}
+
+link="/tmp/mcu"
+baud="115200"
+device=""
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
+    usage
+    exit 0
+fi
+
+if (($# == 3)) && [[ "$2" != --* ]]; then
+    device="$1"
+    link="$2"
+    baud="$3"
+else
+    while (($#)); do
+        case "$1" in
+            --link)
+                shift
+                [[ $# -gt 0 ]] || { echo "farol: missing value for --link" >&2; exit 1; }
+                link="$1"
+                ;;
+            --baud)
+                shift
+                [[ $# -gt 0 ]] || { echo "farol: missing value for --baud" >&2; exit 1; }
+                baud="$1"
+                ;;
+            -*)
+                echo "farol: unknown serial option: $1" >&2
+                exit 1
+                ;;
+            *)
+                if [[ -z "$device" ]]; then
+                    device="$1"
+                else
+                    echo "farol: unexpected argument: $1" >&2
+                    exit 1
+                fi
+                ;;
+        esac
+        shift
+    done
+fi
+
+[[ -n "$device" ]] || { usage >&2; exit 1; }
+[[ -e "$device" ]] || { echo "farol: serial device does not exist: $device" >&2; exit 1; }
+
+printf 'Bridging serial:\n'
+printf '  real port:    %s\n' "$device"
+printf '  virtual port: %s\n' "$link"
+printf '  baudrate:     %s\n\n' "$baud"
+
+exec socat -d -d "pty,raw,echo=0,link=$link" "$device,b$baud,raw,echo=0"

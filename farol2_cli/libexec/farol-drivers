@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=farol-common
+source "$SCRIPT_DIR/farol-common"
+# shellcheck source=../config/drivers.bash
+source "$ROOT_DIR/config/drivers.bash"
+
+MARKER="managed by farol drivers"
+PROFILE_STATE=".farol_drivers_profile"
+
+print_help() {
+    cat <<'EOF'
+Usage:
+  farol drivers disable
+  farol drivers enable
+  farol drivers set <profile>
+  farol drivers status
+  farol drivers profiles
+
+Profiles enable only the driver packages needed by a vehicle profile and place
+COLCON_IGNORE in the other driver package directories.
+`enable` and `disable` are quick switches for the whole farol2_drivers tree;
+they only touch the root COLCON_IGNORE.
+Use `farol drivers set all` to remove driver COLCON_IGNORE files outside the
+legacy subtree and build all active drivers.
+EOF
+}
+
+drivers_root() {
+    local root
+    root="$(farol_workspace_root_or_die)"
+    local dir="$root/src/farol2_drivers"
+    [[ -d "$dir" ]] || farol_die "drivers repository not found: $dir"
+    printf '%s\n' "$dir"
+}
+
+profile_exists() {
+    local profile="$1"
+    local known
+    for known in "${FAROL_DRIVER_PROFILES[@]}"; do
+        [[ "$known" == "$profile" ]] && return 0
+    done
+    return 1
+}
+
+profile_packages() {
+    local profile="$1"
+    local array_name="FAROL_DRIVER_PROFILE_$profile[@]"
+    printf '%s\n' "${!array_name}"
+}
+
+package_name_from_xml() {
+    local package_xml="$1"
+    sed -n 's:.*<name>[[:space:]]*\([^<[:space:]]\{1,\}\)[[:space:]]*</name>.*:\1:p' "$package_xml" | head -n 1
+}
+
+driver_packages() {
+    local root="$1"
+    local package_xml package_dir package_name
+    while IFS= read -r package_xml; do
+        package_dir="${package_xml%/package.xml}"
+        package_name="$(package_name_from_xml "$package_xml")"
+        [[ -n "$package_name" ]] || package_name="${package_dir##*/}"
+        printf '%s\t%s\n' "$package_name" "$package_dir"
+    done < <(find "$root" -name package.xml -print | sort)
+}
+
+is_managed_ignore() {
+    local file="$1"
+    [[ -f "$file" ]] || return 1
+    grep -Fqx "# $MARKER" "$file" 2>/dev/null
+}
+
+write_managed_ignore() {
+    local dir="$1"
+    local reason="$2"
+    local file="$dir/COLCON_IGNORE"
+
+    if [[ -e "$file" ]] && ! is_managed_ignore "$file"; then
+        return 0
+    fi
+
+    {
+        printf '# %s\n' "$MARKER"
+        printf '# %s\n' "$reason"
+    } > "$file"
+}
+
+remove_managed_ignore() {
+    local dir="$1"
+    local file="$dir/COLCON_IGNORE"
+    if is_managed_ignore "$file"; then
+        rm -f -- "$file"
+    fi
+}
+
+has_unmanaged_ignore_between() {
+    local path="$1"
+    local stop="$2"
+    local current file
+
+    current="$(cd -- "$path" && pwd)" || return 1
+    stop="$(cd -- "$stop" && pwd)" || return 1
+
+    while [[ "$current" != "/" ]]; do
+        file="$current/COLCON_IGNORE"
+        if [[ -e "$file" ]] && ! is_managed_ignore "$file"; then
+            return 0
+        fi
+        [[ "$current" == "$stop" ]] && break
+        current="$(dirname "$current")"
+    done
+
+    return 1
+}
+
+disable_drivers() {
+    local root
+    root="$(drivers_root)"
+    write_managed_ignore "$root" "disabled by 'farol drivers disable'"
+    printf 'disabled drivers repository: %s\n' "$root"
+}
+
+enable_drivers() {
+    local root
+    root="$(drivers_root)"
+    remove_managed_ignore "$root"
+    printf 'enabled drivers repository: %s\n' "$root"
+}
+
+set_all_drivers() {
+    local root
+    root="$(drivers_root)"
+    find "$root" -name COLCON_IGNORE -type f ! -path "$root/legacy/*" ! -path "$root/legacy/COLCON_IGNORE" -delete
+    rm -f -- "$root/$PROFILE_STATE"
+    printf 'removed driver COLCON_IGNORE files outside legacy under: %s\n' "$root"
+}
+
+set_profile() {
+    local profile="$1"
+    if [[ "$profile" == "all" ]]; then
+        set_all_drivers
+        return 0
+    fi
+
+    profile_exists "$profile" || farol_die "unknown driver profile '$profile'; available: ${FAROL_DRIVER_PROFILES[*]}"
+
+    local root
+    root="$(drivers_root)"
+    remove_managed_ignore "$root"
+
+    local active_package active_map package_name package_dir
+    declare -A active_map=()
+    while IFS= read -r active_package; do
+        active_map["$active_package"]=1
+    done < <(profile_packages "$profile")
+
+    local enabled=0 ignored=0 preserved=0
+    while IFS=$'\t' read -r package_name package_dir; do
+        if [[ -n "${active_map[$package_name]:-}" ]]; then
+            remove_managed_ignore "$package_dir"
+            ((enabled += 1))
+        else
+            if has_unmanaged_ignore_between "$package_dir" "$root"; then
+                ((preserved += 1))
+            else
+                write_managed_ignore "$package_dir" "disabled by 'farol drivers set $profile'"
+                ((ignored += 1))
+            fi
+        fi
+    done < <(driver_packages "$root")
+
+    printf '%s\n' "$profile" > "$root/$PROFILE_STATE"
+    printf 'driver profile set to %s: %d enabled, %d ignored' "$profile" "$enabled" "$ignored"
+    if (( preserved > 0 )); then
+        printf ', %d existing ignores preserved' "$preserved"
+    fi
+    printf '\n'
+}
+
+list_profiles() {
+    printf 'all\n'
+    printf '%s\n' "${FAROL_DRIVER_PROFILES[@]}"
+}
+
+status() {
+    local root
+    root="$(drivers_root)"
+
+    printf 'drivers root: %s\n' "$root"
+    if [[ -e "$root/COLCON_IGNORE" ]]; then
+        printf 'tree: ignored'
+        is_managed_ignore "$root/COLCON_IGNORE" && printf ' (managed)'
+        printf '\n'
+        return 0
+    fi
+
+    if [[ -f "$root/$PROFILE_STATE" ]]; then
+        printf 'profile: %s\n' "$(<"$root/$PROFILE_STATE")"
+    else
+        printf 'profile: none\n'
+    fi
+
+    local package_name package_dir state
+    while IFS=$'\t' read -r package_name package_dir; do
+        state="enabled"
+        if farol_path_is_colcon_ignored "$package_dir" "$root"; then
+            state="ignored"
+            is_managed_ignore "$package_dir/COLCON_IGNORE" && state="ignored (managed)"
+        fi
+        printf '%-28s %s\n' "$package_name" "$state"
+    done < <(driver_packages "$root")
+}
+
+cmd="${1:-help}"
+case "$cmd" in
+    help|--help|-h)
+        print_help
+        ;;
+    disable)
+        shift
+        [[ $# -eq 0 ]] || farol_die "unexpected arguments for drivers disable: $*"
+        disable_drivers
+        ;;
+    enable)
+        shift
+        [[ $# -eq 0 ]] || farol_die "unexpected arguments for drivers enable: $*"
+        enable_drivers
+        ;;
+    set)
+        shift
+        [[ $# -eq 1 ]] || farol_die "usage: farol drivers set <profile>"
+        set_profile "$1"
+        ;;
+    profiles)
+        shift
+        [[ $# -eq 0 ]] || farol_die "unexpected arguments for drivers profiles: $*"
+        list_profiles
+        ;;
+    status)
+        shift
+        [[ $# -eq 0 ]] || farol_die "unexpected arguments for drivers status: $*"
+        status
+        ;;
+    *)
+        farol_die "unknown drivers subcommand: $cmd"
+        ;;
+esac

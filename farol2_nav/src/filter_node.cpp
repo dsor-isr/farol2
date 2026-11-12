@@ -1,8 +1,9 @@
 #include "filter_node.hpp"
 
 #include <farol2_nav/filters/sample_and_hold.hpp>
-#include <farol2_nav/filters/position_current_ekf.hpp>
+#include <farol2_nav/filters/current_estimator.hpp>
 #include <farol2_nav/filters/yaw_rate_ekf.hpp>
+#include <farol2_nav/filters/asv_dynamics_model.hpp>
 #include <farol2_utils/angles.hpp>
 
 #include <algorithm>
@@ -27,11 +28,7 @@ void FilterNode::load_params()
   node_frequency_ = declare_parameter<double>("node_frequency", 10.0);
   publish_all_steps_ = declare_parameter<bool>("publish_all_steps", true);
   filters_ = declare_parameter<std::vector<std::string>>("filters", std::vector<std::string>{});
-
-  imu_timeout_s_ = declare_parameter<double>("timeouts.imu", 1.0);
-  navsat_timeout_s_ = declare_parameter<double>("timeouts.navsat", 2.0);
-  utm_timeout_s_ = declare_parameter<double>("timeouts.utm", 2.0);
-  rpm_timeout_s_ = declare_parameter<double>("timeouts.rpm", 1.0);
+  measurements_ = declare_parameter<std::vector<std::string>>("measurements", std::vector<std::string>{"gnss", "imu"});
 }
 
 void FilterNode::initialise_publishers()
@@ -42,68 +39,83 @@ void FilterNode::initialise_publishers()
 
 void FilterNode::initialise_subscribers()
 {
-  imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
-    TOPIC_SUB_IMU, rclcpp::QoS(10),
-    [this](sensor_msgs::msg::Imu::SharedPtr msg) {
-      snapshot_.imu = std::move(msg);
-      snapshot_.imu_stamp = now();
-    });
+  const auto is_active = [this](const std::string & measurement) {
+      return std::find(measurements_.begin(), measurements_.end(), measurement) !=
+        measurements_.end();
+    };
 
-  gnss_sub_ = create_subscription<sensor_msgs::msg::NavSatFix>(
-    TOPIC_SUB_GNSS, rclcpp::QoS(10),
-    [this](sensor_msgs::msg::NavSatFix::SharedPtr msg) {
-      snapshot_.gnss = std::move(msg);
-      snapshot_.gnss_stamp = now();
-    });
+  if (is_active("imu")) {
+    imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
+      TOPIC_SUB_IMU, rclcpp::QoS(10),
+      [this](sensor_msgs::msg::Imu::SharedPtr msg) {
+        snapshot_.imu = std::move(msg);
+      });
+  }
 
-  utm_ned_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
-    TOPIC_SUB_UTM_NED, rclcpp::QoS(10),
-    [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
-      snapshot_.utm_ned = std::move(msg);
-      snapshot_.utm_ned_stamp = now();
-    });
+  if (is_active("gnss")) {
+    gnss_sub_ = create_subscription<sensor_msgs::msg::NavSatFix>(
+      TOPIC_SUB_GNSS, rclcpp::QoS(10),
+      [this](sensor_msgs::msg::NavSatFix::SharedPtr msg) {
+        snapshot_.gnss = std::move(msg);
+      });
+  }
 
-  velocity_over_ground_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
-    TOPIC_SUB_VELOCITY_OVER_GROUND, rclcpp::QoS(10),
-    [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
-      snapshot_.velocity_over_ground = std::move(msg);
-      snapshot_.velocity_over_ground_stamp = now();
-    });
+  if (is_active("utm_ned")) {
+    utm_ned_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
+      TOPIC_SUB_UTM_NED, rclcpp::QoS(10),
+      [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
+        snapshot_.utm_ned = std::move(msg);
+      });
+  }
 
-  velocity_through_water_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
-    TOPIC_SUB_VELOCITY_THROUGH_WATER, rclcpp::QoS(10),
-    [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
-      snapshot_.velocity_through_water = std::move(msg);
-      snapshot_.velocity_through_water_stamp = now();
-    });
+  if (is_active("velocity_over_ground")) {
+    velocity_over_ground_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
+      TOPIC_SUB_VELOCITY_OVER_GROUND, rclcpp::QoS(10),
+      [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
+        snapshot_.velocity_over_ground = std::move(msg);
+      });
+  }
 
-  depth_sub_ = create_subscription<std_msgs::msg::Float32>(
-    TOPIC_SUB_DEPTH, rclcpp::QoS(10),
-    [this](std_msgs::msg::Float32::SharedPtr msg) {
-      snapshot_.depth = std::move(msg);
-      snapshot_.depth_stamp = now();
-    });
+  if (is_active("velocity_through_water")) {
+    velocity_through_water_sub_ = create_subscription<geometry_msgs::msg::Vector3Stamped>(
+      TOPIC_SUB_VELOCITY_THROUGH_WATER, rclcpp::QoS(10),
+      [this](geometry_msgs::msg::Vector3Stamped::SharedPtr msg) {
+        snapshot_.velocity_through_water = std::move(msg);
+      });
+  }
 
-  altimeter_sub_ = create_subscription<std_msgs::msg::Float32>(
-    TOPIC_SUB_ALTIMETER, rclcpp::QoS(10),
-    [this](std_msgs::msg::Float32::SharedPtr msg) {
-      snapshot_.altimeter = std::move(msg);
-      snapshot_.altimeter_stamp = now();
-    });
+  if (is_active("depth")) {
+    depth_sub_ = create_subscription<farol2_interfaces::msg::Depth>(
+      TOPIC_SUB_DEPTH, rclcpp::QoS(10),
+      [this](farol2_interfaces::msg::Depth::SharedPtr msg) {
+        snapshot_.depth = std::move(msg);
+      });
+  }
 
-  rudder_sub_ = create_subscription<std_msgs::msg::Float32>(
-    TOPIC_SUB_RUDDER_ANGLE, rclcpp::QoS(10),
-    [this](std_msgs::msg::Float32::SharedPtr msg) {
-      snapshot_.rudder_angle = std::move(msg);
-      snapshot_.rudder_stamp = now();
-    });
+  if (is_active("altimeter")) {
+    altimeter_sub_ = create_subscription<sensor_msgs::msg::Range>(
+      TOPIC_SUB_ALTIMETER, rclcpp::QoS(10),
+      [this](sensor_msgs::msg::Range::SharedPtr msg) {
+        snapshot_.altimeter = std::move(msg);
+      });
+  }
 
-  rpm_sub_ = create_subscription<farol2_allocation::msg::ThrusterRPM>(
-    TOPIC_SUB_RPM_COMMAND, rclcpp::QoS(10),
-    [this](farol2_allocation::msg::ThrusterRPM::SharedPtr msg) {
-      snapshot_.rpm_command = std::move(msg);
-      snapshot_.rpm_stamp = now();
-    });
+  if (is_active("control_surface_angle")) {
+    control_surface_angle_sub_ =
+      create_subscription<farol2_interfaces::msg::ControlSurfaceAngle>(
+      TOPIC_SUB_CONTROL_SURFACE_ANGLE, rclcpp::QoS(10),
+      [this](farol2_interfaces::msg::ControlSurfaceAngle::SharedPtr msg) {
+        snapshot_.control_surface_angle = std::move(msg);
+      });
+  }
+
+  if (is_active("thruster_rpm")) {
+    thruster_rpm_sub_ = create_subscription<farol2_interfaces::msg::ThrusterRPM>(
+      TOPIC_SUB_THRUSTER_RPM, rclcpp::QoS(10),
+      [this](farol2_interfaces::msg::ThrusterRPM::SharedPtr msg) {
+        snapshot_.thruster_rpm = std::move(msg);
+      });
+  }
 }
 
 void FilterNode::build_pipeline()
@@ -116,10 +128,12 @@ void FilterNode::build_pipeline()
 
   for (const auto & key : filters_) {
     std::unique_ptr<farol2_nav::filters::BaseFilter> filter;
-    if (key == "position_current_ekf") {
-      filter = std::make_unique<farol2_nav::filters::PositionCurrentEkfFilter>();
+    if (key == "current_estimator") {
+      filter = std::make_unique<farol2_nav::filters::CurrentEstimatorFilter>();
     } else if (key == "yaw_rate_ekf") {
       filter = std::make_unique<farol2_nav::filters::YawRateEkfFilter>();
+    } else if (key == "asv_dynamics_model") {
+      filter = std::make_unique<farol2_nav::filters::AsvDynamicsModelFilter>();
     // Here add additional filters with else if blocks, following the pattern above. For example:
     // } else if (key == "your_filter_name") {
     //   filter = std::make_unique<farol2_nav::filters::YourFilter>();
@@ -144,15 +158,7 @@ void FilterNode::build_pipeline()
 void FilterNode::initialise_timer()
 {
   const auto period_ns = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / std::max(0.1, node_frequency_)));
-  timer_ = create_wall_timer(period_ns, [this]() { on_timer(); });
-}
-
-bool FilterNode::is_fresh(const rclcpp::Time & stamp, double timeout_s) const
-{
-  if (stamp.nanoseconds() == 0) {
-    return false;
-  }
-  return (now() - stamp).seconds() <= timeout_s;
+  timer_ = create_timer(period_ns, [this]() { on_timer(); });
 }
 
 void FilterNode::on_timer()
@@ -162,26 +168,21 @@ void FilterNode::on_timer()
   const double dt_s = (last_tick_s_ > 0.0) ? (now_s - last_tick_s_) : (1.0 / std::max(0.1, node_frequency_));
   last_tick_s_ = now_s;
 
-  if (!is_fresh(snapshot_.imu_stamp, imu_timeout_s_)) {
-    snapshot_.imu.reset();
-  }
-  if (!is_fresh(snapshot_.gnss_stamp, navsat_timeout_s_)) {
-    snapshot_.gnss.reset();
-  }
-  if (!is_fresh(snapshot_.utm_ned_stamp, utm_timeout_s_)) {
-    snapshot_.utm_ned.reset();
-  }
-  if (!is_fresh(snapshot_.rpm_stamp, rpm_timeout_s_)) {
-    snapshot_.rpm_command.reset();
-  }
-
   // Every cycle starts from a clean state. sample_and_hold runs first and repopulates it.
   state_ = farol2_nav::filters::State{};
+
+  // add here the measurement pre processing -> convert to base_link
 
   // run filter pipeline 
   for (size_t i = 0; i < pipeline_.size(); ++i) {
     auto & filter = pipeline_[i];
     filter->compute(dt_s, snapshot_, state_);
+
+    // sample_and_hold is the first filter and gates startup publication.
+    if (i == 0U && !filter->initialized()) {
+      snapshot_ = farol2_nav::filters::MeasurementSnapshot{};
+      return;
+    }
 
     // Only intermediate stages use stage publishers.
     if (publish_all_steps_ && (i + 1U < pipeline_.size())) {
@@ -216,37 +217,33 @@ void FilterNode::fill_state_msg(const rclcpp::Time & stamp)
 
   msg_.depth = state_.depth;
   msg_.altimeter = state_.altimeter;
-  msg_.altitude_ellipsoidal = state_.altitude_ellipsoidal;
-  msg_.local_datum.altitude = state_.local_datum_altitude;
+  msg_.altitude_wgs84 = state_.altitude_wgs84;
+  msg_.altitude_local_datum.altitude = state_.altitude_local_datum_altitude;
 
-  msg_.velocity_over_ground_body.x = state_.velocity_over_ground_body(0);
-  msg_.velocity_over_ground_body.y = state_.velocity_over_ground_body(1);
-  msg_.velocity_over_ground_body.z = state_.velocity_over_ground_body(2);
-  msg_.velocity_through_water_body.x = state_.velocity_through_water_body(0);
-  msg_.velocity_through_water_body.y = state_.velocity_through_water_body(1);
-  msg_.velocity_through_water_body.z = state_.velocity_through_water_body(2);
-  msg_.velocity_over_ground_ned.x = state_.velocity_over_ground_ned(0);
-  msg_.velocity_over_ground_ned.y = state_.velocity_over_ground_ned(1);
-  msg_.velocity_over_ground_ned.z = state_.velocity_over_ground_ned(2);
-  msg_.velocity_through_water_ned.x = state_.velocity_through_water_ned(0);
-  msg_.velocity_through_water_ned.y = state_.velocity_through_water_ned(1);
-  msg_.velocity_through_water_ned.z = state_.velocity_through_water_ned(2);
+  msg_.velocity_over_ground.x = state_.velocity_over_ground_body(0);
+  msg_.velocity_over_ground.y = state_.velocity_over_ground_body(1);
+  msg_.velocity_over_ground.z = state_.velocity_over_ground_body(2);
+  msg_.velocity_through_water.x = state_.velocity_through_water_body(0);
+  msg_.velocity_through_water.y = state_.velocity_through_water_body(1);
+  msg_.velocity_through_water.z = state_.velocity_through_water_body(2);
+  msg_.speed_over_ground = state_.velocity_over_ground_body.norm();
+  msg_.speed_through_water = state_.velocity_through_water_body.norm();
   msg_.course_over_ground = state_.course_over_ground;
   msg_.current_velocity_ned.x = state_.current_velocity_ned(0);
   msg_.current_velocity_ned.y = state_.current_velocity_ned(1);
   msg_.current_velocity_ned.z = state_.current_velocity_ned(2);
+  msg_.current_speed = state_.current_velocity_ned.head<2>().norm();
+  msg_.current_direction = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(std::atan2(state_.current_velocity_ned(1), state_.current_velocity_ned(0))));
 
-  const double pitch_arg = std::clamp(-state_.rotation_bn(2, 0), -1.0, 1.0);
-  const double roll_rad = std::atan2(state_.rotation_bn(2, 1), state_.rotation_bn(2, 2));
-  const double pitch_rad = std::asin(pitch_arg);
-  const double yaw_rad = std::atan2(state_.rotation_bn(1, 0), state_.rotation_bn(0, 0));
-
-  msg_.attitude.roll = farol2_utils::rad2deg(roll_rad);
-  msg_.attitude.pitch = farol2_utils::rad2deg(pitch_rad);
-  msg_.attitude.yaw = farol2_utils::rad2deg(yaw_rad);
+  msg_.attitude.roll = state_.attitude(0);
+  msg_.attitude.pitch = state_.attitude(1);
+  msg_.attitude.yaw = farol2_utils::rad2deg(farol2_utils::wrapTo2Pi(farol2_utils::deg2rad( state_.attitude(2))));
   msg_.angular_velocity.x = state_.angular_velocity(0);
   msg_.angular_velocity.y = state_.angular_velocity(1);
   msg_.angular_velocity.z = state_.angular_velocity(2);
+
+  msg_.thruster_rpm = state_.thruster_rpm;
+  msg_.control_surface_angle = state_.control_surface_angle;
 }
 
 int main(int argc, char ** argv)

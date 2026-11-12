@@ -1,0 +1,7 @@
+float64 yaw_rate_est
+float64 torque_bias_est
+float64 torque_gain_est
+float64 yaw_est
+float64 yaw_rate_meas
+float64 yaw_meas
+float64 torque_used

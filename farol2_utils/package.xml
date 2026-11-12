@@ -14,6 +14,9 @@
   <depend>std_msgs</depend>
   <depend>eigen3_cmake_module</depend>
   <depend>Eigen3</depend>
+  <depend>tf2</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_ros</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

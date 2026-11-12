@@ -1,7 +1,7 @@
 import re
 import time
 
-def get_next_available_vehicle_id(vehicle_name):
+def get_next_available_vehicle_id(vehicle_name, domain_id=None):
   # Query current ROS graph and choose the first free numeric suffix for /<vehicle_name><id>
   try:
     import rclpy
@@ -10,7 +10,7 @@ def get_next_available_vehicle_id(vehicle_name):
 
   node = None
   try:
-    rclpy.init(args=[])
+    rclpy.init(args=[], domain_id=domain_id)
     node = rclpy.create_node('_vehicle_id_allocator')
 
     # Allow discovery to populate graph info.

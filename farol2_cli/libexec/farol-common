@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+farol_die() {
+    printf 'farol: %s\n' "$*" >&2
+    exit 1
+}
+
+farol_is_workspace_root() {
+    local root="$1"
+    [[ -d "$root/src" ]] || return 1
+    compgen -G "$root/src/*/package.xml" >/dev/null && return 0
+    compgen -G "$root/src/*/*/package.xml" >/dev/null && return 0
+    return 1
+}
+
+farol_find_workspace_root() {
+    if [[ -n "${COLCON_ROOT:-}" ]] && farol_is_workspace_root "$COLCON_ROOT"; then
+        (cd "$COLCON_ROOT" && pwd)
+        return 0
+    fi
+
+    local current
+    current="$(pwd)"
+    while [[ "$current" != "/" ]]; do
+        if farol_is_workspace_root "$current"; then
+            printf '%s\n' "$current"
+            return 0
+        fi
+        if [[ "$(basename "$current")" == "src" ]] && farol_is_workspace_root "$(dirname "$current")"; then
+            dirname "$current"
+            return 0
+        fi
+        current="$(dirname "$current")"
+    done
+    return 1
+}
+
+farol_workspace_root_or_die() {
+    local root
+    root="$(farol_find_workspace_root)" || farol_die "could not find a colcon workspace root; run inside one or set COLCON_ROOT"
+    printf '%s\n' "$root"
+}
+
+farol_colcon_list() {
+    local root="$1"
+    shift
+    local log_dir
+    log_dir="$(mktemp -d "${TMPDIR:-/tmp}/farol_colcon_log.XXXXXX")"
+    (cd "$root" && COLCON_LOG_PATH="$log_dir" colcon list "$@")
+    local status=$?
+    rm -rf -- "$log_dir"
+    return "$status"
+}
+
+farol_default_workers() {
+    local total
+    total="$(nproc 2>/dev/null || printf '1')"
+    if (( total > 4 )); then
+        printf '%s\n' "$((total - 2))"
+    elif (( total > 1 )); then
+        printf '%s\n' "$((total - 1))"
+    else
+        printf '1\n'
+    fi
+}
+
+farol_refuse_dangerous_root() {
+    local root="$1"
+    case "$root" in
+        /|"$HOME"|/home|/usr|/opt|/tmp)
+            farol_die "refusing dangerous workspace root: $root"
+            ;;
+    esac
+}
+
+farol_path_is_colcon_ignored() {
+    local path="$1"
+    local stop="${2:-}"
+    local current
+
+    current="$(cd -- "$path" && pwd)" || return 1
+    if [[ -n "$stop" ]]; then
+        stop="$(cd -- "$stop" && pwd)" || return 1
+    fi
+
+    while [[ "$current" != "/" ]]; do
+        [[ -e "$current/COLCON_IGNORE" ]] && return 0
+        [[ -n "$stop" && "$current" == "$stop" ]] && break
+        current="$(dirname "$current")"
+    done
+
+    return 1
+}

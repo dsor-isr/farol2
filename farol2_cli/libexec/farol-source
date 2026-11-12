@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=farol-common
+source "$SCRIPT_DIR/farol-common"
+
+root="$(farol_workspace_root_or_die)"
+setup="$root/install/setup.bash"
+[[ -f "$setup" ]] || farol_die "workspace setup file does not exist: $setup"
+printf 'source %q\n' "$setup"

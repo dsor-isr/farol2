@@ -37,6 +37,7 @@ git submodule add --recursive git@github.com:dsor-isr/farol2.git
 
 ```
 sudo apt install libgeographiclib-dev
+sudo apt-get install -y ros-jazzy-xacro
 ```
 
 ## Using FAROL 2 QOL scripts and alias
@@ -108,7 +109,7 @@ TODO
 ### Documentation -->
 
 ### Active Developers
-- Eduardo Cunha <eduardo.m.a.cunha@tecnico.ulisboa.pt>
+- Ravi Regalo <ravi.regalo@tecnico.ulisboa.pt>
 
 ### License
 Farol is open-sourced under the MIT license. See the [LICENSE](LICENSE) file for details.

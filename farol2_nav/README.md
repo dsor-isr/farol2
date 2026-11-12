@@ -5,7 +5,7 @@
 The package runs one node (`filter_node`) with chained filters over a shared state:
 
 1. `sample_and_hold` maps asynchronous sensor data into state.
-2. Optional refinement filters (for example `position_current_ekf`, `yaw_rate_ekf`) run sequentially.
+2. Optional refinement filters (for example `current_estimator`, `yaw_rate_ekf`) run sequentially.
 3. Final fused `NavigationState` is published.
 
 This design allows small specialized filters to be stacked, compared, and extended without turning the navigation stack into one monolithic estimator.
@@ -17,7 +17,7 @@ This design allows small specialized filters to be stacked, compared, and extend
 - Implementation-focused overview: [docs/README.md](docs/README.md)
 - Filter theory pages:
   - [docs/sample_and_hold.md](docs/sample_and_hold.md)
-  - [docs/position_current_ekf.md](docs/position_current_ekf.md)
+  - [docs/current_estimator.md](docs/current_estimator.md)
   - [docs/yaw_rate_ekf.md](docs/yaw_rate_ekf.md)
 
 ## Where to configure

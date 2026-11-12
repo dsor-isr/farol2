@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=farol-common
+source "$SCRIPT_DIR/farol-common"
+
+usage() {
+    cat <<'EOF'
+Usage:
+  farol clean [-y|--yes]
+
+Removes the workspace's top-level build, install, and log directories.
+EOF
+}
+
+yes=false
+while (($#)); do
+    case "$1" in
+        -h|--help|help) usage; exit 0 ;;
+        -y|--yes) yes=true ;;
+        *) farol_die "unknown option for clean: $1" ;;
+    esac
+    shift
+done
+
+root="$(farol_workspace_root_or_die)"
+farol_refuse_dangerous_root "$root"
+
+targets=()
+for name in build install log; do
+    if [[ -e "$root/$name" || -L "$root/$name" ]]; then
+        targets+=("$root/$name")
+    fi
+done
+
+if ((${#targets[@]} == 0)); then
+    echo "No build/install/log folders found."
+    exit 0
+fi
+
+echo "The following folders will be removed:"
+printf '  %s\n' "${targets[@]}"
+echo
+
+if [[ "$yes" != true ]]; then
+    read -r -p "Are you sure? [y/N] " answer
+    case "$answer" in
+        y|Y|yes|YES) ;;
+        *) echo "Aborted."; exit 1 ;;
+    esac
+fi
+
+for target in "${targets[@]}"; do
+    echo "Removing: $target"
+    rm -rf -- "$target"
+done
+echo "Done."

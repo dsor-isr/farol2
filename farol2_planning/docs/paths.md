@@ -9,14 +9,14 @@ This node deals with the rationale previously explained in the *paths* documenta
 ## Subscribers
 | Subscribers | msgs type | Purpose |
 | ----------- | -------------- | --------- |
-| /#vehicle#/control/path_following/gamma | [std\_msgs/Float32](http://docs.ros.org/en/api/std_msgs/html/msg/Float32.html) | The coordination state of a certain vehicle with respect to others on the network |
+| /#vehicle#/path_following/gamma | [std\_msgs/Float32](http://docs.ros.org/en/api/std_msgs/html/msg/Float32.html) | The coordination state of a certain vehicle with respect to others on the network |
 | /#vehicle#/nav/filter/state | farol\_msgs/NavigationState | The navigation state of the vehicle after filtering                               |
 
 ## Publishers
 | Publishers | msgs type | Purpose |
 | ----------- | -------------- | --------- |
-| "/#vehicle#/control/path_following/path_data" | [paths/PathData](PathData.md) | Message with the path data on a certain point (curvature, tangent, velocity, etc.) |
-| "/#vehicle#/control/path_following/virtual_state" | farol\_msgs/StateConsole | Vehicle state message                                                              |
+| "/#vehicle#/path_following/path_data" | [paths/PathData](PathData.md) | Message with the path data on a certain point (curvature, tangent, velocity, etc.) |
+| "/#vehicle#/path_following/virtual_state" | farol\_msgs/StateConsole | Vehicle state message                                                              |
 
 ## Services
 | Services                      | msgs type                                 | Purpose                                                                  |
