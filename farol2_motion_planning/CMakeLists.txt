@@ -17,6 +17,8 @@ find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(casadi REQUIRED)
+find_package(visualization_msgs REQUIRED)
+
 
 # Find CasADi
 find_path(CASADI_INCLUDE_DIR
@@ -118,6 +120,7 @@ ament_target_dependencies(${PROJECT_NAME}_core
   std_srvs
   nav_msgs
   geometry_msgs
+  visualization_msgs
 )
 
 target_include_directories(${PROJECT_NAME}_core PUBLIC

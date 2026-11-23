@@ -66,7 +66,7 @@ farol2_motion_planning/distributed_planner_node/*:
     use_initial_guess: false
     
     # Constraint flags: [velocity, angular_velocity, acceleration, angular_acceleration]
-    constraint_flags: [true, false, false, false]
+    constraint_flags: [true, true, true, true]
     
     # nSplit parameters for adaptive constraints
     n_split: [1, 1, 1]
@@ -110,7 +110,7 @@ farol2_motion_planning/distributed_planner_node/*:
     alpha: 1.0
     
     # Energy cost weight (acceleration penalties)
-    beta: 1.0
+    beta: 30.0
     
     # End-point cost weight
     gamma: 1.0
@@ -121,9 +121,12 @@ farol2_motion_planning/distributed_planner_node/*:
     use_goal_straight_line: true
     use_goal_closer_point: true
     cell_margin: 2.0
-    sampling_period: 10.0
+    sampling_period: 15.0
 
     vehicle_name: mred0
     discovery_mode: false
+    collection_budget_fraction: 0.4
+    solve_budget_fraction: 0.5
+    warm_start: false
 
 

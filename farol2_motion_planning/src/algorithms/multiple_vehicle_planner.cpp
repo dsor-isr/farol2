@@ -289,7 +289,10 @@ void MultipleVehiclePlanner::computeCostFunctionDistributed(double Ts)
 
         vel_at_sampling_cost = BezierUtils::velocity_sampling_penalty(sym_vel_constr_[i], sym_Tf_, Ts, nSplit_[0], VEL_MAX);
 
-        sym_cost_ = sym_cost_ + sym_Tf_ * (ALPHA + BETA * energy_cost + GAMMA * end_cost + EPSILON * final_point_cost + ZETA * vel_at_sampling_cost);
+        sym_cost_ = sym_cost_
+          + sym_Tf_ * (ALPHA + BETA * energy_cost + GAMMA * end_cost)
+          + EPSILON * final_point_cost
+          + ZETA * vel_at_sampling_cost;
     }
 }
 
@@ -907,6 +910,13 @@ void MultipleVehiclePlanner::createConstraintVectorDistributed(double Ts)
         values_to_substitute.push_back(SX(goal_states_[i].x));
         values_to_substitute.push_back(SX(goal_states_[i].y));
 
+        std::cout << "[state debug] vehicle=" << i
+                  << " current v=" << current_states_[i].v
+                  << " current theta=" << current_states_[i].theta
+                  << " goal v=" << goal_states_[i].v
+                  << " goal theta=" << goal_states_[i].theta << '\n';
+
+                  
         if(fixed_final_position_)
         {
             vars_to_substitute.push_back(sym_P_all_[i](0,BezierDegree_));
@@ -977,21 +987,27 @@ void MultipleVehiclePlanner::createConstraintVectorDistributed(double Ts)
             }
             all_obs_constraints.push_back(substituted_constraint);
         }
-        for (int k = 0; k < circ_obs_.cols(); ++k) {
-            SX substituted_constraint = sym_circ_constr_[i];
-            SX obs = SX::vertcat({SX(circ_obs_(0,k)), SX(circ_obs_(1,k)), SX(circ_obs_(2,k))});
-            for (casadi_int j = 0; j < obs.size1(); ++j)
-            {
-                substituted_constraint = SX::substitute(substituted_constraint, sym_circ_obs_(j), obs(j));
-            }
-            all_obs_constraints.push_back(substituted_constraint);
-        }
+        
         for (int k = 0; k < elip_obs_.cols(); ++k) {
             SX substituted_constraint = sym_elip_constr_[i];
             SX elip = SX::vertcat({SX(elip_obs_(0,k)), SX(elip_obs_(1,k)), SX(elip_obs_(2,k)), SX(elip_obs_(3,k)), SX(elip_obs_(4,k))});
             for (casadi_int j = 0; j < elip.size1(); ++j)
             {
                 substituted_constraint = SX::substitute(substituted_constraint, sym_elip_obs_(j), elip(j));
+            }
+            all_obs_constraints.push_back(substituted_constraint);
+        }
+        for (int k = 0; k < line_obs_.cols(); ++k) {
+            SX substituted_constraint = sym_line_constr_[i];
+            SX line = SX::vertcat({
+                SX(line_obs_(0,k)),
+                SX(line_obs_(1,k)),
+                SX(line_obs_(2,k))});
+
+            for (casadi_int j = 0; j < line.size1(); ++j)
+            {
+                substituted_constraint =
+                    SX::substitute(substituted_constraint, sym_line_obs_(j), line(j));
             }
             all_obs_constraints.push_back(substituted_constraint);
         }
@@ -1222,6 +1238,15 @@ void MultipleVehiclePlanner::solveOptimizationProblem(std::atomic<bool>* cancel_
     std::cout << "Callback n_out: " << cancel_cb.n_out() << std::endl;
     Function solver = nlpsol("solver", "ipopt", nlp, opts);
    
+    Function debug_g("debug_g", {decision_vec_}, {constraints_});
+    const std::vector<DM> g0_result = debug_g({DM(initial_guess_)});
+
+    std::cerr << "[solver debug] initial Tf="
+              << initial_guess_(initial_guess_.size1() - 1).scalar() << '\n';
+    reportConstraintViolations(
+        "initial guess", g0_result.at(0),
+        problem_Bounds_.g_lbx, problem_Bounds_.g_ubx);
+
     DMDict solver_inputs = {
         {"x0", DM(initial_guess_)},
         {"lbx", DM(problem_Bounds_.lbx)},
@@ -1234,7 +1259,17 @@ void MultipleVehiclePlanner::solveOptimizationProblem(std::atomic<bool>* cancel_
 
         // Extract the solution
         DM opt_sol = sol["x"];
+        DM g_final = sol["g"];
         return_status_ = solver.stats().at("return_status").to_string();
+
+        std::cerr << "[solver debug] status=" << return_status_
+                  << " final Tf="
+                  << opt_sol(opt_sol.size1() - 1, 0).scalar() << '\n';
+        reportConstraintViolations(
+            "solver result", g_final,
+            problem_Bounds_.g_lbx, problem_Bounds_.g_ubx);
+
+
         // Extract the final time (Tf)
         Tf_opt_ = opt_sol(opt_sol.size1() - 1, 0).scalar();
         double t_wall_s = solver.stats().at("t_wall_total").to_double();  // seconds
@@ -1420,4 +1455,43 @@ double MultipleVehiclePlanner::getTf() const
 double MultipleVehiclePlanner::getTcomput() const
 {
     return t_comput_;
+}
+
+//-----------------------------------------------------------------------------------
+//          Debug on constraint violations
+//-----------------------------------------------------------------------------------
+void MultipleVehiclePlanner::reportConstraintViolations(
+    const char *label,
+    const casadi::DM &values,
+    const casadi::DM &lower,
+    const casadi::DM &upper)
+{
+    constexpr double tolerance = 1e-7;
+    double worst_violation = 0.0;
+    casadi_int worst_index = -1;
+
+    for (casadi_int i = 0; i < values.numel(); ++i)
+    {
+        const double value = values(i).scalar();
+        const double lb = lower(i).scalar();
+        const double ub = upper(i).scalar();
+        const double violation =
+            std::max({0.0, lb - value, value - ub});
+
+        if (violation > worst_violation)
+        {
+            worst_violation = violation;
+            worst_index = i;
+        }
+
+        if (violation > tolerance)
+        {
+            std::cerr << "[constraint debug][" << label << "] index=" << i
+                      << " value=" << value << " bounds=[" << lb << ", " << ub
+                      << "] violation=" << violation << '\n';
+        }
+    }
+
+    std::cerr << "[constraint debug][" << label << "] max_violation="
+              << worst_violation << " at index=" << worst_index << '\n';
 }

@@ -135,6 +135,12 @@ public:
 
     double getTcomput() const;
 
+    void reportConstraintViolations(
+    const char *label,
+    const casadi::DM &values,
+    const casadi::DM &lower,
+    const casadi::DM &upper);
+
 private:
     int BezierDegree_;
     int NVehicles_;

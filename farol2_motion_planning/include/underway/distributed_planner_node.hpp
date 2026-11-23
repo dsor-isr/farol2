@@ -8,6 +8,8 @@
 #include <std_msgs/msg/bool.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
+#include <visualization_msgs/msg/marker.hpp>
 
 #include "algorithms/multiple_vehicle_planner.hpp"
 #include "underway/distributed_utils.hpp"
@@ -18,6 +20,8 @@
 #include <thread>
 #include <regex>
 #include <optional>
+#include <algorithm>
+#include <cmath>
 
 // Custom message headers
 #include <farol2_motion_planning/msg/stamped_matrix.hpp>
@@ -68,6 +72,8 @@ bool isClose(const vehicle_state& a, const vehicle_state& b, double pos_tol, dou
 }
 
 void printControlPoints(const Eigen::Tensor<double, 3>& cp);
+
+std::vector<Eigen::Vector2d> clipLineToSquare(const Eigen::Vector3d &line, double min_x, double max_x, double min_y, double max_y);
 
 /**
  * @brief ROS2 interface node for the motion planning framework.
@@ -127,6 +133,7 @@ private:
 
     bool initial_state_received_{false};
     bool goal_state_received_{false};
+    bool warm_start_{false};
 
 
     
@@ -144,7 +151,9 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr traj_pub_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr mission_pub_;
     rclcpp::Publisher<farol2_motion_planning::msg::StampedMatrix>::SharedPtr control_points_pub_;
-
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr global_goal_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr current_position_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr voronoi_edges_pub_;
 
     // sycronisation between solve and broadcast and publish trajectory
     rclcpp::TimerBase::SharedPtr broadcast_timer_;
@@ -160,6 +169,8 @@ private:
     std::optional<std::chrono::steady_clock::time_point> iteration_collection_started_;
     rclcpp::TimerBase::SharedPtr scheme_timer_;
 
+    double collection_budget_fraction_{1.0 / 3.0};
+    double solve_budget_fraction_{1.0 / 3.0};
 
     std::chrono::steady_clock::time_point solve_deadline_;
 
@@ -172,6 +183,8 @@ private:
     double sampling_period_;
     double tf_min_;
     bool first_run_{true};
+    bool publish_as_static_obstacle_{false};
+    std::unordered_map<std::string, Eigen::Vector3d> static_vehicle_obstacles_; // x, y, radius
 
     std::string vehicle_name_;
     vehicle_state initial_state_;
@@ -193,6 +206,9 @@ private:
     double pos_tol_{0.1};    // m
     double theta_tol_{0.02}; // rad
     double v_tol_{0.01};     // m/s
+
+    // Visualization
+    double voronoi_line_extent_{20.0};
     
 
     // ###################################################################################### //
@@ -228,6 +244,7 @@ private:
     void publishControlPoints(const Eigen::Tensor<double, 3>& tensor, const std::vector<double>& tf_values, bool is_guess);
     void publishAliveStatus();
     void publishTrajectorySamples(const Eigen::MatrixXd &trajectory, int first_sample, int last_sample);
+    void publishVoronoiEdges(const VoronoiCell &cell, const Eigen::Vector2d &center);
 
     // Service callbacks
     void setGoalService(const std::shared_ptr<farol2_motion_planning::srv::SetState::Request> req,
@@ -249,6 +266,7 @@ private:
     void finishDistributedSolve();
     void commitDistributedIteration();
     void runDistributedSchemeIteration();
+    void stopSchemeAsStaticObstacle();
 
     // Helper methods
     void processState(const vehicle_state msg, const std::string& vehicle_name);

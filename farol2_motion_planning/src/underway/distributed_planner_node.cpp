@@ -83,10 +83,27 @@ void DistributedPlannerNode::LoadParameters()
     cell_margin_ = this->declare_parameter<double>("cell_margin", 2.0);
     sampling_period_ = this->declare_parameter<double>("sampling_period", 2.0);
 
+    collection_budget_fraction_ = this->declare_parameter<double>("collection_budget_fraction", 1.0 / 3.0);
+    solve_budget_fraction_ = this->declare_parameter<double>("solve_budget_fraction", 1.0 / 3.0);
+
+    if (collection_budget_fraction_ < 0.0 || solve_budget_fraction_ <= 0.0 || collection_budget_fraction_ + solve_budget_fraction_ >= 1.0)
+    {
+        throw std::runtime_error(
+            "collection_budget_fraction must be >= 0, solve_budget_fraction must be > 0, "
+            "and their sum must be < 1");
+    }
+    
+    voronoi_line_extent_ = this->declare_parameter<double>("voronoi_line_extent", 20.0);
+    if (!std::isfinite(voronoi_line_extent_) || voronoi_line_extent_ <= 0.0)
+    {
+        throw std::runtime_error("voronoi_line_extent must be positive and finite");
+    }
+
     discovery_mode_ = this->declare_parameter<bool>("discovery_mode", true);
 
     vehicle_name_ = this->declare_parameter<std::string>("vehicle_name", "myellow0");
 
+    warm_start_ = this->declare_parameter<bool>("warm_start", false);
     // Synchronizing stuff
     const auto third_period = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(sampling_period_ / 3.0));
 
@@ -121,6 +138,10 @@ void DistributedPlannerNode::initialisePublishers()
     traj_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>("/" + vehicle_name_ + "/planned_path", rclcpp::QoS(1).transient_local());
     mission_pub_ = this->create_publisher<std_msgs::msg::String>("/" + vehicle_name_ + "/planning_console/Mission_String", rclcpp::QoS(1).transient_local());
     control_points_pub_= this->create_publisher<farol2_motion_planning::msg::StampedMatrix>("/" + vehicle_name_ + "/Stamped_controlPoints", rclcpp::QoS(1).transient_local());
+    global_goal_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/" + vehicle_name_ + "/global_goal", rclcpp::QoS(1).transient_local());
+    current_position_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/" + vehicle_name_ + "/current_position", rclcpp::QoS(1).transient_local());
+
+    voronoi_edges_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/" + vehicle_name_ + "/voronoi_boundaries", rclcpp::QoS(1).transient_local());
 
 }
 
@@ -180,7 +201,24 @@ void DistributedPlannerNode::neighborCallback(const farol2_motion_planning::msg:
         return;
     }
 
+    if (!std::isfinite(msg->radius) || msg->radius < 0.0)
+    {
+        RCLCPP_WARN(get_logger(), "Ignoring message from %s with invalid radius %.3f",
+                    msg->vehicle_name.c_str(), msg->radius);
+        return;
+    }
+    
     std::lock_guard<std::mutex> lock(state_mutex_);
+    
+    if (msg->radius > 0.0)
+    {
+        static_vehicle_obstacles_.insert_or_assign(msg->vehicle_name, Eigen::Vector3d(msg->position[0], msg->position[1], msg->radius));
+
+        return;
+    }
+
+    // Radius zero means this vehicle is active again.
+    static_vehicle_obstacles_.erase(msg->vehicle_name);
 
     // Discovery records vehicle identities only; it does not store positions.
     if (!distributed_scheme_running_ && get_parameter("discovery_mode").as_bool())
@@ -258,6 +296,7 @@ void DistributedPlannerNode::distributedStartStopCallback(const farol2_motion_pl
     }
 
     first_run_ = true;
+    publish_as_static_obstacle_ = false;
     iteration_collection_started_.reset();
     distributed_scheme_running_ = true;
 
@@ -271,7 +310,7 @@ void DistributedPlannerNode::distributedStartStopCallback(const farol2_motion_pl
       return;
     }
 
-    distributed_scheme_running_ = false;
+    stopSchemeAsStaticObstacle();
 
     RCLCPP_INFO(get_logger(), "Distributed scheme stopped for %s", vehicle_name_.c_str());
   }
@@ -298,6 +337,11 @@ void DistributedPlannerNode::publishNeighborPosition()
             state = states_history_[current_iteration_];
             msg.curr_iter = static_cast<uint32_t>(current_iteration_);
         }
+        else if (publish_as_static_obstacle_ && !states_history_.empty())
+        {
+            state = states_history_.back();
+            msg.curr_iter = static_cast<uint32_t>(std::max(current_iteration_, 0));
+        }
         else
         {
             // Idle/discovery messages use iteration 0.
@@ -312,6 +356,7 @@ void DistributedPlannerNode::publishNeighborPosition()
 
         msg.vehicle_name = vehicle_name_;
         msg.position = {state.x, state.y};
+        msg.radius = publish_as_static_obstacle_ && !distributed_scheme_running_ ? std::max(bounds_.radius, 0.01) : 0.0;
     }
 
     msg.header.stamp = now();
@@ -406,8 +451,102 @@ void DistributedPlannerNode::publishTrajectorySamples(const Eigen::MatrixXd &tra
     }
 
     traj_pub_->publish(positions);
+    const auto make_goal_pose = [this](const vehicle_state &state)
+    {
+        geometry_msgs::msg::PoseStamped pose;
+        pose.header.stamp = now();
+        pose.header.frame_id = "map";
+        pose.pose.position.x = state.x;
+        pose.pose.position.y = state.y;
+        pose.pose.orientation.z = std::sin(state.theta / 2.0);
+        pose.pose.orientation.w = std::cos(state.theta / 2.0);
+        return pose;
+    };
+
+    global_goal_pub_->publish(make_goal_pose(goal_state_));
+
+    vehicle_state current_state;
+    if (publish_as_static_obstacle_ && !distributed_scheme_running_)
+    {
+        if (states_history_.empty())
+        {
+            return;
+        }
+        current_state = states_history_.back();
+    }
+    else if (current_iteration_ >= 0 &&
+             static_cast<std::size_t>(current_iteration_) < states_history_.size())
+    {
+        current_state = states_history_[current_iteration_];
+    }
+    else
+    {
+        RCLCPP_WARN(get_logger(), "Cannot publish current position: no valid state is available.");
+        return;
+    }
+
+    current_position_pub_->publish(make_goal_pose(current_state));
 }
 
+void DistributedPlannerNode::publishVoronoiEdges(const VoronoiCell &cell, const Eigen::Vector2d &center)
+{
+    visualization_msgs::msg::MarkerArray array;
+    visualization_msgs::msg::Marker marker;
+
+    marker.header.stamp = now();
+    marker.header.frame_id = "map";
+    marker.ns = "voronoi_neighbor_boundaries";
+    marker.id = 0;
+    marker.type = visualization_msgs::msg::Marker::LINE_LIST;
+    marker.action = visualization_msgs::msg::Marker::ADD;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = 0.08;
+    marker.color.r = 0.1F;
+    marker.color.g = 0.8F;
+    marker.color.b = 1.0F;
+    marker.color.a = 1.0F;
+
+    const double min_x = center.x() - voronoi_line_extent_;
+    const double max_x = center.x() + voronoi_line_extent_;
+    const double min_y = center.y() - voronoi_line_extent_;
+    const double max_y = center.y() + voronoi_line_extent_;
+
+    for (const Eigen::Vector3d &edge : cell.edges)
+    {
+        if (!edge.allFinite())
+        {
+            continue;
+        }
+
+        const auto endpoints = clipLineToSquare(edge, min_x, max_x, min_y, max_y);
+        if (endpoints.size() != 2)
+        {
+            continue;
+        }
+
+        geometry_msgs::msg::Point first;
+        first.x = endpoints[0].x();
+        first.y = endpoints[0].y();
+        first.z = 0.02;
+
+        geometry_msgs::msg::Point second;
+        second.x = endpoints[1].x();
+        second.y = endpoints[1].y();
+        second.z = 0.02;
+
+        marker.points.push_back(first);
+        marker.points.push_back(second);
+    }
+
+    // Delete the previous marker when there are no drawable edges.
+    if (marker.points.empty())
+    {
+        marker.action = visualization_msgs::msg::Marker::DELETE;
+    }
+
+    array.markers.push_back(std::move(marker));
+    voronoi_edges_pub_->publish(array);
+}
 // ------------------------------------------------------------------------------------------------------------------//
 // -------------------------------------------------Services---------------------------------------------------------//
 // ------------------------------------------------------------------------------------------------------------------//
@@ -742,21 +881,25 @@ void DistributedPlannerNode::startDistributedSolve(std::chrono::nanoseconds budg
 
 void DistributedPlannerNode::checkDistributedSolveDeadline()
 {
-    if (!solve_running_)
+    if (solve_running_)
     {
-        return;
-    }
+        if (!solve_done_.load() && std::chrono::steady_clock::now() >= solve_deadline_)
+        {
+            // The solver must periodically check this flag to stop promptly.
+            solve_cancel_flag_.store(true);
+        }
 
-    if (!solve_done_.load() &&
-        std::chrono::steady_clock::now() >= solve_deadline_)
-    {
-        // The solver must periodically check this flag to stop promptly.
-        solve_cancel_flag_.store(true);
+        if (solve_done_.load())
+        {
+            finishDistributedSolve();
+        }
     }
+    
 
-    if (solve_done_.load())
+    if (!solve_running_ && solve_result_ready_ && pending_iteration_.has_value() && iteration_collection_started_.has_value() &&
+        std::chrono::steady_clock::now() >= *iteration_collection_started_ + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(sampling_period_)))
     {
-        finishDistributedSolve();
+        commitDistributedIteration();
     }
 }
 
@@ -775,14 +918,20 @@ void DistributedPlannerNode::finishDistributedSolve()
     solve_running_ = false;
 
     std::string status = solver_.getOptimizationstatus();
-    std::transform(status.begin(), status.end(), status.begin(), [](unsigned char c) { return std::tolower(c); });
+    std::transform(status.begin(), status.end(), status.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
 
-    // A cancelled solve must not be treated as successful just because it returned.
-    solve_succeeded_ = !solve_cancel_flag_.load() && status.find("succe") != std::string::npos;
+    RCLCPP_INFO(
+        get_logger(),
+        "Solve result: status='%s', cancelled=%s",
+        status.c_str(),
+        solve_cancel_flag_.load() ? "true" : "false");
 
+    solve_succeeded_ = !solve_cancel_flag_.load() &&
+                       status.find("succe") != std::string::npos;
     
     solve_result_ready_ = true;
-    commitDistributedIteration();
+    //commitDistributedIteration();
 
     if (solve_succeeded_)
     {
@@ -901,7 +1050,7 @@ void DistributedPlannerNode::commitDistributedIteration()
         if (pending.index == 0)
         {
             RCLCPP_ERROR(get_logger(),"First optimization failed; no previous trajectory exists for fallback. Stopping the scheme.");
-            distributed_scheme_running_ = false;
+            stopSchemeAsStaticObstacle();
             pending_iteration_.reset();
             return;
         }
@@ -911,7 +1060,7 @@ void DistributedPlannerNode::commitDistributedIteration()
         if (control_points_history_.size() <= previous_index || tf_history_.size() <= previous_index)
         {
             RCLCPP_ERROR(get_logger(), "Fallback unavailable: previous trajectory history is incomplete. Stopping the scheme");
-            distributed_scheme_running_ = false;
+            stopSchemeAsStaticObstacle();
             pending_iteration_.reset();
             return;
         }
@@ -921,7 +1070,7 @@ void DistributedPlannerNode::commitDistributedIteration()
         if (!std::isfinite(previous_duration) || previous_duration <= 2*sampling_period_)
         {
             RCLCPP_ERROR(get_logger(), "Fallback trajectory has no remaining duration. Stopping the scheme.");
-            distributed_scheme_running_ = false;
+            stopSchemeAsStaticObstacle();
             pending_iteration_.reset();
             return;
         }
@@ -954,7 +1103,7 @@ void DistributedPlannerNode::commitDistributedIteration()
         if (curve.rows() < 2 || curve_duration <= 0.0)
         {
             RCLCPP_ERROR(get_logger(), "Fallback produced an invalid remaining trajectory. Stopping the scheme.");
-            distributed_scheme_running_ = false;
+            stopSchemeAsStaticObstacle();
             pending_iteration_.reset();
             return;
         }
@@ -984,7 +1133,7 @@ void DistributedPlannerNode::commitDistributedIteration()
     if (!have_next_state)
     {
         RCLCPP_ERROR(get_logger(), "Could not compute the next state. Stopping the scheme.");
-        distributed_scheme_running_ = false;
+        stopSchemeAsStaticObstacle();
         pending_iteration_.reset();
         return;
     }
@@ -998,7 +1147,11 @@ void DistributedPlannerNode::commitDistributedIteration()
     ++current_iteration_;
     pending_iteration_.reset();
     iteration_collection_started_.reset();
-    publishTrajectorySamples(trajectories_history_.back(), 0, publish_last_sample);
+    
+    const int last_sample = static_cast<int>(trajectories_history_.back().cols()) - 1;
+    publishTrajectorySamples(trajectories_history_.back(), 0, last_sample);
+
+    publishVoronoiEdges(cell_history_.back(), Eigen::Vector2d(pending.start_state.x, pending.start_state.y));
 
 }
 
@@ -1028,7 +1181,7 @@ void DistributedPlannerNode::runDistributedSchemeIteration()
             
             for (const auto &name : known_vehicle_names_)
             {
-                if (name == vehicle_name_)
+                if (name == vehicle_name_ || static_vehicle_obstacles_.count(name) != 0)
                 {
                     continue;
                 }
@@ -1041,7 +1194,7 @@ void DistributedPlannerNode::runDistributedSchemeIteration()
             }
         }
 
-        const auto collection_budget = std::chrono::duration<double>(sampling_period_ / 3.0);
+        const auto collection_budget = std::chrono::duration<double>(sampling_period_ * collection_budget_fraction_);
 
         const bool collection_timed_out = now_steady - *iteration_collection_started_ >= collection_budget;
 
@@ -1067,7 +1220,10 @@ void DistributedPlannerNode::runDistributedSchemeIteration()
             {
                 for (const auto& [name, position] : it->second)
                 {
-                    eigen_neighbors.push_back(position);
+                    if (static_vehicle_obstacles_.count(name) == 0)
+                    {
+                        eigen_neighbors.push_back(position);
+                    }
                 }
             }
             RCLCPP_INFO(get_logger(),"############################################ ######################################### \n ############################################ ######################################### \n ############################################ #########################################");
@@ -1084,6 +1240,8 @@ void DistributedPlannerNode::runDistributedSchemeIteration()
         }
 
         VoronoiCell current_cell = DistributedUtils::getVoronoiNeighbors(eigen_state, eigen_neighbors, cell_margin_);
+
+        //publishVoronoiEdges(current_cell, eigen_state);
 
         for (const Eigen::Vector3d& edge : current_cell.edges)
         {
@@ -1128,10 +1286,8 @@ void DistributedPlannerNode::runDistributedSchemeIteration()
         }
         else if (use_goal_straight_line_ && use_goal_closer_point_)
         {
-            Eigen::Vector2d current_goal_closest =
-                DistributedUtils::getClosestPointInVoronoiCell(eigen_state, eigen_goal, current_cell);
-            Eigen::Vector2d current_goal_intersec =
-                DistributedUtils::getCurrentGoalVoronoiIntersection(eigen_state, eigen_goal, current_cell);
+            Eigen::Vector2d current_goal_closest = DistributedUtils::getClosestPointInVoronoiCell(eigen_state, eigen_goal, current_cell);
+            Eigen::Vector2d current_goal_intersec = DistributedUtils::getCurrentGoalVoronoiIntersection(eigen_state, eigen_goal, current_cell);
 
             RCLCPP_INFO(
                 get_logger(),
@@ -1167,35 +1323,69 @@ void DistributedPlannerNode::runDistributedSchemeIteration()
         std::vector<vehicle_state> goal_states{current_goal};
 
         Eigen::Matrix<double, 3, Eigen::Dynamic> all_line_obs(3, line_obs_.cols() + current_cell.edges.size());
-        Eigen::Matrix<double, 3, Eigen::Dynamic> empty_obs(3, 0);
         Eigen::Matrix<double, 5, Eigen::Dynamic> empty_elip_obs(5, 0);
         all_line_obs << line_obs_, cellToLineObs(current_cell);
+
+        // Snapshot configured and received static obstacles while holding the mutex.
+        Eigen::Matrix<double, 3, Eigen::Dynamic> configured_circular_obstacles;
+        std::vector<Eigen::Vector3d> static_obstacles;
+        {
+            std::lock_guard<std::mutex> lock(state_mutex_);
+            configured_circular_obstacles = circ_obs_;
+
+            for (const auto &[name, obstacle] : static_vehicle_obstacles_)
+            {
+                static_obstacles.push_back(obstacle);
+            }
+        }
+
+        Eigen::Matrix<double, 3, Eigen::Dynamic> circular_obstacles(3, configured_circular_obstacles.cols() + static_cast<Eigen::Index>(static_obstacles.size()));
+
+        circular_obstacles.leftCols(configured_circular_obstacles.cols()) = configured_circular_obstacles;
+
+        for (Eigen::Index i = 0; i < static_cast<Eigen::Index>(static_obstacles.size()); ++i)
+        {
+            circular_obstacles.col(configured_circular_obstacles.cols() + i) = static_obstacles[static_cast<std::size_t>(i)];
+        }
+
+
+        for (std::size_t i = 0; i < current_states.size(); ++i)
+        {
+            RCLCPP_INFO(
+                get_logger(),
+                "Solver input vehicle %zu: start=(%.3f, %.3f), v=%.3f, theta=%.3f; "
+                "goal=(%.3f, %.3f), v=%.3f, theta=%.3f",
+                i,
+                current_states[i].x, current_states[i].y,
+                current_states[i].v, current_states[i].theta,
+                goal_states[i].x, goal_states[i].y,
+                goal_states[i].v, goal_states[i].theta);
+        }
         if(first_run_)
         {
-            solver_.setOptimizationProblem(current_states, goal_states, empty_obs, empty_obs, empty_elip_obs);
+            solver_.setOptimizationProblem(current_states, goal_states, circular_obstacles, all_line_obs, empty_elip_obs);
         }
         else
         {
             const double tf_prev = tf_history_[current_iteration_-1];
             const double tf_guess = tf_prev - sampling_period_;
 
-            auto res = BezierUtils::divide_bezier(control_points_history_[current_iteration_-1],
-                                                sampling_period_ / tf_prev);
+            auto res = BezierUtils::divide_bezier(control_points_history_[current_iteration_-1], sampling_period_ / tf_prev);
             const Eigen::MatrixXd& P = res.second;
 
             Eigen::Tensor<double, 3> prev_control_points = BezierUtils::matrix_2_tensor(P);
 
-            solver_.setOptimizationProblem(current_states, goal_states, empty_obs, empty_obs, empty_elip_obs, prev_control_points, tf_guess, false);
+            solver_.setOptimizationProblem(current_states, goal_states, circular_obstacles, all_line_obs, empty_elip_obs, prev_control_points, tf_guess, !warm_start_/*the call to the function is poor (if we have a warm_start we want the input to be false and vice-versa)*/);
 
             RCLCPP_INFO(get_logger(), "[%s][iter %d] state=(%.3f, %.3f, th=%.3f, v=%.3f) tf_prev=%.3f tf_guess=%.3f tf_min=%.3f",
                         vehicle_name_.c_str(), current_iteration_, current_state.x, current_state.y,
                         current_state.theta, current_state.v, tf_prev, tf_guess, tf_min_);
         }
-        solver_.createConstraintVectorDistributed(sampling_period_);
-        solver_.createDecisionVectorDistributed(tf_min_);
+        solver_.createConstraintVectorDistributed(0.05); // This argument does nothing TODO: Correct this...
+        solver_.createDecisionVectorDistributed(5*sampling_period_);
 
         const auto solve_budget = std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::duration<double>(sampling_period_ / 3.0));
+            std::chrono::duration<double>(sampling_period_ * solve_budget_fraction_));
 
         startDistributedSolve(solve_budget);
         first_run_ = false;
@@ -1205,8 +1395,14 @@ void DistributedPlannerNode::runDistributedSchemeIteration()
     }
     else
     {
-        distributed_scheme_running_ = false;
+        stopSchemeAsStaticObstacle();
     }
+}
+
+void DistributedPlannerNode::stopSchemeAsStaticObstacle()
+{
+    distributed_scheme_running_ = false;
+    publish_as_static_obstacle_ = true;
 }
 
 // ------------------------------------------------------------------------------------------------------------------//
@@ -1264,6 +1460,55 @@ void printControlPoints(const Eigen::Tensor<double, 3> &cp)
 
         std::cout << std::endl;
     }
+}
+
+std::vector<Eigen::Vector2d> clipLineToSquare(const Eigen::Vector3d &line, double min_x, double max_x, double min_y, double max_y)
+{
+    constexpr double eps = 1e-10;
+    std::vector<Eigen::Vector2d> intersections;
+
+    const auto addIntersection = [&](double x, double y)
+    {
+        if (x < min_x - eps || x > max_x + eps ||
+            y < min_y - eps || y > max_y + eps)
+        {
+            return;
+        }
+
+        const Eigen::Vector2d point(
+            std::clamp(x, min_x, max_x),
+            std::clamp(y, min_y, max_y));
+
+        for (const auto &existing : intersections)
+        {
+            if ((existing - point).squaredNorm() < 1e-16)
+            {
+                return;
+            }
+        }
+        intersections.push_back(point);
+    };
+
+    const double a = line.x();
+    const double b = line.y();
+    const double c = line.z();
+
+    if (std::abs(b) > eps)
+    {
+        addIntersection(min_x, -(a * min_x + c) / b);
+        addIntersection(max_x, -(a * max_x + c) / b);
+    }
+    if (std::abs(a) > eps)
+    {
+        addIntersection(-(b * min_y + c) / a, min_y);
+        addIntersection(-(b * max_y + c) / a, max_y);
+    }
+
+    if (intersections.size() > 2)
+    {
+        intersections.resize(2);
+    }
+    return intersections;
 }
 
 void DistributedPlannerNode::prepareSolver()
