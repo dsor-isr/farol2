@@ -149,27 +149,27 @@ void DistributedPlannerNode::initialiseServices()
 {
     // This function can be used to initialize any subscribers if needed
     set_goal_srv_ = this->create_service<farol2_motion_planning::srv::SetState>(
-        "/" + vehicle_name_ +"/"+ TOPIC_SRV_SET_GOAL,
+        "/distributed_planner/" + vehicle_name_ +"/"+ TOPIC_SRV_SET_GOAL,
         std::bind(&DistributedPlannerNode::setGoalService, this, std::placeholders::_1, std::placeholders::_2));
 
     set_states_srv_ = this->create_service<farol2_motion_planning::srv::SetState>(
-        "/" + vehicle_name_ +"/"+ TOPIC_SRV_SET_STATES,
+        "/distributed_planner/" + vehicle_name_ +"/"+ TOPIC_SRV_SET_STATES,
         std::bind(&DistributedPlannerNode::setStatesService, this, std::placeholders::_1, std::placeholders::_2));
 
     set_bounds_srv_ = this->create_service<farol2_motion_planning::srv::SetBoundsAndGains>(
-        "/" + vehicle_name_ +"/"+ TOPIC_SRV_SET_BOUNDS,
+        "/distributed_planner/" + vehicle_name_ +"/"+ TOPIC_SRV_SET_BOUNDS,
         std::bind(&DistributedPlannerNode::setBoundsService, this, std::placeholders::_1, std::placeholders::_2));
 
     set_bezier_params_srv_ = this->create_service<farol2_motion_planning::srv::SetBezierParams>(
-        "/" + vehicle_name_ +"/"+ TOPIC_SRV_SET_BEZIER_PARAMS,
+        "/distributed_planner/" + vehicle_name_ +"/"+ TOPIC_SRV_SET_BEZIER_PARAMS,
         std::bind(&DistributedPlannerNode::setBezierParamsService, this, std::placeholders::_1, std::placeholders::_2));
 
     set_obstacles_srv_ = this->create_service<farol2_motion_planning::srv::SetObstacles>(
-        "/" + vehicle_name_ +"/"+ TOPIC_SRV_SET_OBSTACLES,
+        "/distributed_planner/" + vehicle_name_ +"/"+ TOPIC_SRV_SET_OBSTACLES,
         std::bind(&DistributedPlannerNode::setObstaclesService, this, std::placeholders::_1, std::placeholders::_2));
 
     get_planner_config_srv_ = this->create_service<farol2_motion_planning::srv::GetPlannerConfig>(
-        "/" + vehicle_name_ +"/"+ TOPIC_SRV_GET_PLANNER_CONFIG,
+        "/distributed_planner/" + vehicle_name_ +"/"+ TOPIC_SRV_GET_PLANNER_CONFIG,
         std::bind(&DistributedPlannerNode::getPlannerConfigService, this, std::placeholders::_1, std::placeholders::_2));
 }
 
